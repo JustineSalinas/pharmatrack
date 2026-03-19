@@ -1,4 +1,4 @@
-# 🏥 PharmaTrack | CPMT Attendance System
+# PharmaTrack |Attendance System
 
 *Version:* 1.0.0-Beta   
 *Institution:* University of San Agustin - Iloilo City  
@@ -19,17 +19,17 @@ Welcome to the development branch. This system is designed to automate attendanc
 
 ## 👥 Team Roles & Responsibilities
 
-### 🎨 Matthew (Frontend Lead)
+### Matthew (Frontend Lead)
 - *Primary Task:* Build the **Student Dashboard**.
 - *Focus:* Create the UI in `src/app/dashboard/page.tsx`.
 - *Logic:* Fetch `full_name` and `qr_code_string` from the `profiles` table and render the QR code using `react-qr-code`.
 
-### 📷 Alex (Scanner & Integration)
+### Alex (Scanner & Integration)
 - **Primary Task:* Build the **Admin Scanner**.
 - *Focus:* Develop the logic in `src/components/Scanner.tsx`.
 - *Logic:* Implement the camera feed. On a successful scan, trigger a function that inserts a row into the `attendance` table.
 
-### 📊 Tways & Herminio (Backend & Analytics)
+### Tways & Herminio (Backend & Analytics)
 - *Primary Task:* **Attendance Logic & Reporting**.
 - *Focus:* Create a "Live Event View" for the Council Officers.
 - *Logic:* Use **Supabase Real-Time** to show a live count of students who have checked in. Calculate "Late" status based on the `grace_period_minutes` in the `events` table.
