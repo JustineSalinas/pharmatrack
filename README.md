@@ -10,3 +10,4 @@ Node.js (v20 or higher)
 Git
 
 VS Code (Recommended Extensions: ESLint, Tailwind CSS IntelliSense, Prettier)
+LOUBENNNNNNNNNNNNNNNNNNNNNNNNNNS
