@@ -19,12 +19,17 @@ Welcome to the development branch. This system is designed to automate attendanc
 
 ## 👥 Team Roles & Responsibilities
 
-### Matthew (Frontend Lead)
+## Adrian Salinas (Project Manager / Lead Backend)
+- *Primary Task:* Develop the **Project Infrastructure & Security Oversight.**.
+- *Focus:* Maintain the main branch, manage **GitHub repository permissions**, and resolve merge conflicts.**
+- *Logic:* Architect the relational database schema in Supabase and enforce **Row Level Security (RLS)** to protect student data privacy.
+
+### Matthew Tabat (Frontend Lead)
 - *Primary Task:* Build the **Student Dashboard**.
 - *Focus:* Create the UI in `src/app/dashboard/page.tsx`.
 - *Logic:* Fetch `full_name` and `qr_code_string` from the `profiles` table and render the QR code using `react-qr-code`.
 
-### Alex (Scanner & Integration)
+### Alexander Tolosa (Scanner & Integration)
 - **Primary Task:* Build the **Admin Scanner**.
 - *Focus:* Develop the logic in `src/components/Scanner.tsx`.
 - *Logic:* Implement the camera feed. On a successful scan, trigger a function that inserts a row into the `attendance` table.
@@ -35,6 +40,7 @@ Welcome to the development branch. This system is designed to automate attendanc
 - *Logic:* Use **Supabase Real-Time** to show a live count of students who have checked in. Calculate "Late" status based on the `grace_period_minutes` in the `events` table.
 
 ---
+Figma Wireframe and Design: https://www.figma.com/site/ckOv3NzIUmG1V0aljtXAFD/Untitled?node-id=0-1&t=yMDFdrphBjwnLn36-1
 
 ## Getting Started
 
