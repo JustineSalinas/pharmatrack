@@ -1,3 +1,11 @@
+@import "tailwindcss";
+
+/* Point to your theme variables if you have them, or just use the import above */
+@theme {
+  --color-augustinian-purple: #640d82;
+  --color-augustinian-gold: #f5dc8c;
+}
+
 @layer components {
   .bg-augustinian-gradient {
     background: radial-gradient(circle at top, #78648c 0%, #640d82 50%, #2e063b 100%);
@@ -13,8 +21,7 @@
   }
 
   .btn-gold {
-    @apply bg-[#f5dc8c] text-[#2e063b] font-bold py-4 px-8 rounded-xl 
-           hover:bg-[#fbf5e1] active:scale-95 transition-all duration-300 
-           uppercase tracking-widest text-sm shadow-lg;
+    @apply bg-[--color-augustinian-gold] text-[#2e063b] font-bold py-4 px-8 rounded-xl;
+    transition: all 0.3s ease;
   }
 }
