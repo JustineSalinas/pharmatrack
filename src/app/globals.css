@@ -1,66 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer components {
+  .bg-augustinian-gradient {
+    background: radial-gradient(circle at top, #78648c 0%, #640d82 50%, #2e063b 100%);
+  }
 
-:root {
-  /* --- Brand Colors --- */
-  --usa-purple-dark: #640d82;
-  --usa-purple-muted: #78648c;
-  --usa-purple-soft: #d2c8dc;
-  --usa-gold: #f5dc8c;
-  --usa-gold-soft: #fbf5e1;
-  --usa-neutral: #e6e1e1;
+  .glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 28px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
 
-  --background: var(--usa-neutral);
-  --foreground: #0a0a0a;
-}
-
-/* Base Styles using standard CSS */
-body {
-  background-color: var(--usa-neutral);
-  color: #0a0a0a;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* PM Pro-Tip: If @utility or @layer is failing, 
-   we define these as standard CSS classes. 
-*/
-
-.btn-primary {
-  background-color: #640d82;
-  color: white;
-  padding: 0.625rem 1.25rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  transition: all 0.2s;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-}
-.btn-primary:hover {
-  background-color: #520a6a;
-}
-.btn-primary:active {
-  transform: scale(0.95);
-}
-
-.card-premium {
-  background-color: #fbf5e1;
-  border: 1px solid #d2c8dc;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-}
-
-.input-field {
-  width: 100%;
-  padding: 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid #d2c8dc;
-  background-color: white;
-  outline: none;
-  transition: all 0.2s;
-}
-.input-field:focus {
-  border-color: #640d82;
-  box-shadow: 0 0 0 2px rgba(100, 13, 130, 0.2);
+  .btn-gold {
+    @apply bg-[#f5dc8c] text-[#2e063b] font-bold py-4 px-8 rounded-xl 
+           hover:bg-[#fbf5e1] active:scale-95 transition-all duration-300 
+           uppercase tracking-widest text-sm shadow-lg;
+  }
 }
