@@ -7,7 +7,7 @@ Welcome to the development branch. This system is designed to automate attendanc
 
 ---
 
-## 🛠️ System Architecture
+## System Architecture
 
 - *Frontend:* Next.js 15 (App Router)
 - *Styling:* Tailwind CSS
@@ -17,7 +17,7 @@ Welcome to the development branch. This system is designed to automate attendanc
 
 ---
 
-## 👥 Team Roles & Responsibilities
+## Team Roles & Responsibilities
 
 ### Adrian Salinas (Project Manager / Lead Backend)
 - *Primary Task:* Develop the **Project Infrastructure & Security Oversight.**.
