@@ -1,4 +1,4 @@
-# PharmaTrack |Attendance System
+# PharmaTrack | Attendance System
 
 *Version:* 1.0.0-Beta   
 *Institution:* University of San Agustin - Iloilo City  
