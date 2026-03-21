@@ -1,3 +1,5 @@
+import "./globals.css";
+
 export default function RootLayout({
   children,
 }: {
@@ -5,7 +7,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased bg-[#2e063b]"> 
+      <body className="antialiased bg-[#2e063b]">
         {/* Set a dark base color to prevent a white flash on load */}
         {children}
       </body>
