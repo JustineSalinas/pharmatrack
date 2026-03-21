@@ -19,7 +19,7 @@ Welcome to the development branch. This system is designed to automate attendanc
 
 ## 👥 Team Roles & Responsibilities
 
-## Adrian Salinas (Project Manager / Lead Backend)
+### Adrian Salinas (Project Manager / Lead Backend)
 - *Primary Task:* Develop the **Project Infrastructure & Security Oversight.**.
 - *Focus:* Maintain the main branch, manage **GitHub repository permissions**, and resolve merge conflicts.**
 - *Logic:* Architect the relational database schema in Supabase and enforce **Row Level Security (RLS)** to protect student data privacy.

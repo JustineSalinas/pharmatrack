@@ -14,3 +14,4 @@ export const AttendanceSchema = z.object({
 
 export type StudentId = z.infer<typeof StudentIdSchema>;
 export type Attendance = z.infer<typeof AttendanceSchema>;
+
