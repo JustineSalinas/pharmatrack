@@ -457,54 +457,12 @@ input, select, textarea {
   background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
 }
 
-/* --- CREATIVE COLOR CLASSES --- */
-/* 1. REGISTER: Trust Blue */
-.color-register .step-icon-box, .color-register .feat-icon { color: #38BDF8; border-color: rgba(56, 189, 248, 0.3); }
-.color-register:hover .step-icon-box, .color-register:hover .feat-icon {
-  border-color: #38BDF8; background: rgba(56, 189, 248, 0.05);
-  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.3), inset 0 1px 2px rgba(56, 189, 248, 0.4);
-}
-.color-register:hover strong, .color-register:hover h4 { color: #38BDF8; text-shadow: 0 0 12px rgba(56, 189, 248, 0.5); }
+/* --- STATIC COLORS --- */
+.static-blue .step-icon-box, .static-blue .feat-icon { color: #38BDF8; border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 4px 16px rgba(56, 189, 248, 0.15), inset 0 1px 2px rgba(56, 189, 248, 0.2); }
+.static-blue strong, .static-blue h4 { color: #38BDF8; }
 
-/* 2. SCAN: Mint Green */
-.color-scan .step-icon-box, .color-scan .feat-icon { color: #34D399; border-color: rgba(52, 211, 153, 0.3); }
-.color-scan:hover .step-icon-box, .color-scan:hover .feat-icon {
-  border-color: #34D399; background: rgba(52, 211, 153, 0.05);
-  box-shadow: 0 4px 20px rgba(52, 211, 153, 0.3), inset 0 1px 2px rgba(52, 211, 153, 0.4);
-}
-.color-scan:hover strong, .color-scan:hover h4 { color: #34D399; text-shadow: 0 0 12px rgba(52, 211, 153, 0.5); }
-
-/* 3. TRACK: Analytics Purple */
-.color-track .step-icon-box, .color-track .feat-icon { color: #A78BFA; border-color: rgba(167, 139, 250, 0.3); }
-.color-track:hover .step-icon-box, .color-track:hover .feat-icon {
-  border-color: #A78BFA; background: rgba(167, 139, 250, 0.05);
-  box-shadow: 0 4px 20px rgba(167, 139, 250, 0.3), inset 0 1px 2px rgba(167, 139, 250, 0.4);
-}
-.color-track:hover strong, .color-track:hover h4 { color: #A78BFA; text-shadow: 0 0 12px rgba(167, 139, 250, 0.5); }
-
-/* 4. AUTO REPORTING: Magic Pink */
-.color-auto .step-icon-box, .color-auto .feat-icon { color: #EC4899; border-color: rgba(236, 72, 153, 0.3); }
-.color-auto:hover .step-icon-box, .color-auto:hover .feat-icon {
-  border-color: #EC4899; background: rgba(236, 72, 153, 0.05);
-  box-shadow: 0 4px 20px rgba(236, 72, 153, 0.3), inset 0 1px 2px rgba(236, 72, 153, 0.4);
-}
-.color-auto:hover strong, .color-auto:hover h4 { color: #EC4899; text-shadow: 0 0 12px rgba(236, 72, 153, 0.5); }
-
-/* 5. LIVE DATA: Live Orange */
-.color-live .step-icon-box, .color-live .feat-icon { color: #F97316; border-color: rgba(249, 115, 22, 0.3); }
-.color-live:hover .step-icon-box, .color-live:hover .feat-icon {
-  border-color: #F97316; background: rgba(249, 115, 22, 0.05);
-  box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3), inset 0 1px 2px rgba(249, 115, 22, 0.4);
-}
-.color-live:hover strong, .color-live:hover h4 { color: #F97316; text-shadow: 0 0 12px rgba(249, 115, 22, 0.5); }
-
-/* 6. EXACT ACCURACY: Precision Ruby */
-.color-exact .step-icon-box, .color-exact .feat-icon { color: #F43F5E; border-color: rgba(244, 63, 94, 0.3); }
-.color-exact:hover .step-icon-box, .color-exact:hover .feat-icon {
-  border-color: #F43F5E; background: rgba(244, 63, 94, 0.05);
-  box-shadow: 0 4px 20px rgba(244, 63, 94, 0.3), inset 0 1px 2px rgba(244, 63, 94, 0.4);
-}
-.color-exact:hover strong, .color-exact:hover h4 { color: #F43F5E; text-shadow: 0 0 12px rgba(244, 63, 94, 0.5); }
+.static-pink .step-icon-box, .static-pink .feat-icon { color: #F472B6; border-color: rgba(244, 114, 182, 0.4); box-shadow: 0 4px 16px rgba(244, 114, 182, 0.15), inset 0 1px 2px rgba(244, 114, 182, 0.2); }
+.static-pink strong, .static-pink h4 { color: #F472B6; }
 
 .step-col strong, .feat-item h4 {
   transition: all 0.3s ease;
