@@ -5,6 +5,15 @@ import { useState } from "react";
 
 export default function RegisterPage() {
   const [role, setRole] = useState<"student" | "admin">("student");
+  const [year, setYear] = useState("");
+  const [section, setSection] = useState("");
+
+  const sectionsByYear: Record<string, string[]> = {
+    "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
+    "2nd Year": ["PH 2A", "PH 2B", "PH 2C", "PH 2D", "PH 2E"],
+    "3rd Year": ["PH 3A", "PH 3B", "PH 3C", "PH 3D"],
+    "4th Year": ["PH 4A", "PH 4B", "PH 4C", "PH 4D"]
+  };
 
   return (
     <>
@@ -62,12 +71,33 @@ export default function RegisterPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div className="input-group">
-                  <label>Section</label>
-                  <input type="text" className="input-field" placeholder="PHARM-3A" required />
+                  <label>Current Year</label>
+                  <select 
+                    className="input-field select-field" 
+                    value={year} 
+                    onChange={(e) => { setYear(e.target.value); setSection(""); }}
+                    required
+                  >
+                    <option value="" disabled>Select Year</option>
+                    {Object.keys(sectionsByYear).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="input-group">
-                  <label>Current Year</label>
-                  <input type="text" className="input-field" placeholder="3rd Year" required />
+                  <label>Section</label>
+                  <select 
+                    className="input-field select-field" 
+                    value={section} 
+                    onChange={(e) => setSection(e.target.value)}
+                    disabled={!year}
+                    required
+                  >
+                    <option value="" disabled>Select Section</option>
+                    {year && sectionsByYear[year].map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </>
