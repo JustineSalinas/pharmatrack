@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 export default function RegisterPage() {
+  const [role, setRole] = useState<"student" | "admin">("student");
+
   return (
     <>
       {/* ANIMATED BACKGROUND (DARKER) */}
@@ -22,26 +25,66 @@ export default function RegisterPage() {
           <p>Register for your secure University profile.</p>
         </div>
 
+        {/* ROLE TOGGLE */}
+        <div className="role-toggle">
+          <button 
+            type="button"
+            className={`role-btn ${role === "student" ? "active" : ""}`}
+            onClick={() => setRole("student")}
+          >
+            Student
+          </button>
+          <button 
+            type="button"
+            className={`role-btn ${role === "admin" ? "active" : ""}`}
+            onClick={() => setRole("admin")}
+          >
+            Admin
+          </button>
+        </div>
+
         <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
           <div className="input-group">
             <label>Full Name</label>
             <input type="text" className="input-field" placeholder="Juan Dela Cruz" required />
           </div>
+          
           <div className="input-group">
-            <label>Student / Faculty ID</label>
-            <input type="text" className="input-field" placeholder="USA-2026-0001" required />
-          </div>
-          <div className="input-group">
-            <label>Official Email</label>
+            <label>USA Email</label>
             <input type="email" className="input-field" placeholder="juan@usa.edu.ph" required />
           </div>
+
+          {role === "student" && (
+            <>
+              <div className="input-group">
+                <label>Student ID Number</label>
+                <input type="text" className="input-field" placeholder="USA-2026-0001" required />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div className="input-group">
+                  <label>Section</label>
+                  <input type="text" className="input-field" placeholder="PHARM-3A" required />
+                </div>
+                <div className="input-group">
+                  <label>Current Year</label>
+                  <input type="text" className="input-field" placeholder="3rd Year" required />
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="input-group">
             <label>Password</label>
-            <input type="password" className="input-field" placeholder="Create a strong password" required />
+            <input type="password" className="input-field" placeholder="••••••••" required />
+          </div>
+
+          <div className="input-group">
+            <label>Confirm Password</label>
+            <input type="password" className="input-field" placeholder="••••••••" required />
           </div>
           
           <Link href="/dashboard" className="btn btn-gold pulse-btn" style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem", textDecoration: "none" }}>
-            Register Securely
+            Create {role === "student" ? "Student" : "Admin"} Account
           </Link>
         </form>
 
