@@ -9,6 +9,7 @@ create extension if not exists "uuid-ossp";
 -- ============================================================
 
 -- Function to check if the current user is an approved admin
+-- SECURITY DEFINER skips RLS checks inside the function to avoid recursion.
 create or replace function public.is_admin()
 returns boolean as $$
 begin
@@ -19,9 +20,9 @@ begin
     and status = 'approved'
   );
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
--- Function to check if the current user is an approved council member (faculty or admin)
+-- Function to check if the current user is an approved council member
 create or replace function public.is_council()
 returns boolean as $$
 begin
@@ -32,7 +33,7 @@ begin
     and status = 'approved'
   );
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- ============================================================
 -- USERS TABLE
@@ -48,15 +49,27 @@ create table if not exists public.users (
 
 alter table public.users enable row level security;
 
-drop policy if exists "Users can read their own profile" on public.users;
-create policy "Users can read their own profile"
-  on public.users for select
-  using (auth.uid() = id);
+-- Nuke all policies on users to ensure a clean slate
+do $$ 
+declare 
+    pol record;
+begin 
+    for pol in (select policyname from pg_policies where tablename = 'users' and schemaname = 'public') loop
+        execute format('drop policy %I on public.users', pol.policyname);
+    end loop;
+end $$;
 
-drop policy if exists "Admins can manage all users" on public.users;
-create policy "Admins can manage all users"
-  on public.users for all
-  using (public.is_admin());
+-- 1. Allow signup (anyone can insert if it matches their UID)
+create policy "allow_signup" on public.users 
+for insert with check (auth.uid() = id);
+
+-- 2. Allow own select
+create policy "allow_own_read" on public.users 
+for select using (auth.uid() = id);
+
+-- 3. Allow admins to manage (using loop-safe check)
+create policy "allow_admin_manage_all" on public.users 
+for all using ((auth.uid() != id) and public.is_admin());
 
 -- ============================================================
 -- STUDENT PROFILES

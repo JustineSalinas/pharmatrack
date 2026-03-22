@@ -19,7 +19,7 @@ BEGIN
     AND status = 'approved'
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE OR REPLACE FUNCTION public.is_council()
 RETURNS BOOLEAN AS $$
@@ -31,7 +31,7 @@ BEGIN
     AND status = 'approved'
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ============================================================
 -- USERS
@@ -46,11 +46,19 @@ CREATE TABLE IF NOT EXISTS public.users (
 );
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Users read own" ON public.users;
-CREATE POLICY "Users read own" ON public.users FOR SELECT USING (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Admins manage all users" ON public.users;
-CREATE POLICY "Admins manage all users" ON public.users FOR ALL USING (public.is_admin());
+DO $$ 
+DECLARE 
+    pol record;
+BEGIN 
+    FOR pol IN (SELECT policyname FROM pg_policies WHERE tablename = 'users' AND schemaname = 'public') LOOP
+        EXECUTE format('DROP POLICY %I ON public.users', pol.policyname);
+    END LOOP;
+END $$;
+
+CREATE POLICY "allow_signup" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "allow_own_read" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "allow_admin_manage_all" ON public.users FOR ALL USING ((auth.uid() != id) AND public.is_admin());
 
 -- ============================================================
 -- STUDENT PROFILES
