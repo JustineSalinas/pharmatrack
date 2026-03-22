@@ -252,8 +252,7 @@ input, select, textarea {
   color: #1a1a1a;
   box-shadow: 0 0 15px rgba(232, 200, 74, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.5);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .btn-gold:hover {
@@ -721,13 +720,13 @@ input, select, textarea {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.3));
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 24px;
-  padding: 50px 40px;
+  padding: 35px 30px;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 20px;
   text-align: center;
 }
 
@@ -796,7 +795,6 @@ input, select, textarea {
 .input-group label {
   font-size: 0.85rem;
   font-weight: 700;
-  text-transform: uppercase;
   color: var(--gold);
   letter-spacing: 0.5px;
 }
