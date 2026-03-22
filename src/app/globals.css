@@ -427,11 +427,47 @@ input, select, textarea {
 }
 
 @media (max-width: 768px) {
-  .steps-row {
-    flex-direction: column;
-    align-items: center;
-    gap: 40px;
+  .hero h1 { font-size: 2.2rem; }
+  .hero-logos img { height: 100px; }
+  .hero p { font-size: 1rem; padding: 0 10px; }
+  .typewriter-container { font-size: 1.1rem; height: 28px; }
+  
+  .land-nav { padding: 12px 18px; top: 10px; border-radius: 12px; }
+  .logo-row { font-size: 1.1rem; gap: 8px; }
+  .logo-row img { height: 32px !important; }
+  .nav-btns { gap: 8px; }
+  .btn { padding: 8px 12px !important; font-size: 0.8rem !important; }
+
+  .hero-cta { flex-direction: column; width: 100%; padding: 0 20px; }
+  .hero-cta .btn { width: 100%; }
+
+  .cards-row { grid-template-columns: 1fr; gap: 20px; }
+  .card { padding: 25px 20px; }
+  .card h3 { font-size: 1.4rem; }
+  
+  .steps-row { flex-direction: column; align-items: center; gap: 40px; }
+  .step-col { max-width: 100%; }
+  
+  .auth-card { padding: 30px 20px; margin: 10px; }
+  .auth-header h2 { font-size: 1.8rem; }
+  
+  .mission-strip p { font-size: 1rem; }
+  
+  .qr-mockup-card { padding: 30px 20px !important; }
+  .qr-text { font-size: 1.2rem; }
+
+  /* Dashboard Mobile Overrides */
+  .dash-layout { display: block; }
+  .mobile-menu-btn { display: block !important; }
+  .sidebar {
+    position: fixed;
+    left: -280px;
+    height: 100vh;
+    transition: left 0.3s ease;
+    z-index: 1000;
   }
+  .sidebar.open { left: 0; }
+  .main-content { margin-left: 0 !important; padding: 80px 20px 40px !important; }
 }
 
 .feat-item {
