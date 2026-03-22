@@ -28,7 +28,7 @@ export default function RegisterPage() {
       <div className="auth-card">
         <div className="auth-header">
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
-             <img src="/pham-logo.png" alt="Pharmacy Logo" style={{ height: "60px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
+             <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
           </div>
           <h2>Create Account</h2>
           <p>Register for your secure University profile.</p>
