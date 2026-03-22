@@ -367,24 +367,29 @@ input, select, textarea {
   gap: 8px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.6); /* Brighter text base */
   text-transform: uppercase;
   letter-spacing: 1.5px;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.4); /* Green glow on text */
 }
 
 .f-dot {
-  width: 6px;
-  height: 6px;
-  background: #00ff88; /* Vibrant Green for 'Active/Secure' */
+  width: 8px;
+  height: 8px;
+  background: #00ff88;
   border-radius: 50%;
-  box-shadow: 0 0 12px #00ff88, 0 0 24px rgba(0, 255, 136, 0.3);
-  animation: pulseGreen 2s infinite;
+  box-shadow: 
+    0 0 10px #00ff88,
+    0 0 20px #00ff88,
+    0 0 40px #00ff88,
+    0 0 60px rgba(0, 255, 136, 0.4);
+  animation: intensePulse 1.2s infinite ease-in-out;
 }
 
-@keyframes pulseGreen {
-  0% { transform: scale(1); box-shadow: 0 0 12px #00ff88, 0 0 24px rgba(0, 255, 136, 0.3); }
-  50% { transform: scale(1.2); box-shadow: 0 0 18px #00ff88, 0 0 30px rgba(0, 255, 136, 0.5); }
-  100% { transform: scale(1); box-shadow: 0 0 12px #00ff88, 0 0 24px rgba(0, 255, 136, 0.3); }
+@keyframes intensePulse {
+  0% { transform: scale(1); box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px rgba(0, 255, 136, 0.6); }
+  50% { transform: scale(1.4); box-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88, 0 0 60px #00ff88; }
+  100% { transform: scale(1); box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px rgba(0, 255, 136, 0.6); }
 }
 
 .scroll-indicator {
