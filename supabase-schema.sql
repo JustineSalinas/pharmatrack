@@ -5,6 +5,36 @@
 create extension if not exists "uuid-ossp";
 
 -- ============================================================
+-- SECURITY HELPERS (To avoid RLS recursion)
+-- ============================================================
+
+-- Function to check if the current user is an approved admin
+create or replace function public.is_admin()
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.users
+    where id = auth.uid()
+    and account_type = 'admin'
+    and status = 'approved'
+  );
+end;
+$$ language plpgsql security definer;
+
+-- Function to check if the current user is an approved council member (faculty or admin)
+create or replace function public.is_council()
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.users
+    where id = auth.uid()
+    and account_type in ('faculty', 'admin')
+    and status = 'approved'
+  );
+end;
+$$ language plpgsql security definer;
+
+-- ============================================================
 -- USERS TABLE
 -- ============================================================
 create table if not exists public.users (
@@ -26,9 +56,7 @@ create policy "Users can read their own profile"
 drop policy if exists "Admins can manage all users" on public.users;
 create policy "Admins can manage all users"
   on public.users for all
-  using (
-    exists (select 1 from public.users where id = auth.uid() and account_type = 'admin' and status = 'approved')
-  );
+  using (public.is_admin());
 
 -- ============================================================
 -- STUDENT PROFILES
@@ -53,14 +81,7 @@ create policy "Students can read their own profile"
 drop policy if exists "Admins can read all student profiles" on public.student_profiles;
 create policy "Admins can read all student profiles"
   on public.student_profiles for select
-  using (
-    exists (
-      select 1 from public.users
-      where id = auth.uid()
-      and account_type in ('faculty', 'admin')
-      and status = 'approved'
-    )
-  );
+  using (public.is_council());
 
 -- ============================================================
 -- EVENTS (Council Activities)
@@ -94,9 +115,7 @@ create policy "Everyone can view events"
 drop policy if exists "Admins can manage events" on public.events;
 create policy "Admins can manage events"
   on public.events for all
-  using (
-    exists (select 1 from public.users where id = auth.uid() and account_type = 'admin' and status = 'approved')
-  );
+  using (public.is_admin());
 
 -- ============================================================
 -- ATTENDANCE RECORDS
@@ -128,9 +147,7 @@ create policy "Students can read their own attendance"
 drop policy if exists "Admins can manage attendance" on public.attendance_records;
 create policy "Admins can manage attendance"
   on public.attendance_records for all
-  using (
-    exists (select 1 from public.users where id = auth.uid() and account_type in ('faculty', 'admin') and status = 'approved')
-  );
+  using (public.is_council());
 
 -- ============================================================
 -- VIEWS & ANALYTICS
