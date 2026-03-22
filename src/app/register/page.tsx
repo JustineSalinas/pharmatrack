@@ -69,7 +69,7 @@ export default function RegisterPage() {
                 <label>Student ID Number</label>
                 <input type="text" className="input-field" placeholder="USA-2026-0001" required />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div className="two-col-grid">
                 <div className="input-group">
                   <label>Current Year</label>
                   <select 
