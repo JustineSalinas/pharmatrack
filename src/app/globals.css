@@ -373,11 +373,18 @@ input, select, textarea {
 }
 
 .f-dot {
-  width: 5px;
-  height: 5px;
-  background: var(--gold);
+  width: 6px;
+  height: 6px;
+  background: #00ff88; /* Vibrant Green for 'Active/Secure' */
   border-radius: 50%;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 12px #00ff88, 0 0 24px rgba(0, 255, 136, 0.3);
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(1); box-shadow: 0 0 12px #00ff88, 0 0 24px rgba(0, 255, 136, 0.3); }
+  50% { transform: scale(1.2); box-shadow: 0 0 18px #00ff88, 0 0 30px rgba(0, 255, 136, 0.5); }
+  100% { transform: scale(1); box-shadow: 0 0 12px #00ff88, 0 0 24px rgba(0, 255, 136, 0.3); }
 }
 
 .scroll-indicator {

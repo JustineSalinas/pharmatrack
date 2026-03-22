@@ -103,19 +103,22 @@ export default function LandingPage() {
             <div className="f-item"><div className="f-dot"></div><span>Live Reporting</span></div>
             <div className="f-item"><div className="f-dot"></div><span>Faculty Integration</span></div>
           </div>
+
+          {/* SCROLL INDICATOR */}
+          <div className="scroll-indicator fade-in delay-2">
+            <div 
+              className="scroll-circle" 
+              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+              </svg>
+            </div>
+          </div>
         </section>
 
-      {/* SCROLL INDICATOR */}
-      <div className="scroll-indicator fade-in delay-2">
-        <div className="scroll-circle">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
-          </svg>
-        </div>
-      </div>
-
-      {/* CARDS */}
-      <div className="cards-row fade-in delay-3">
+        {/* CARDS */}
+        <div id="how-it-works" className="cards-row fade-in delay-3">
         <div className="card how-it-works-card">
           <h3 className="section-title">How PharmaTrack System works</h3>
           <div className="steps-row">
@@ -161,7 +164,7 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-        <div className="card">
+        <div id="key-features" className="card">
           <h3>Key Features</h3>
           {[
             { 
@@ -197,7 +200,7 @@ export default function LandingPage() {
         </div>
 
         {/* CUSTOM QR SCANNER MOCKUP */}
-        <div className="card qr-mockup-card">
+        <div id="secure-verification" className="card qr-mockup-card">
           <div className="qr-scanner-frame">
             <div className="qr-scan-line"></div>
             <svg xmlns="http://www.w3.org/2000/svg" className="qr-code-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
