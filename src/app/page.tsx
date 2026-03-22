@@ -66,8 +66,8 @@ export default function LandingPage() {
             <span>PHARMATRACK</span>
           </div>
           <div className="nav-btns">
-            <Link href="/login" className="btn btn-outline" style={{ width: "auto", padding: "9px 20px" }}>Log In</Link>
-            <Link href="/register" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "9px 20px" }}>Sign Up</Link>
+            <Link href="/register" className="btn btn-outline" style={{ width: "auto", padding: "9px 20px" }}>Sign Up</Link>
+            <Link href="/login" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "9px 20px" }}>Log In to Portal</Link>
           </div>
         </nav>
 
@@ -77,12 +77,17 @@ export default function LandingPage() {
             <img src="/usa.png" alt="University of San Agustin Logo" />
           </div>
           <div className="hero-badge">University of San Agustin · Pharmacy Department</div>
-          <h1>PharmaTrack<br /><span style={{ color: "var(--gold)" }}>Attendance Monitoring</span></h1>
+          <h1 style={{ display: "flex", flexDirection: "column", gap: "8px", lineHeight: "1" }}>
+            <span style={{ fontSize: "5rem", fontWeight: "900", letterSpacing: "1px" }}>PHARMATRACK</span>
+            <span style={{ color: "var(--gold)", fontSize: "2.2rem", fontWeight: "600", letterSpacing: "3px" }}>ATTENDANCE MONITORING</span>
+          </h1>
           <Typewriter />
-          <p><i>"Where precision meets purpose and excellence."</i></p>
+          <p style={{ fontSize: "1.3rem", fontWeight: "600", color: "var(--white-shade)", letterSpacing: "0.5px", marginTop: "10px" }}>
+            <i>"Where precision meets purpose and excellence."</i>
+          </p>
         <div className="hero-cta">
-          <Link href="/login" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "16px 40px", fontSize: "1.1rem" }}>
-            Access PharmaTrack Portal
+          <Link href="/register" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "16px 40px", fontSize: "1.1rem" }}>
+            Get Started
           </Link>
         </div>
       </section>
