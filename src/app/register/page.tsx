@@ -1,13 +1,23 @@
 "use client";
 
+import { registerStudent, registerAdmin } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [role, setRole] = useState<"student" | "admin">("student");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [year, setYear] = useState("");
   const [section, setSection] = useState("");
   const [isPending, setIsPending] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const sectionsByYear: Record<string, string[]> = {
     "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
@@ -16,13 +26,44 @@ export default function RegisterPage() {
     "4th Year": ["PH 4A", "PH 4B", "PH 4C", "PH 4D"]
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (role === "admin") {
-      setIsPending(true);
-    } else {
-      // For students, simulate immediate success/redirect
-      window.location.href = "/dashboard";
+    setLoading(true);
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (role === "admin") {
+        await registerAdmin({
+          full_name: fullName,
+          email,
+          password,
+          confirm_password: confirmPassword,
+          account_type: "admin"
+        });
+        setIsPending(true);
+      } else {
+        await registerStudent({
+          full_name: fullName,
+          email,
+          password,
+          confirm_password: confirmPassword,
+          account_type: "student",
+          student_id_number: studentId,
+          section: section,
+          current_year: year
+        });
+        router.push("/dashboard");
+      }
+    } catch (err: any) {
+      setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -87,22 +128,49 @@ export default function RegisterPage() {
               </button>
             </div>
 
+            {error && (
+              <div style={{ backgroundColor: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", padding: "12px", borderRadius: "8px", marginBottom: "20px", textAlign: "center", fontSize: "0.9rem", border: "1px solid rgba(239, 68, 68, 0.3)" }}>
+                {error}
+              </div>
+            )}
+
             <form className="auth-form" onSubmit={handleRegister}>
               <div className="input-group">
                 <label>Full Name</label>
-                <input type="text" className="input-field" placeholder="Juan Dela Cruz" required />
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="Juan Dela Cruz" 
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required 
+                />
               </div>
               
               <div className="input-group">
                 <label>USA Email</label>
-                <input type="email" className="input-field" placeholder="juan@usa.edu.ph" required />
+                <input 
+                  type="email" 
+                  className="input-field" 
+                  placeholder="juan@usa.edu.ph" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required 
+                />
               </div>
 
               {role === "student" && (
                 <>
                   <div className="input-group">
                     <label>Student ID Number</label>
-                    <input type="text" className="input-field" placeholder="USA-2026-0001" required />
+                    <input 
+                      type="text" 
+                      className="input-field" 
+                      placeholder="USA-2026-0001" 
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
+                      required 
+                    />
                   </div>
                   <div className="two-col-grid">
                     <div className="input-group">
@@ -140,16 +208,35 @@ export default function RegisterPage() {
 
               <div className="input-group">
                 <label>Password</label>
-                <input type="password" className="input-field" placeholder="••••••••" required />
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="••••••••" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required 
+                />
               </div>
 
               <div className="input-group">
                 <label>Confirm Password</label>
-                <input type="password" className="input-field" placeholder="••••••••" required />
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="••••••••" 
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required 
+                />
               </div>
               
-              <button type="submit" className="btn btn-gold pulse-btn" style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem" }}>
-                Create {role === "student" ? "Student" : "Admin"} Account
+              <button 
+                type="submit" 
+                className={`btn btn-gold pulse-btn ${loading ? 'opacity-50' : ''}`} 
+                style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem" }}
+                disabled={loading}
+              >
+                {loading ? "Creating Account..." : `Create ${role === "student" ? "Student" : "Admin"} Account`}
               </button>
             </form>
 
