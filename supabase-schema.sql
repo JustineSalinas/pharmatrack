@@ -12,6 +12,7 @@ create table if not exists public.users (
   email       text not null unique,
   full_name   text not null,
   account_type text not null check (account_type in ('student', 'faculty', 'admin')),
+  status      text not null default 'approved' check (status in ('pending', 'approved', 'rejected')),
   created_at  timestamptz default now()
 );
 
