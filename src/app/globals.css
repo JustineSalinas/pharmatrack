@@ -112,8 +112,17 @@ input, select, textarea {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(45, 27, 105, 0.7), rgba(30, 15, 75, 0.8));
+  background: linear-gradient(135deg, rgba(20, 10, 60, 0.75), rgba(10, 5, 30, 0.85));
   z-index: 0;
+}
+
+@keyframes kenBurns {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.1) translate(10px, 10px); }
+}
+
+.animated-bg {
+  animation: kenBurns 40s ease-in-out infinite alternate;
 }
 
 .blob {
@@ -842,41 +851,53 @@ input, select, textarea {
 @media (max-width: 768px) {
   /* LIGHTEN OVERLAY FOR MOBILE: Counteracts high-contrast mobile screen darkened effect */
   .animated-bg::after {
-    background: linear-gradient(135deg, rgba(70, 45, 180, 0.45), rgba(45, 27, 105, 0.55)) !important;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.8), rgba(20, 10, 60, 0.7)) !important;
   }
 
   /* TYPOGRAPHY: Scale and Wrap Fixes */
   .hero h1 { 
-    font-size: clamp(1.8rem, 9vw, 2.6rem) !important; 
-    padding: 0 15px; 
-    line-height: 1.2;
-    letter-spacing: -0.5px;
-    word-break: break-word;
-    margin-bottom: 10px;
+    font-size: 11vw !important; /* Slightly smaller to fit single line */
+    padding: 0 10px; 
+    line-height: 1;
+    letter-spacing: -1px;
+    white-space: nowrap; /* Prevent mid-word breaks */
+    margin-bottom: 5px;
   }
   
-  .hero p { font-size: 1rem !important; padding: 0 20px; line-height: 1.5; margin-bottom: 20px; }
-  .hero-logos img { height: 90px !important; margin-bottom: 10px; }
-  .typewriter-container { font-size: 1.1rem !important; min-height: 48px; }
-
-  /* NAVBAR: Compact and Single-Line where possible */
+  .hero-badge { font-size: 0.75rem !important; padding: 6px 12px !important; }
+  .hero p { font-size: 0.9rem !important; margin-bottom: 15px; }
+  
+  /* Navbar: High-impact compact UI */
   .land-nav { 
-    padding: 12px 16px !important; 
+    padding: 10px 12px !important; 
     top: 10px !important; 
-    margin: 0 15px !important;
-    gap: 15px;
-    border-radius: 12px;
+    margin: 0 10px !important;
+    gap: 10px;
+    justify-content: space-between;
+    flex-direction: row !important; /* Keep it on one line but shrink items */
   }
-  .logo-row { font-size: 1.1rem !important; gap: 8px; flex-shrink: 0; }
-  .logo-row img { height: 28px !important; }
-  .nav-btns { gap: 8px; flex-shrink: 0; }
-  .btn { padding: 8px 12px !important; font-size: 0.8rem !important; border-radius: 8px; }
+  .logo-row { font-size: 1rem !important; gap: 6px; }
+  .logo-row img { height: 24px !important; }
+  .logo-row span { font-size: 0.8rem !important; }
+  
+  .nav-btns { gap: 6px !important; }
+  .btn { 
+    padding: 8px 10px !important; 
+    font-size: 0.7rem !important; 
+    white-space: nowrap;
+    min-width: fit-content !important;
+  }
 
-  /* HERO AREA CTA */
-  .hero-cta { flex-direction: column !important; width: 100%; padding: 0 20px; gap: 12px !important; margin-top: 15px; }
+  .hero-cta { flex-direction: column !important; width: 100%; padding: 0 20px; gap: 12px !important; margin-top: 10px; }
   .hero-cta .btn { width: 100% !important; padding: 18px !important; font-size: 1rem !important; }
 
-  /* CARDS: Fluid Single-Column Layout */
+  /* Section Titles */
+  .attendance-title {
+    font-size: 1.4rem !important;
+    color: var(--gold) !important;
+    margin-top: -5px;
+    letter-spacing: 2px;
+  }
   .cards-row { grid-template-columns: 1fr !important; gap: 16px !important; padding: 0 10px; }
   .card { padding: 30px 20px !important; border-radius: 20px !important; gap: 16px; }
   .card h3 { font-size: 1.4rem !important; margin-bottom: 8px; }
