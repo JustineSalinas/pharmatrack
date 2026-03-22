@@ -67,8 +67,8 @@ export default function LandingPage() {
             <span>PHARMATRACK</span>
           </div>
           <div className="nav-btns">
-            <Link href="/register" className="btn btn-outline" style={{ width: "auto", padding: "9px 20px" }}>Sign Up</Link>
-            <Link href="/login" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "9px 20px" }}>Log In to Portal</Link>
+            <Link href="/login" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "9px 18px" }}>Log In to Portal</Link>
+            <Link href="/register" className="btn btn-outline" style={{ width: "auto", padding: "9px 18px" }}>Sign Up</Link>
           </div>
         </nav>
 

@@ -248,9 +248,9 @@ input, select, textarea {
 }
 
 .btn-gold {
-  background: linear-gradient(135deg, #FFDF00, #E8C84A);
+  background: linear-gradient(135deg, #FFEF82, #F5D96B);
   color: #1a1a1a;
-  box-shadow: 0 0 15px rgba(232, 200, 74, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 15px rgba(232, 200, 74, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.6);
   font-weight: 700;
   letter-spacing: 0.5px;
 }
@@ -910,10 +910,11 @@ input, select, textarea {
 
   /* Section Titles */
   .attendance-title {
-    font-size: 1.4rem !important;
+    font-size: 5vw !important; /* Shrunk significantly to fit one line */
     color: var(--gold) !important;
     margin-top: -5px;
     letter-spacing: 2px;
+    white-space: nowrap;
   }
   .cards-row { grid-template-columns: 1fr !important; gap: 16px !important; padding: 0 10px; }
   .card { padding: 30px 20px !important; border-radius: 20px !important; gap: 16px; }
