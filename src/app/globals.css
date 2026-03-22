@@ -154,6 +154,18 @@ input, select, textarea {
   animation-delay: -10s;
 }
 
+.hero-dark-spot {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100vw;
+  height: 60vh;
+  background: radial-gradient(ellipse at center, rgba(10, 5, 25, 0.65) 0%, transparent 60%);
+  z-index: 2;
+  pointer-events: none;
+}
+
 @keyframes floatBlobs {
   0% { transform: translate(0, 0) scale(1); }
   33% { transform: translate(8vw, 6vh) scale(1.1); }
@@ -457,12 +469,30 @@ input, select, textarea {
   background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
 }
 
-/* --- STATIC COLORS --- */
-.static-blue .step-icon-box, .static-blue .feat-icon { color: #38BDF8; border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 4px 16px rgba(56, 189, 248, 0.15), inset 0 1px 2px rgba(56, 189, 248, 0.2); }
-.static-blue strong, .static-blue h4 { color: #38BDF8; }
+/* --- STATIC THEMATIC COLORS --- */
+/* 1. REGISTER: Trust Blue */
+.static-color-register .step-icon-box, .static-color-register .feat-icon { color: #38BDF8; border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 4px 16px rgba(56, 189, 248, 0.15), inset 0 1px 2px rgba(56, 189, 248, 0.2); }
+.static-color-register strong, .static-color-register h4 { color: #38BDF8; }
 
-.static-pink .step-icon-box, .static-pink .feat-icon { color: #F472B6; border-color: rgba(244, 114, 182, 0.4); box-shadow: 0 4px 16px rgba(244, 114, 182, 0.15), inset 0 1px 2px rgba(244, 114, 182, 0.2); }
-.static-pink strong, .static-pink h4 { color: #F472B6; }
+/* 2. SCAN: Mint Green */
+.static-color-scan .step-icon-box, .static-color-scan .feat-icon { color: #34D399; border-color: rgba(52, 211, 153, 0.4); box-shadow: 0 4px 16px rgba(52, 211, 153, 0.15), inset 0 1px 2px rgba(52, 211, 153, 0.2); }
+.static-color-scan strong, .static-color-scan h4 { color: #34D399; }
+
+/* 3. TRACK: Analytics Purple */
+.static-color-track .step-icon-box, .static-color-track .feat-icon { color: #A78BFA; border-color: rgba(167, 139, 250, 0.4); box-shadow: 0 4px 16px rgba(167, 139, 250, 0.15), inset 0 1px 2px rgba(167, 139, 250, 0.2); }
+.static-color-track strong, .static-color-track h4 { color: #A78BFA; }
+
+/* 4. AUTO REPORTING: Magic Pink */
+.static-color-auto .step-icon-box, .static-color-auto .feat-icon { color: #EC4899; border-color: rgba(236, 72, 153, 0.4); box-shadow: 0 4px 16px rgba(236, 72, 153, 0.15), inset 0 1px 2px rgba(236, 72, 153, 0.2); }
+.static-color-auto strong, .static-color-auto h4 { color: #EC4899; }
+
+/* 5. LIVE DATA: Live Orange */
+.static-color-live .step-icon-box, .static-color-live .feat-icon { color: #F97316; border-color: rgba(249, 115, 22, 0.4); box-shadow: 0 4px 16px rgba(249, 115, 22, 0.15), inset 0 1px 2px rgba(249, 115, 22, 0.2); }
+.static-color-live strong, .static-color-live h4 { color: #F97316; }
+
+/* 6. EXACT ACCURACY: Precision Ruby */
+.static-color-exact .step-icon-box, .static-color-exact .feat-icon { color: #F43F5E; border-color: rgba(244, 63, 94, 0.4); box-shadow: 0 4px 16px rgba(244, 63, 94, 0.15), inset 0 1px 2px rgba(244, 63, 94, 0.2); }
+.static-color-exact strong, .static-color-exact h4 { color: #F43F5E; }
 
 .step-col strong, .feat-item h4 {
   transition: all 0.3s ease;
