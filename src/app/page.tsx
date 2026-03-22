@@ -56,6 +56,7 @@ export default function LandingPage() {
         <div className="blob blob-1"></div>
         <div className="blob blob-2"></div>
         <div className="blob blob-3"></div>
+        <div className="hero-dark-spot"></div>
       </div>
 
       <div className="landing page-enter">
@@ -115,7 +116,7 @@ export default function LandingPage() {
                 ),
                 step: "1. REGISTER",
                 desc: "Create your profile with official credentials.",
-                hClass: "static-blue"
+                hClass: "static-color-register"
               },
               {
                 icon: (
@@ -125,7 +126,7 @@ export default function LandingPage() {
                 ),
                 step: "2. SCAN",
                 desc: "Scan a secure QR code to mark your presence.",
-                hClass: "static-blue"
+                hClass: "static-color-scan"
               },
               {
                 icon: (
@@ -135,7 +136,7 @@ export default function LandingPage() {
                 ),
                 step: "3. TRACK",
                 desc: "View real-time attendance history and trends.",
-                hClass: "static-blue"
+                hClass: "static-color-track"
               },
             ].map((s) => (
               <div className={`step-col ${s.hClass}`} key={s.step}>
@@ -157,7 +158,7 @@ export default function LandingPage() {
               ), 
               title: "Automated Reporting", 
               desc: "Generate ready-to-use analysis.",
-              hClass: "static-pink"
+              hClass: "static-color-auto"
             },
             { 
               icon: (
@@ -165,7 +166,7 @@ export default function LandingPage() {
               ), 
               title: "Real-time Data", 
               desc: "Up-to-the-minute tracking.",
-              hClass: "static-pink"
+              hClass: "static-color-live"
             },
             { 
               icon: (
@@ -173,7 +174,7 @@ export default function LandingPage() {
               ), 
               title: "Precision and Accuracy", 
               desc: "Error-free records.",
-              hClass: "static-pink"
+              hClass: "static-color-exact"
             },
           ].map((f) => (
             <div className={`feat-item ${f.hClass}`} key={f.title}>
