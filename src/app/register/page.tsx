@@ -4,6 +4,14 @@ import Link from "next/link";
 
 export default function RegisterPage() {
   return (
+    <>
+      {/* ANIMATED BACKGROUND (DARKER) */}
+      <div className="animated-bg darker">
+        <div className="blob blob-1 darker"></div>
+        <div className="blob blob-2 darker"></div>
+        <div className="blob blob-3 darker"></div>
+      </div>
+
     <div className="auth-page fade-in">
       <div className="auth-card">
         <div className="auth-header">
@@ -42,5 +50,6 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
