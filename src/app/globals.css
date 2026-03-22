@@ -227,14 +227,17 @@ input, select, textarea {
 }
 
 .btn-gold {
-  background: var(--gold);
+  background: linear-gradient(135deg, #FFDF00, #E8C84A);
   color: #1a1a1a;
-  box-shadow: 0 4px 14px var(--gold-dim);
+  box-shadow: 0 0 15px rgba(232, 200, 74, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn-gold:hover {
-  background: var(--gold2);
-  box-shadow: 0 6px 20px rgba(232, 200, 74, 0.3);
+  background: linear-gradient(135deg, #FFF066, #FFEC8B);
+  box-shadow: 0 0 25px rgba(255, 223, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.7);
 }
 
 .hero {
@@ -717,9 +720,10 @@ input, select, textarea {
 }
 
 .role-btn.active {
-  background: var(--gold);
-  color: var(--bg);
-  box-shadow: 0 4px 15px rgba(232, 200, 74, 0.3);
+  background: linear-gradient(135deg, #FFDF00, #E8C84A);
+  color: #1a1a1a;
+  box-shadow: 0 0 15px rgba(232, 200, 74, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  font-weight: 800;
 }
 
 .auth-form {
@@ -809,4 +813,27 @@ input, select, textarea {
   .hero-cta { flex-direction: column; }
   .land-nav { flex-direction: column; gap: 16px; position: relative; top: 0; margin: 0; padding: 20px; border-radius: 12px; }
   .mission-strip p { font-size: 1.1rem; }
+}
+
+/* Auth Pages & Form Responsiveness */
+.two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .auth-card {
+    padding: 30px 20px;
+  }
+  .auth-header h2 {
+    font-size: 1.8rem;
+  }
+  .input-field, .select-field {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+  .two-col-grid {
+    grid-template-columns: 1fr;
+  }
 }
