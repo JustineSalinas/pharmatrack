@@ -855,6 +855,12 @@ input, select, textarea {
   text-decoration: underline;
 }
 
+.two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
 /* ============================================================ */
 /* RESPONSIVE OVERRIDES (MOBILE & TABLET) */
 /* ============================================================ */
@@ -929,7 +935,8 @@ input, select, textarea {
   .auth-card { padding: 35px 20px !important; margin: 0 15px !important; gap: 20px !important; }
   .auth-header h2 { font-size: 1.8rem !important; }
   .auth-header p { font-size: 0.9rem; }
-  .two-col-grid { grid-template-columns: 1fr !important; gap: 15px; }
+  /* Keep Year/Section as 2-cols to save vertical space even on mobile */
+  .two-col-grid { grid-template-columns: 1fr 1fr !important; gap: 10px; }
   
   .mission-strip { padding: 16px 12px; margin-bottom: 30px; }
   .mission-strip p { font-size: 1.1rem !important; }
