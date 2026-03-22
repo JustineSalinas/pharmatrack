@@ -1,91 +1,220 @@
 "use client";
-import { useState } from "react";
-import Scanner from "@/components/Scanner";
 
-export default function PharmaTrackPortal() {
-  const [studentId, setStudentId] = useState("");
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+import Link from "next/link";
+import { useState, useEffect } from "react";
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+const Typewriter = () => {
+  const [text, setText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [loopNum, setLoopNum] = useState(0);
+  const [typingSpeed, setTypingSpeed] = useState(100);
 
-    try {
-      const res = await fetch(`/api/student/profile?id=${studentId}`);
-      const data = await res.json();
-      if (res.ok) setProfile(data);
-      else setError(data.error || "Student not found");
-    } catch (err) {
-      setError("Connection error");
-    } finally {
-      setLoading(false);
+  const phrases = [
+    "\"Maayong adlaw, future Pharmacists!\"",
+    "\"Malipayon nga pag-abot sa PharmaTrack!\"",
+    "\"Padayon, mga Augustinians!\""
+  ];
+
+  useEffect(() => {
+    let timer = setTimeout(() => {
+      handleType();
+    }, typingSpeed);
+    return () => clearTimeout(timer);
+  }, [text, isDeleting, typingSpeed]);
+
+  const handleType = () => {
+    const i = loopNum % phrases.length;
+    const fullText = phrases[i];
+
+    setText(isDeleting ? fullText.substring(0, text.length - 1) : fullText.substring(0, text.length + 1));
+
+    setTypingSpeed(isDeleting ? 40 : 80);
+
+    if (!isDeleting && text === fullText) {
+      setTimeout(() => setIsDeleting(true), 2500);
+      setTypingSpeed(2500);
+    } else if (isDeleting && text === "") {
+      setIsDeleting(false);
+      setLoopNum(loopNum + 1);
+      setTypingSpeed(500);
     }
   };
 
   return (
-    <main className="min-h-screen bg-augustinian-gradient flex flex-col items-center justify-center p-6 text-white font-sans">
-      
-      {!profile ? (
-        /* --- FIGMA LOGIN VIEW --- */
-        <div className="glass-card max-w-md w-full p-10 animate-in fade-in zoom-in duration-500">
-          <div className="text-center mb-10">
-            <h1 className="text-4xl font-black tracking-tighter mb-2">PHARMATRACK</h1>
-            <p className="text-[#f5dc8c] text-xs font-bold uppercase tracking-[0.3em]">Attendance Monitoring</p>
-          </div>
+    <div className="typewriter-container">
+      <span className="typewriter-text">{text}</span>
+      <span className="cursor">|</span>
+    </div>
+  );
+};
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Student ID Number</label>
-              <input 
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-[#f5dc8c]/50 transition-all placeholder:text-white/20"
-                placeholder="2024-XXXXX-USA"
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value.toUpperCase())}
-                required
-              />
-              {error && <p className="text-red-400 text-[10px] font-bold animate-pulse">⚠️ {error}</p>}
+export default function LandingPage() {
+  return (
+    <>
+      {/* ANIMATED BACKGROUND */}
+      <div className="animated-bg">
+        <div className="blob blob-1"></div>
+        <div className="blob blob-2"></div>
+        <div className="blob blob-3"></div>
+      </div>
+
+      <div className="landing page-enter">
+        {/* NAV */}
+        <nav className="land-nav fade-in">
+          <div className="logo-row">
+            <img src="/pham-logo.png" alt="Pharmacy Logo" style={{ height: "46px", width: "auto", objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.5))" }} />
+            <span>PHARMATRACK</span>
+          </div>
+          <div className="nav-btns">
+            <Link href="/login" className="btn btn-outline" style={{ width: "auto", padding: "9px 20px" }}>Log In</Link>
+            <Link href="/register" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "9px 20px" }}>Sign Up</Link>
+          </div>
+        </nav>
+
+        {/* HERO */}
+        <section className="hero fade-in delay-1">
+          <div className="hero-logos">
+            <img src="/usa.png" alt="University of San Agustin Logo" />
+          </div>
+          <div className="hero-badge">University of San Agustin · Pharmacy Department</div>
+          <h1>PharmaTrack<br /><span style={{ color: "var(--gold)" }}>Attendance Monitoring</span></h1>
+          <Typewriter />
+          <p><i>"Where precision meets purpose and excellence."</i></p>
+        <div className="hero-cta">
+          <Link href="/login" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "16px 40px", fontSize: "1.1rem" }}>
+            Access PharmaTrack Portal
+          </Link>
+        </div>
+      </section>
+
+      {/* SCROLL INDICATOR */}
+      <div className="scroll-indicator fade-in delay-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bounce">
+          <path d="M12 5v14M19 12l-7 7-7-7"/>
+        </svg>
+      </div>
+
+      {/* CARDS */}
+      <div className="cards-row fade-in delay-3">
+        <div className="card how-it-works-card">
+          <h3 className="section-title">How PharmaTrack System works</h3>
+          <div className="steps-row">
+            {[
+              {
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                ),
+                step: "1. REGISTER",
+                desc: "Create your profile with official credentials.",
+                hClass: "hover-indigo"
+              },
+              {
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                  </svg>
+                ),
+                step: "2. SCAN",
+                desc: "Scan a secure QR code to mark your presence.",
+                hClass: "hover-success"
+              },
+              {
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/>
+                  </svg>
+                ),
+                step: "3. TRACK",
+                desc: "View real-time attendance history and trends.",
+                hClass: "hover-gold"
+              },
+            ].map((s) => (
+              <div className={`step-col ${s.hClass}`} key={s.step}>
+                <div className="step-icon-box">
+                  {s.icon}
+                </div>
+                <strong>{s.step}</strong>
+                <p>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card">
+          <h3>Key Features</h3>
+          {[
+            { 
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              ), 
+              title: "Automated Reporting", 
+              desc: "Generate ready-to-use analysis.",
+              hClass: "hover-gold"
+            },
+            { 
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              ), 
+              title: "Real-time Data", 
+              desc: "Up-to-the-minute tracking.",
+              hClass: "hover-success"
+            },
+            { 
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              ), 
+              title: "Precision and Accuracy", 
+              desc: "Error-free records.",
+              hClass: "hover-danger"
+            },
+          ].map((f) => (
+            <div className={`feat-item ${f.hClass}`} key={f.title}>
+              <div className="feat-icon">{f.icon}</div>
+              <div><h4>{f.title}</h4><p>{f.desc}</p></div>
             </div>
-
-            <button disabled={loading} className="btn-gold w-full flex items-center justify-center gap-2">
-              {loading ? "Verifying..." : "Log In"}
-            </button>
-          </form>
-
-          <p className="text-center mt-8 text-[10px] opacity-40 uppercase tracking-widest">
-            University of San Agustin • CPMT
-          </p>
+          ))}
         </div>
-      ) : (
-        /* --- FIGMA SUCCESS / SIGN OUT VIEW --- */
-        <div className="space-y-6 w-full max-w-md animate-in slide-in-from-bottom-8 duration-500">
-          <div className="glass-card p-10 text-center border-t-4 border-t-[#f5dc8c]">
-             <div className="w-20 h-20 bg-[#f5dc8c] rounded-full mx-auto mb-6 flex items-center justify-center shadow-2xl">
-                <span className="text-4xl">🎓</span>
-             </div>
-             <h2 className="text-2xl font-bold mb-1">Welcome Back,</h2>
-             <h3 className="text-3xl font-black text-[#f5dc8c] mb-2 uppercase tracking-tight">{profile.full_name}</h3>
-             <p className="text-sm opacity-60 italic mb-4">{profile.department || "Pharmacy Student"}</p>
-             <div className="text-[10px] font-mono bg-black/20 py-2 rounded-lg opacity-50 tracking-widest">
-                ID: {profile.student_id}
-             </div>
-          </div>
 
-          {/* Scanner Component for Week 2 */}
-          <div className="glass-card p-6 overflow-hidden">
-             <Scanner eventId="GA-2026-LIVE" />
+        {/* CUSTOM QR SCANNER MOCKUP */}
+        <div className="card qr-mockup-card">
+          <div className="qr-scanner-frame">
+            <div className="qr-scan-line"></div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="qr-code-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+              <rect x="6" y="6" width="1" height="1"></rect>
+              <rect x="17" y="6" width="1" height="1"></rect>
+              <rect x="17" y="17" width="1" height="1"></rect>
+              <rect x="6" y="17" width="1" height="1"></rect>
+            </svg>
           </div>
-          
-          <button 
-            onClick={() => { setProfile(null); setStudentId(""); }} 
-            className="w-full py-4 rounded-xl border border-white/20 font-bold hover:bg-white/5 transition-colors uppercase tracking-widest text-xs"
-          >
-            Sign Out
-          </button>
+          <div className="qr-info">
+            <h3 className="qr-text">Secure Verification</h3>
+            <p className="qr-sub">Scan your official USA ID to instantly log your attendance with absolute precision.</p>
+          </div>
         </div>
-      )}
-    </main>
+      </div>
+
+      <footer className="land-footer">
+        <span style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: "600", color: "var(--white)" }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+            <rect x="6" y="6" width="1" height="1"></rect>
+            <rect x="17" y="6" width="1" height="1"></rect>
+            <rect x="17" y="17" width="1" height="1"></rect>
+            <rect x="6" y="17" width="1" height="1"></rect>
+          </svg>
+          USA - Attendance System
+        </span>
+        <span>© 2026 University of San Agustin - Pharmacy Department. All rights reserved.</span>
+      </footer>
+    </div>
+    </>
   );
 }

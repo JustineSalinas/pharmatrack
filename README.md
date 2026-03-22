@@ -1,59 +1,112 @@
-# PharmaTrack | Attendance System
+# ⚗️ PharmaTrack — Attendance Monitoring System
 
-*Version:* 1.0.0-Beta   
-*Institution:* University of San Agustin - Iloilo City  
-
-Welcome to the development branch. This system is designed to automate attendance for 700+ CPMT students using encrypted QR codes and Supabase Real-Time tracking.
+QR-based attendance tracking for the University of San Agustin Pharmacy Department.
 
 ---
 
-## System Architecture
+## 🗂 Project Structure
 
-- *Frontend:* Next.js 15 (App Router)
-- *Styling:* Tailwind CSS
-- *Database:* Supabase (PostgreSQL)
-- *Authentication:* Supabase Auth
-- *Scanner:* Html5-Qrcode (Browser-based)
+```
+src/
+├── app/
+│   ├── page.tsx                        # Landing page
+│   ├── layout.tsx                      # Root layout
+│   ├── globals.css                     # Design system & global styles
+│   ├── login/page.tsx                  # Student/Faculty login
+│   ├── register/page.tsx               # Registration (Student & Faculty)
+│   ├── check-in/page.tsx               # QR check-in page (student)
+│   ├── dashboard/
+│   │   ├── layout.tsx                  # Student dashboard layout (sidebar)
+│   │   ├── page.tsx                    # Student overview
+│   │   ├── records/page.tsx            # Attendance history
+│   │   ├── schedule/page.tsx           # Class schedule
+│   │   ├── profile/page.tsx            # Student profile
+│   │   ├── notifications/page.tsx      # Notifications
+│   │   ├── faculty/
+│   │   │   ├── layout.tsx              # Faculty sidebar layout
+│   │   │   ├── page.tsx                # Faculty overview
+│   │   │   ├── generate/page.tsx       # QR code generator
+│   │   │   ├── students/page.tsx       # Student management
+│   │   │   └── reports/page.tsx        # Reports & analytics
+│   │   └── admin/
+│   │       ├── layout.tsx              # Admin sidebar layout
+│   │       ├── page.tsx                # Admin dashboard
+│   │       ├── users/page.tsx          # User management
+│   │       ├── attendance/page.tsx     # Attendance logs
+│   │       ├── reports/page.tsx        # Analytics
+│   │       └── settings/page.tsx       # System settings
+│   └── api/
+│       ├── auth/[...all]/route.ts      # Auth API (login/register/logout)
+│       └── student/profile/route.ts   # Student profile & attendance API
+├── components/
+│   ├── Scanner.tsx                     # QR scanner component
+│   └── Sidebar.tsx                     # Role-aware sidebar nav
+└── lib/
+    ├── schema.ts                       # TypeScript DB types
+    ├── supabase.ts                     # Supabase client
+    ├── auth.ts                         # Server-side auth helpers
+    ├── auth-client.ts                  # Client-side auth utilities
+    └── validations.ts                  # Zod validation schemas
+```
 
 ---
 
-## Team Roles & Responsibilities
+## 🚀 Quick Start
 
-### Adrian Salinas (Project Manager / Lead Backend)
-- *Primary Task:* Develop the **Project Infrastructure & Security Oversight.**.
-- *Focus:* Maintain the main branch, manage **GitHub repository permissions**, and resolve merge conflicts.**
-- *Logic:* Architect the relational database schema in Supabase and enforce **Row Level Security (RLS)** to protect student data privacy.
-
-### Matthew Tabat (Frontend Lead)
-- *Primary Task:* Build the **Student Dashboard**.
-- *Focus:* Create the UI in `src/app/dashboard/page.tsx`.
-- *Logic:* Fetch `full_name` and `qr_code_string` from the `profiles` table and render the QR code using `react-qr-code`.
-
-### Alexander Tolosa (Scanner & Integration)
-- **Primary Task:* Build the **Admin Scanner**.
-- *Focus:* Develop the logic in `src/components/Scanner.tsx`.
-- *Logic:* Implement the camera feed. On a successful scan, trigger a function that inserts a row into the `attendance` table.
-
-### Tways & Herminio (Backend & Analytics)
-- *Primary Task:* **Attendance Logic & Reporting**.
-- *Focus:* Create a "Live Event View" for the Council Officers.
-- *Logic:* Use **Supabase Real-Time** to show a live count of students who have checked in. Calculate "Late" status based on the `grace_period_minutes` in the `events` table.
-
----
-Figma Wireframe and Design: https://www.figma.com/site/ckOv3NzIUmG1V0aljtXAFD/Untitled?node-id=0-1&t=yMDFdrphBjwnLn36-1
-
-## Getting Started
-
-### 1. Prerequisites
-Ensure you have the following installed:
-- **Node.js** (v20 or higher)
-- **Git**
-- **VS Code** (Extensions: ESLint, Tailwind CSS, Prettier)
-
-### 2. Initial Setup
+### 1. Install dependencies
 ```bash
-# Clone the repository
-git clone [https://github.com/JustineSalinas/pharmatrack.git](https://github.com/JustineSalinas/pharmatrack.git)
-
-# Install dependencies
 npm install
+```
+
+### 2. Set up Supabase
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to **SQL Editor** and run `schema.sql` (included in this repo)
+3. Copy your project URL and keys
+
+### 3. Configure environment
+```bash
+cp .env.example .env.local
+```
+Fill in your Supabase credentials:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+### 4. Run the dev server
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 👥 User Roles
+
+| Role | Access |
+|------|--------|
+| **Student** | Check-in via QR, view own attendance records & schedule |
+| **Faculty** | Generate QR sessions, view class attendance, manage students, export reports |
+| **Admin** | Full system access, user management, system-wide analytics |
+
+---
+
+## 🔑 Flow
+
+1. **Faculty** creates a timed QR session for a subject/section
+2. **Students** scan the QR code (or enter the session code manually)
+3. Attendance is recorded automatically with timestamp
+4. Late arrivals (after 7:35 AM) are marked as **LATE**
+5. Faculty & Admin can view reports and export CSV/PDF
+
+---
+
+## 🛠 Tech Stack
+
+- **Next.js 14** (App Router)
+- **Supabase** (Auth + PostgreSQL)
+- **TypeScript**
+- **Zod** (validation)
+- **Custom CSS** (no Tailwind — full design system in `globals.css`)
