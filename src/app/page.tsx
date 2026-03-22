@@ -108,7 +108,7 @@ export default function LandingPage() {
                 ),
                 step: "1. REGISTER",
                 desc: "Create your profile with official credentials.",
-                hClass: "hover-indigo"
+                hClass: "color-register"
               },
               {
                 icon: (
@@ -118,7 +118,7 @@ export default function LandingPage() {
                 ),
                 step: "2. SCAN",
                 desc: "Scan a secure QR code to mark your presence.",
-                hClass: "hover-success"
+                hClass: "color-scan"
               },
               {
                 icon: (
@@ -128,7 +128,7 @@ export default function LandingPage() {
                 ),
                 step: "3. TRACK",
                 desc: "View real-time attendance history and trends.",
-                hClass: "hover-gold"
+                hClass: "color-track"
               },
             ].map((s) => (
               <div className={`step-col ${s.hClass}`} key={s.step}>
@@ -150,7 +150,7 @@ export default function LandingPage() {
               ), 
               title: "Automated Reporting", 
               desc: "Generate ready-to-use analysis.",
-              hClass: "hover-gold"
+              hClass: "color-auto"
             },
             { 
               icon: (
@@ -158,7 +158,7 @@ export default function LandingPage() {
               ), 
               title: "Real-time Data", 
               desc: "Up-to-the-minute tracking.",
-              hClass: "hover-success"
+              hClass: "color-live"
             },
             { 
               icon: (
@@ -166,7 +166,7 @@ export default function LandingPage() {
               ), 
               title: "Precision and Accuracy", 
               desc: "Error-free records.",
-              hClass: "hover-danger"
+              hClass: "color-exact"
             },
           ].map((f) => (
             <div className={`feat-item ${f.hClass}`} key={f.title}>
