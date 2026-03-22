@@ -889,7 +889,7 @@ input, select, textarea {
   .hero-badge { 
     font-size: 0.8rem !important; 
     padding: 8px 14px !important; 
-    background: rgba(0, 0, 0, 0.6) !important;
+    background: rgba(0, 0, 0, 0.45) !important;
     font-weight: 800 !important;
     letter-spacing: 0.5px !important;
   }
