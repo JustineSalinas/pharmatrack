@@ -655,6 +655,35 @@ input, select, textarea {
   font-size: 0.95rem;
 }
 
+/* ROLE TOGGLE STYLES */
+.role-toggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 25px;
+}
+
+.role-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.role-btn.active {
+  background: var(--gold);
+  color: var(--bg);
+  box-shadow: 0 4px 15px rgba(232, 200, 74, 0.3);
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;
