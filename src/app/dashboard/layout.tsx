@@ -1,28 +1,78 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { logoutUser } from "@/lib/auth-client";
+import { usePathname, useRouter } from "next/navigation";
+import { logoutUser, getCurrentUser } from "@/lib/auth-client";
 
 const studentNav = [
   { href: "/dashboard", label: "Overview", icon: "🏠" },
-  { href: "/check-in", label: "Check-In", icon: "📷" },
   { href: "/dashboard/records", label: "My Records", icon: "📋" },
-  { href: "/dashboard/schedule", label: "Schedule", icon: "🗓️" },
+  { href: "/dashboard/schedule", label: "Events Calendar", icon: "🗓️" },
 ];
+
+const adminNav = [
+  { href: "/dashboard", label: "Admin Panel", icon: "⚙️" },
+  { href: "/dashboard/admin/scanner", label: "QR Scanner", icon: "📷" },
+  { href: "/dashboard/admin/events", label: "Manage Events", icon: "📍" },
+  { href: "/dashboard/admin/reports", label: "Attendance Reports", icon: "📊" },
+];
+
 const accountNav = [
   { href: "/dashboard/profile", label: "Profile", icon: "👤" },
-  { href: "/dashboard/notifications", label: "Notifications", icon: "🔔" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const u = await getCurrentUser();
+        if (!u) {
+          router.push("/login");
+          return;
+        }
+        setUser(u);
+      } catch (err) {
+        router.push("/login");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadUser();
+  }, [router]);
 
   const handleLogout = async () => {
     await logoutUser();
-    window.location.href = "/login";
+    router.push("/login");
   };
+
+  if (loading) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "var(--bg)", color: "var(--gold)" }}>
+        <div className="loader">Loading Portal...</div>
+      </div>
+    );
+  }
+
+  // If Admin is pending, show restricted view
+  if (user?.account_type === "admin" && user?.status === "pending") {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center" }}>
+        <div className="card" style={{ maxWidth: "500px" }}>
+          <h2 style={{ color: "var(--gold)" }}>Approval Pending</h2>
+          <p style={{ margin: "20px 0" }}>Your admin account is currently awaiting verification by the Department Head. You will be granted full access once approved.</p>
+          <button onClick={handleLogout} className="btn btn-outline" style={{ width: "100%" }}>Log Out</button>
+        </div>
+      </div>
+    );
+  }
+
+  const navItems = user?.account_type === "admin" ? adminNav : studentNav;
 
   const NavLink = ({ href, label, icon }: { href: string; label: string; icon: string }) => (
     <Link
@@ -50,27 +100,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-logo">
-          <Link href="/" className="logo-row" style={{ margin: 0, justifyContent: "flex-start" }}>
-            <div className="logo-mark" style={{ width: 34, height: 34, fontSize: 14 }}>⚗️</div>
-            <span style={{ fontSize: 13 }}>PHARMATRACK</span>
+          <Link href="/" className="logo-mark" style={{ fontSize: "1.4rem", textDecoration: "none", color: "var(--gold)", fontWeight: "bold", display: "flex", alignItems: "center", gap: "10px" }}>
+            ⚗️ <span style={{ fontSize: "1rem", letterSpacing: "1px" }}>PHARMATRACK</span>
           </Link>
         </div>
         <div className="nav-section">
           <div className="nav-section-label">Main</div>
-          {studentNav.map((n) => <NavLink key={n.href} {...n} />)}
+          {navItems.map((n) => <NavLink key={n.href} {...n} />)}
         </div>
         <div className="nav-section">
-          <div className="nav-section-label">Account</div>
+          <div className="nav-section-label">Settings</div>
           {accountNav.map((n) => <NavLink key={n.href} {...n} />)}
         </div>
         <div className="sidebar-footer">
           <div className="user-chip" onClick={handleLogout} style={{ cursor: "pointer" }}>
-            <div className="avatar">JD</div>
+            <div className="avatar">{user?.full_name?.substring(0, 2).toUpperCase() || "U"}</div>
             <div className="user-info">
-              <strong>Juan Dela Cruz</strong>
-              <span>PharmA · 2nd Year</span>
+              <strong>{user?.full_name || "User"}</strong>
+              <span style={{ textTransform: "capitalize" }}>{user?.account_type}</span>
             </div>
-            <span style={{ color: "var(--muted)" }}>⏻</span>
+            <span style={{ color: "var(--muted)", marginLeft: "auto" }}>⏻</span>
           </div>
         </div>
       </aside>

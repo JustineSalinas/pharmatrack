@@ -65,6 +65,12 @@ export async function logoutUser() {
 export async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data: profile } = await supabase.from("users").select("*").eq("id", user.id).single();
+  
+  const { data: profile } = await supabase
+    .from("users")
+    .select("*, student_profiles(*)")
+    .eq("id", user.id)
+    .single();
+    
   return profile;
 }
