@@ -10,9 +10,10 @@ const Typewriter = () => {
   const [typingSpeed, setTypingSpeed] = useState(100);
 
   const phrases = [
-    "\"Maayong adlaw, future Pharmacists!\"",
-    "\"Malipayon nga pag-abot sa PharmaTrack!\"",
-    "\"Padayon, mga Augustinians!\""
+    "\"Professional Pharmacy Solutions.\"",
+    "\"Precision Attendance Tracking.\"",
+    "\"Official Augustinian Platform.\"",
+    "\"Real-time Cloud Analytics.\""
   ];
 
   useEffect(() => {
@@ -51,6 +52,7 @@ const Typewriter = () => {
 export default function LandingPage() {
   return (
     <>
+      <div className="hero-watermark"></div>
       {/* ANIMATED BACKGROUND */}
       <div className="animated-bg">
         <div className="blob blob-1"></div>
@@ -89,19 +91,27 @@ export default function LandingPage() {
 
           <div className="hero-cta">
             <Link href="/login" className="btn btn-gold pulse-btn" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>
-              Get Started Now
+              Go to Scanner
             </Link>
             <Link href="/register" className="btn btn-outline" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>
-              Create Account
+              Create Student Account
             </Link>
+          </div>
+
+          <div className="feature-preview">
+            <div className="f-item"><div className="f-dot"></div><span>Secure QR Identity</span></div>
+            <div className="f-item"><div className="f-dot"></div><span>Live Reporting</span></div>
+            <div className="f-item"><div className="f-dot"></div><span>Faculty Integration</span></div>
           </div>
         </section>
 
       {/* SCROLL INDICATOR */}
       <div className="scroll-indicator fade-in delay-2">
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bounce">
-          <path d="M12 5v14M19 12l-7 7-7-7"/>
-        </svg>
+        <div className="scroll-circle">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+          </svg>
+        </div>
       </div>
 
       {/* CARDS */}
