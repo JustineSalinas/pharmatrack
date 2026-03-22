@@ -92,7 +92,7 @@ input, select, textarea {
 
 
 /* Animated Background */
-/* REFINED: Professional Purple Animated Background */
+/* REFINED: Brighter Professional Purple Animated Background */
 .animated-bg {
   position: fixed;
   top: 0;
@@ -101,7 +101,7 @@ input, select, textarea {
   height: 100vh;
   z-index: -1;
   overflow: hidden;
-  background-color: #0d061a; /* Deep midnight purple base */
+  background-color: #1a0b36; /* Slightly brighter purple base */
   pointer-events: none;
 }
 
@@ -116,7 +116,7 @@ input, select, textarea {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.04; /* Ultra-subtle institutional watermark */
+  opacity: 0.05; /* Slightly more visible institutional watermark */
   pointer-events: none;
   z-index: 0;
 }
@@ -125,7 +125,7 @@ input, select, textarea {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(30, 15, 75, 0.4) 0%, rgba(5, 5, 20, 0.9) 100%);
+  background: radial-gradient(circle at center, rgba(60, 30, 150, 0.4) 0%, rgba(15, 10, 40, 0.9) 100%);
   z-index: 2;
 }
 
@@ -381,10 +381,8 @@ input, select, textarea {
 }
 
 .scroll-indicator {
-  position: absolute;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative; /* Relocated to flow within the hero */
+  margin: 60px auto 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -392,6 +390,7 @@ input, select, textarea {
   color: var(--white);
   text-decoration: none;
   z-index: 10;
+  width: fit-content;
 }
 
 .scroll-circle {
