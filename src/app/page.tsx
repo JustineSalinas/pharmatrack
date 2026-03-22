@@ -78,10 +78,8 @@ export default function LandingPage() {
             <img src="/usa.png" alt="University of San Agustin Logo" />
           </div>
           <div className="hero-badge">University of San Agustin · Pharmacy Department</div>
-          <h1 style={{ display: "flex", flexDirection: "column", gap: "16px", lineHeight: "1" }}>
-            <span style={{ fontSize: "5rem", fontWeight: "900", letterSpacing: "1px" }}>PHARMATRACK</span>
-            <span style={{ color: "var(--gold)", fontFamily: '"DM Sans", sans-serif', fontSize: "2.2rem", fontWeight: "800", letterSpacing: "3px" }}>ATTENDANCE MONITORING</span>
-          </h1>
+          <h1 className="hero-title fade-in delay-1">PHARMATRACK</h1>
+          <h2 className="attendance-title fade-in delay-2">ATTENDANCE MONITORING</h2>
           <div style={{ marginBottom: "20px" }}>
             <Typewriter />
           </div>
