@@ -7,9 +7,9 @@
   --surface: rgba(255, 255, 255, 0.07);
   --surface2: rgba(255, 255, 255, 0.12);
   --border: rgba(255, 255, 255, 0.13);
-  --gold: #E8C84A;
-  --gold2: #F5D96B;
-  --gold-dim: rgba(232, 200, 74, 0.15);
+  --gold: #FFD700;
+  --gold2: #FFF700;
+  --gold-dim: rgba(255, 215, 0, 0.15);
   --white: #ffffff;
   --white-shade: rgba(255, 255, 255, 0.9);
   --muted: rgba(255, 255, 255, 0.55);
@@ -248,16 +248,16 @@ input, select, textarea {
 }
 
 .btn-gold {
-  background: linear-gradient(135deg, #FFEF82, #F5D96B);
-  color: #1a1a1a;
-  box-shadow: 0 0 15px rgba(232, 200, 74, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.6);
-  font-weight: 700;
+  background: linear-gradient(135deg, #FFD700, #FFE44D);
+  color: #000000;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  font-weight: 800;
   letter-spacing: 0.5px;
 }
 
 .btn-gold:hover {
-  background: linear-gradient(135deg, #FFF066, #FFEC8B);
-  box-shadow: 0 0 25px rgba(255, 223, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.7);
+  background: linear-gradient(135deg, #FFF700, #FFD700);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.7), inset 0 2px 4px rgba(255, 255, 255, 0.9);
 }
 
 .hero {
@@ -765,9 +765,9 @@ input, select, textarea {
 }
 
 .role-btn.active {
-  background: linear-gradient(135deg, #FFDF00, #E8C84A);
-  color: #1a1a1a;
-  box-shadow: 0 0 15px rgba(232, 200, 74, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  background: linear-gradient(135deg, #FFD700, #FFE44D);
+  color: #000000;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.6);
   font-weight: 800;
 }
 
@@ -866,9 +866,9 @@ input, select, textarea {
 /* ============================================================ */
 
 @media (max-width: 768px) {
-  /* LIGHTEN OVERLAY FOR MOBILE: Counteracts high-contrast mobile screen darkened effect */
+  /* DARK PURPLE BACKGROUND FOR MOBILE: Professional and moody */
   .animated-bg::after {
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.8), rgba(20, 10, 60, 0.7)) !important;
+    background: radial-gradient(circle at center, rgba(45, 27, 105, 0.75) 0%, rgba(15, 8, 40, 0.95) 100%) !important;
   }
 
   /* TYPOGRAPHY: Scale and Wrap Fixes */
