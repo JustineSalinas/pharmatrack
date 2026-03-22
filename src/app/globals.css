@@ -92,7 +92,7 @@ input, select, textarea {
 
 
 /* Animated Background */
-/* Animated Background with Stronger Blur/Darken for content clarity */
+/* REFINED: Professional Purple Animated Background */
 .animated-bg {
   position: fixed;
   top: 0;
@@ -101,21 +101,16 @@ input, select, textarea {
   height: 100vh;
   z-index: -1;
   overflow: hidden;
-  background-color: #0d061a;
-  background-image: url("/bp.png");
-  background-size: cover;
-  background-position: center;
+  background-color: #0d061a; /* Deep midnight purple base */
   pointer-events: none;
-  filter: contrast(0.9) blur(12px) brightness(0.7); /* Professional blur to avoid text competition */
-  opacity: 0.9;
 }
 
 .animated-bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(15, 8, 40, 0.7) 0%, rgba(5, 5, 20, 0.95) 100%);
-  z-index: 1;
+  background: radial-gradient(circle at center, rgba(30, 15, 75, 0.4) 0%, rgba(5, 5, 20, 0.9) 100%);
+  z-index: 2;
 }
 
 @keyframes kenBurns {
@@ -129,20 +124,20 @@ input, select, textarea {
 
 .blob {
   position: absolute;
-  filter: blur(90px) brightness(0.4); /* Darkened the animation exactly by 60% */
+  filter: blur(100px);
   border-radius: 50%;
-  opacity: 0.6; 
-  z-index: 1; 
-  animation: floatBlobs 20s infinite ease-in-out alternate;
+  opacity: 0.25; /* Professional low-opacity for background ambience */
+  z-index: 1;
+  animation: floatBlobs 30s infinite ease-in-out alternate;
 }
 
 .blob-1 {
-  width: 45vw;
-  height: 45vw;
-  background: var(--bg3);
+  width: 60vw;
+  height: 60vw;
+  background: #3d1a7a;
   top: -10%;
   left: -20%;
-  animation-duration: 25s;
+  animation-duration: 35s;
 }
 
 .blob-2 {
@@ -883,7 +878,7 @@ input, select, textarea {
 @media (max-width: 768px) {
   /* DARK PURPLE BACKGROUND FOR MOBILE: Professional and moody */
   .animated-bg::after {
-    background: radial-gradient(circle at center, rgba(45, 27, 105, 0.75) 0%, rgba(15, 8, 40, 0.95) 100%) !important;
+    background: radial-gradient(circle at center, rgba(45, 27, 105, 0.6) 0%, rgba(5, 5, 20, 0.9) 100%) !important;
   }
 
   /* TYPOGRAPHY: Scale and Wrap Fixes */

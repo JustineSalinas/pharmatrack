@@ -73,7 +73,7 @@ export default function LandingPage() {
         </nav>
 
         {/* HERO */}
-        <section className="hero fade-in delay-1" style={{ paddingTop: "12vh" }}>
+        <section className="hero fade-in delay-1" style={{ paddingTop: "6vh" }}>
           <div className="hero-badge">Official Pharmacy Attendance Management System</div>
           
           <h1 className="hero-title">PHARMATRACK</h1>
