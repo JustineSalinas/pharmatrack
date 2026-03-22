@@ -105,6 +105,22 @@ input, select, textarea {
   pointer-events: none;
 }
 
+.hero-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80vh;
+  height: 80vh;
+  background-image: url("/usa.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.04; /* Ultra-subtle institutional watermark */
+  pointer-events: none;
+  z-index: 0;
+}
+
 .animated-bg::after {
   content: "";
   position: absolute;
@@ -249,17 +265,18 @@ input, select, textarea {
 }
 
 .btn-outline {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--white);
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
 .btn-outline:hover {
   background: rgba(255, 255, 255, 0.2);
-  border-color: var(--white);
+  border-color: #fff;
   transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(255,255,255,0.1);
 }
 
 .hero {
@@ -312,21 +329,73 @@ input, select, textarea {
   filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
 }
 
-.attendance-title {
-  color: var(--gold);
-  font-family: var(--font-primary);
-  font-size: clamp(1.2rem, 4vw, 2rem);
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: none; /* Sentence Case Preference */
-  margin-bottom: 40px;
-  opacity: 0.9;
+.scroll-indicator {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--white);
+  text-decoration: none;
+  z-index: 10;
+}
+
+.scroll-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: bounce 2s infinite;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  cursor: pointer;
 }
 
 .hero p {
-  font-size: 1.2rem;
-  color: var(--muted);
-  max-width: 600px;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 650px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+}
+
+/* Feature Preview: High-end teaser strip */
+.feature-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  margin-top: 60px;
+  padding: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.02), transparent);
+}
+
+.f-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.f-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--gold);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 /* Typewriter Effect */
@@ -975,6 +1044,19 @@ input, select, textarea {
   
   .mission-strip { padding: 16px 12px; margin-bottom: 30px; }
   .mission-strip p { font-size: 1.1rem !important; }
+  
+  .scroll-indicator {
+    bottom: 20px !important;
+  }
+  .scroll-circle {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .feature-preview {
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 40px;
+  }
 
   .qr-mockup-card { padding: 40px 20px !important; gap: 24px; }
   .qr-text { font-size: 1.25rem !important; }
