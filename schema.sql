@@ -1,6 +1,5 @@
 -- ============================================================
--- PharmaTrack Database Schema
--- Run this in your Supabase SQL Editor
+-- PharmaTrack Database Schema (Spec v1.0)
 -- ============================================================
 
 -- Enable UUID extension
@@ -9,104 +8,132 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================================
 -- USERS
 -- ============================================================
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS public.users (
   id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email       TEXT NOT NULL UNIQUE,
   full_name   TEXT NOT NULL,
   account_type TEXT NOT NULL CHECK (account_type IN ('student', 'faculty', 'admin')),
+  status      TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
 -- STUDENT PROFILES
 -- ============================================================
-CREATE TABLE student_profiles (
+CREATE TABLE IF NOT EXISTS public.student_profiles (
   id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id             UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   student_id_number   TEXT NOT NULL UNIQUE,
   section             TEXT NOT NULL,
   current_year        TEXT NOT NULL,
+  qr_code_id          TEXT NOT NULL UNIQUE, -- Permanent unique QR identifier
   created_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
--- FACULTY PROFILES
+-- EVENTS (Council Activities)
 -- ============================================================
-CREATE TABLE faculty_profiles (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  department  TEXT NOT NULL DEFAULT 'Pharmacy',
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ============================================================
--- QR SESSIONS (created by faculty)
--- ============================================================
-CREATE TABLE qr_sessions (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  faculty_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  subject     TEXT NOT NULL,
-  section     TEXT NOT NULL,
-  date        DATE NOT NULL,
-  expires_at  TIMESTAMPTZ NOT NULL,
-  code        TEXT NOT NULL UNIQUE,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS public.events (
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name                TEXT NOT NULL,
+  description         TEXT,
+  location            TEXT NOT NULL,
+  date                DATE NOT NULL,
+  
+  check_in_start     TIMESTAMPTZ NOT NULL,
+  check_in_late      TIMESTAMPTZ NOT NULL,
+  check_in_end       TIMESTAMPTZ NOT NULL,
+  
+  check_out_start    TIMESTAMPTZ,
+  check_out_end      TIMESTAMPTZ,
+  
+  created_by         UUID NOT NULL REFERENCES public.users(id),
+  created_at         TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
 -- ATTENDANCE RECORDS
 -- ============================================================
-CREATE TABLE attendance_records (
+CREATE TABLE IF NOT EXISTS public.attendance_records (
   id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  student_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  session_id  UUID NOT NULL REFERENCES qr_sessions(id) ON DELETE CASCADE,
-  status      TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late')),
+  student_id  UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  event_id    UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  
+  status      TEXT NOT NULL CHECK (status IN ('present', 'late', 'absent', 'incomplete')),
+  
   time_in     TIMESTAMPTZ,
   time_out    TIMESTAMPTZ,
-  date        DATE NOT NULL,
-  subject     TEXT NOT NULL,
-  section     TEXT NOT NULL,
+  
+  scanned_by  UUID REFERENCES public.users(id),
   remarks     TEXT DEFAULT '',
   created_at  TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (student_id, session_id)
+  
+  UNIQUE (student_id, event_id)
 );
 
 -- ============================================================
--- ROW LEVEL SECURITY
+-- ROW LEVEL SECURITY (WITH DROP GUARDS)
 -- ============================================================
 
--- Users: read own profile, admin reads all
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can read own data" ON users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Admin reads all users" ON users FOR ALL USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND account_type = 'admin')
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users read own" ON public.users;
+CREATE POLICY "Users read own" ON public.users FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Admins manage all users" ON public.users;
+CREATE POLICY "Admins manage all users" ON public.users FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND account_type = 'admin' AND status = 'approved')
 );
 
--- Student profiles: student reads own
-ALTER TABLE student_profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Student reads own profile" ON student_profiles FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Faculty/admin reads all profiles" ON student_profiles FOR SELECT USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND account_type IN ('faculty','admin'))
+ALTER TABLE public.student_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Student reads own" ON public.student_profiles;
+CREATE POLICY "Student reads own" ON public.student_profiles FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins read all students" ON public.student_profiles;
+CREATE POLICY "Admins read all students" ON public.student_profiles FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND account_type IN ('faculty','admin') AND status = 'approved')
 );
 
--- QR Sessions: faculty creates, everyone authenticated can read
-ALTER TABLE qr_sessions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Faculty creates sessions" ON qr_sessions FOR INSERT WITH CHECK (auth.uid() = faculty_id);
-CREATE POLICY "Authenticated reads sessions" ON qr_sessions FOR SELECT USING (auth.role() = 'authenticated');
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Everyone views events" ON public.events;
+CREATE POLICY "Everyone views events" ON public.events FOR SELECT USING (true);
 
--- Attendance: students insert own, faculty/admin reads all
-ALTER TABLE attendance_records ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Student inserts own attendance" ON attendance_records FOR INSERT WITH CHECK (auth.uid() = student_id);
-CREATE POLICY "Student reads own attendance" ON attendance_records FOR SELECT USING (auth.uid() = student_id);
-CREATE POLICY "Faculty/admin reads all attendance" ON attendance_records FOR SELECT USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND account_type IN ('faculty','admin'))
+DROP POLICY IF EXISTS "Admins manage events" ON public.events;
+CREATE POLICY "Admins manage events" ON public.events FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND account_type = 'admin' AND status = 'approved')
 );
-CREATE POLICY "Faculty/admin updates attendance" ON attendance_records FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND account_type IN ('faculty','admin'))
+
+ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Student reads own attendance" ON public.attendance_records;
+CREATE POLICY "Student reads own attendance" ON public.attendance_records FOR SELECT USING (auth.uid() = student_id);
+
+DROP POLICY IF EXISTS "Admins manage attendance" ON public.attendance_records;
+CREATE POLICY "Admins manage attendance" ON public.attendance_records FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND account_type IN ('faculty','admin') AND status = 'approved')
 );
 
 -- ============================================================
--- SEED: Admin user (update with real UUID after creating via Auth)
+-- VIEWS & ANALYTICS
 -- ============================================================
--- INSERT INTO users (id, email, full_name, account_type)
--- VALUES ('your-admin-uuid-here', 'admin@pharmatrack.edu', 'Administrator', 'admin');
+
+DROP VIEW IF EXISTS public.student_attendance_summary;
+CREATE OR REPLACE VIEW public.student_attendance_summary AS
+SELECT
+  u.id AS student_id,
+  u.full_name,
+  sp.student_id_number,
+  sp.section,
+  sp.current_year,
+  COUNT(*) AS total_events,
+  COUNT(*) FILTER (WHERE ar.status = 'present') AS present_count,
+  COUNT(*) FILTER (WHERE ar.status = 'late') AS late_count,
+  COUNT(*) FILTER (WHERE ar.status = 'absent') AS absent_count,
+  COUNT(*) FILTER (WHERE ar.status = 'incomplete') AS incomplete_count,
+  ROUND(
+    COUNT(*) FILTER (WHERE ar.status IN ('present', 'late'))::NUMERIC / NULLIF(COUNT(*), 0) * 100, 1
+  ) AS attendance_rate
+FROM public.users u
+JOIN public.student_profiles sp ON sp.user_id = u.id
+LEFT JOIN public.attendance_records ar ON ar.student_id = u.id
+WHERE u.account_type = 'student'
+GROUP BY u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year;
+
