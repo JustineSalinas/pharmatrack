@@ -92,6 +92,7 @@ input, select, textarea {
 
 
 /* Animated Background */
+/* Animated Background with Stronger Blur/Darken for content clarity */
 .animated-bg {
   position: fixed;
   top: 0;
@@ -100,20 +101,21 @@ input, select, textarea {
   height: 100vh;
   z-index: -1;
   overflow: hidden;
-  background-color: var(--bg);
-  background-image: url("/bp.png"); /* User will place their image here */
+  background-color: #0d061a;
+  background-image: url("/bp.png");
   background-size: cover;
   background-position: center;
   pointer-events: none;
+  filter: contrast(0.9) blur(12px) brightness(0.7); /* Professional blur to avoid text competition */
+  opacity: 0.9;
 }
 
-/* Dark gradient overlay to blend the building image while keeping text clarity */
 .animated-bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(20, 10, 60, 0.75), rgba(10, 5, 30, 0.85));
-  z-index: 0;
+  background: radial-gradient(circle at center, rgba(15, 8, 40, 0.7) 0%, rgba(5, 5, 20, 0.95) 100%);
+  z-index: 1;
 }
 
 @keyframes kenBurns {
@@ -221,43 +223,48 @@ input, select, textarea {
   gap: 16px;
 }
 
+/* Re-Designed Global Buttons: Primary (Glow) vs Secondary (Outline) */
 .btn {
+  padding: 14px 28px;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  transition: all 0.2s ease;
-  cursor: pointer;
+  gap: 10px;
   border: none;
-}
-
-.btn:hover {
-  transform: translateY(-2px);
-}
-
-.btn-outline {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--white);
-}
-
-.btn-outline:hover {
-  background: var(--surface2);
-  border-color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .btn-gold {
   background: linear-gradient(135deg, #FFD700, #FFE44D);
   color: #000000;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3);
   font-weight: 800;
-  letter-spacing: 0.5px;
 }
 
 .btn-gold:hover {
-  background: linear-gradient(135deg, #FFF700, #FFD700);
-  box-shadow: 0 0 30px rgba(255, 215, 0, 0.7), inset 0 2px 4px rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(255, 215, 0, 0.5);
+  filter: brightness(1.1);
+}
+
+.btn-outline {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--white);
+  transform: translateY(-2px);
 }
 
 .hero {
@@ -300,22 +307,25 @@ input, select, textarea {
 }
 
 .hero-title {
-  font-size: 5rem;
+  font-size: clamp(3.5rem, 10vw, 5.5rem);
   font-weight: 900;
-  letter-spacing: 1px;
-  line-height: 1.1;
+  letter-spacing: -2px;
+  line-height: 0.95;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  margin-bottom: 24px;
+  color: var(--white);
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
 }
 
 .attendance-title {
   color: var(--gold);
-  font-family: 'Montserrat', sans-serif;
-  font-size: 2.2rem;
-  font-weight: 800;
-  letter-spacing: 3px;
-  text-shadow: 0 0 15px rgba(232, 200, 74, 0.4);
-  margin-bottom: 30px;
+  font-family: var(--font-primary);
+  font-size: clamp(1.2rem, 4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: none; /* Sentence Case Preference */
+  margin-bottom: 40px;
+  opacity: 0.9;
 }
 
 .hero p {
@@ -938,7 +948,25 @@ input, select, textarea {
   .step-icon-box { width: 90px !important; height: 90px !important; border-radius: 20px !important; }
 
   /* DASHBOARD MOBILE OVERRIDES */
-  .mobile-menu-btn { display: block !important; top: 18px !important; left: 18px !important; }
+  /* Fixed Floating Menu Button Integration: Professional FAB at bottom-right */
+  .mobile-menu-btn { 
+    display: flex !important; 
+    position: fixed !important; 
+    top: auto !important;
+    left: auto !important;
+    bottom: 24px !important; 
+    right: 24px !important; 
+    width: 60px !important;
+    height: 60px !important;
+    background: var(--gold) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+    z-index: 1001 !important;
+    color: #000 !important;
+    justify-content: center;
+    align-items: center;
+    border: none !important;
+  }
   .sidebar { position: fixed; left: -280px; width: 260px; height: 100%; z-index: 1000; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
   .sidebar.open { left: 0; }
   .main-content { margin-left: 0 !important; padding: 80px 16px 40px !important; }

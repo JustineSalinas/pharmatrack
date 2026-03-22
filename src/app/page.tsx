@@ -63,35 +63,39 @@ export default function LandingPage() {
         {/* NAV */}
         <nav className="land-nav fade-in">
           <div className="logo-row">
-            <img src="/pham-logo.png" alt="Pharmacy Logo" style={{ height: "46px", width: "auto", objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.5))" }} />
-            <span>PHARMATRACK</span>
+            <img src="/pham-logo.png" alt="Pharmacy Logo" style={{ height: "40px", width: "auto", objectFit: "contain" }} />
+            <span style={{ fontWeight: "800", letterSpacing: "1px" }}>PHARMATRACK</span>
           </div>
           <div className="nav-btns">
-            <Link href="/login" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "9px 18px" }}>Log In to Portal</Link>
-            <Link href="/register" className="btn btn-outline" style={{ width: "auto", padding: "9px 18px" }}>Sign Up</Link>
+            <Link href="/login" className="btn btn-gold pulse-btn">Log In</Link>
+            <Link href="/register" className="btn btn-outline">Sign Up</Link>
           </div>
         </nav>
 
         {/* HERO */}
-        <section className="hero fade-in delay-1">
-          <div className="hero-logos">
-            <img src="/usa.png" alt="University of San Agustin Logo" />
-          </div>
-          <div className="hero-badge">University of San Agustin · Pharmacy Department</div>
-          <h1 className="hero-title fade-in delay-1">PHARMATRACK</h1>
-          <h2 className="attendance-title fade-in delay-2">ATTENDANCE MONITORING</h2>
-          <div style={{ marginBottom: "20px" }}>
+        <section className="hero fade-in delay-1" style={{ paddingTop: "12vh" }}>
+          <div className="hero-badge">Official Pharmacy Attendance Management System</div>
+          
+          <h1 className="hero-title">PHARMATRACK</h1>
+          <h2 className="attendance-title">Professional Attendance Monitoring</h2>
+          
+          <div style={{ minHeight: "60px", marginBottom: "30px" }}>
             <Typewriter />
           </div>
-          <p style={{ fontSize: "1.3rem", fontWeight: "600", color: "var(--white-shade)", letterSpacing: "0.5px", marginTop: "10px" }}>
-            <i>"Where precision meets purpose and excellence."</i>
+
+          <p style={{ maxWidth: "600px", margin: "0 auto 40px", fontSize: "1.1rem", color: "var(--white-shade)", lineHeight: "1.6" }}>
+            Seamlessly track student and faculty attendance with high-precision QR scanning and real-time dashboard analytics.
           </p>
-        <div className="hero-cta">
-          <Link href="/register" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "16px 40px", fontSize: "1.1rem" }}>
-            Get Started
-          </Link>
-        </div>
-      </section>
+
+          <div className="hero-cta">
+            <Link href="/login" className="btn btn-gold pulse-btn" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>
+              Get Started Now
+            </Link>
+            <Link href="/register" className="btn btn-outline" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>
+              Create Account
+            </Link>
+          </div>
+        </section>
 
       {/* SCROLL INDICATOR */}
       <div className="scroll-indicator fade-in delay-2">
