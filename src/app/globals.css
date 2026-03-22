@@ -835,37 +835,80 @@ input, select, textarea {
   text-decoration: underline;
 }
 
-@media (max-width: 900px) {
-  .cards-row { grid-template-columns: 1fr; }
-  .qr-mockup-card { padding: 40px 20px !important; }
-}
+/* ============================================================ */
+/* RESPONSIVE OVERRIDES (MOBILE & TABLET) */
+/* ============================================================ */
 
 @media (max-width: 768px) {
-  .hero h1 { font-size: 3rem; }
-  .hero-cta { flex-direction: column; }
-  .land-nav { flex-direction: column; gap: 16px; position: relative; top: 0; margin: 0; padding: 20px; border-radius: 12px; }
-  .mission-strip p { font-size: 1.1rem; }
+  /* LIGHTEN OVERLAY FOR MOBILE: Counteracts high-contrast mobile screen darkened effect */
+  .animated-bg::after {
+    background: linear-gradient(135deg, rgba(70, 45, 180, 0.45), rgba(45, 27, 105, 0.55)) !important;
+  }
+
+  /* TYPOGRAPHY: Scale and Wrap Fixes */
+  .hero h1 { 
+    font-size: clamp(1.8rem, 9vw, 2.6rem) !important; 
+    padding: 0 15px; 
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    word-break: break-word;
+    margin-bottom: 10px;
+  }
+  
+  .hero p { font-size: 1rem !important; padding: 0 20px; line-height: 1.5; margin-bottom: 20px; }
+  .hero-logos img { height: 90px !important; margin-bottom: 10px; }
+  .typewriter-container { font-size: 1.1rem !important; min-height: 48px; }
+
+  /* NAVBAR: Compact and Single-Line where possible */
+  .land-nav { 
+    padding: 12px 16px !important; 
+    top: 10px !important; 
+    margin: 0 15px !important;
+    gap: 15px;
+    border-radius: 12px;
+  }
+  .logo-row { font-size: 1.1rem !important; gap: 8px; flex-shrink: 0; }
+  .logo-row img { height: 28px !important; }
+  .nav-btns { gap: 8px; flex-shrink: 0; }
+  .btn { padding: 8px 12px !important; font-size: 0.8rem !important; border-radius: 8px; }
+
+  /* HERO AREA CTA */
+  .hero-cta { flex-direction: column !important; width: 100%; padding: 0 20px; gap: 12px !important; margin-top: 15px; }
+  .hero-cta .btn { width: 100% !important; padding: 18px !important; font-size: 1rem !important; }
+
+  /* CARDS: Fluid Single-Column Layout */
+  .cards-row { grid-template-columns: 1fr !important; gap: 16px !important; padding: 0 10px; }
+  .card { padding: 30px 20px !important; border-radius: 20px !important; gap: 16px; }
+  .card h3 { font-size: 1.4rem !important; margin-bottom: 8px; }
+  .card p { font-size: 0.95rem; }
+
+  .how-it-works-card .section-title { font-size: 1.6rem !important; margin-bottom: 30px; }
+  .steps-row { flex-direction: column !important; gap: 32px !important; align-items: center; }
+  .step-col { max-width: 100%; }
+  .step-icon-box { width: 90px !important; height: 90px !important; border-radius: 20px !important; }
+
+  /* DASHBOARD MOBILE OVERRIDES */
+  .mobile-menu-btn { display: block !important; top: 18px !important; left: 18px !important; }
+  .sidebar { position: fixed; left: -280px; width: 260px; height: 100%; z-index: 1000; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .sidebar.open { left: 0; }
+  .main-content { margin-left: 0 !important; padding: 80px 16px 40px !important; }
+
+  /* AUTHENTICATION PAGES */
+  .auth-card { padding: 35px 20px !important; margin: 0 15px !important; gap: 20px !important; }
+  .auth-header h2 { font-size: 1.8rem !important; }
+  .auth-header p { font-size: 0.9rem; }
+  .two-col-grid { grid-template-columns: 1fr !important; gap: 15px; }
+  
+  .mission-strip { padding: 16px 12px; margin-bottom: 30px; }
+  .mission-strip p { font-size: 1.1rem !important; }
+
+  .qr-mockup-card { padding: 40px 20px !important; gap: 24px; }
+  .qr-text { font-size: 1.25rem !important; }
+  .qr-scanner-frame { width: 120px !important; height: 120px !important; }
 }
 
-/* Auth Pages & Form Responsiveness */
-.two-col-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+@media (max-width: 1024px) {
+  .cards-row { gap: 24px; }
+  .steps-row { gap: 40px; }
 }
 
-@media (max-width: 600px) {
-  .auth-card {
-    padding: 30px 20px;
-  }
-  .auth-header h2 {
-    font-size: 1.8rem;
-  }
-  .input-field, .select-field {
-    padding: 10px 14px;
-    font-size: 0.9rem;
-  }
-  .two-col-grid {
-    grid-template-columns: 1fr;
-  }
-}
