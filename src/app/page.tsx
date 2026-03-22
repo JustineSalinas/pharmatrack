@@ -77,11 +77,13 @@ export default function LandingPage() {
             <img src="/usa.png" alt="University of San Agustin Logo" />
           </div>
           <div className="hero-badge">University of San Agustin · Pharmacy Department</div>
-          <h1 style={{ display: "flex", flexDirection: "column", gap: "8px", lineHeight: "1" }}>
+          <h1 style={{ display: "flex", flexDirection: "column", gap: "16px", lineHeight: "1" }}>
             <span style={{ fontSize: "5rem", fontWeight: "900", letterSpacing: "1px" }}>PHARMATRACK</span>
-            <span style={{ color: "var(--gold)", fontSize: "2.2rem", fontWeight: "600", letterSpacing: "3px" }}>ATTENDANCE MONITORING</span>
+            <span style={{ color: "var(--gold)", fontFamily: '"DM Sans", sans-serif', fontSize: "2.2rem", fontWeight: "800", letterSpacing: "3px" }}>ATTENDANCE MONITORING</span>
           </h1>
-          <Typewriter />
+          <div style={{ marginBottom: "20px" }}>
+            <Typewriter />
+          </div>
           <p style={{ fontSize: "1.3rem", fontWeight: "600", color: "var(--white-shade)", letterSpacing: "0.5px", marginTop: "10px" }}>
             <i>"Where precision meets purpose and excellence."</i>
           </p>
@@ -113,7 +115,7 @@ export default function LandingPage() {
                 ),
                 step: "1. REGISTER",
                 desc: "Create your profile with official credentials.",
-                hClass: "color-register"
+                hClass: "static-blue"
               },
               {
                 icon: (
@@ -123,7 +125,7 @@ export default function LandingPage() {
                 ),
                 step: "2. SCAN",
                 desc: "Scan a secure QR code to mark your presence.",
-                hClass: "color-scan"
+                hClass: "static-blue"
               },
               {
                 icon: (
@@ -133,7 +135,7 @@ export default function LandingPage() {
                 ),
                 step: "3. TRACK",
                 desc: "View real-time attendance history and trends.",
-                hClass: "color-track"
+                hClass: "static-blue"
               },
             ].map((s) => (
               <div className={`step-col ${s.hClass}`} key={s.step}>
@@ -155,7 +157,7 @@ export default function LandingPage() {
               ), 
               title: "Automated Reporting", 
               desc: "Generate ready-to-use analysis.",
-              hClass: "color-auto"
+              hClass: "static-pink"
             },
             { 
               icon: (
@@ -163,7 +165,7 @@ export default function LandingPage() {
               ), 
               title: "Real-time Data", 
               desc: "Up-to-the-minute tracking.",
-              hClass: "color-live"
+              hClass: "static-pink"
             },
             { 
               icon: (
@@ -171,7 +173,7 @@ export default function LandingPage() {
               ), 
               title: "Precision and Accuracy", 
               desc: "Error-free records.",
-              hClass: "color-exact"
+              hClass: "static-pink"
             },
           ].map((f) => (
             <div className={`feat-item ${f.hClass}`} key={f.title}>
