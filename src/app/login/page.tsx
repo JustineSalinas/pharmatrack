@@ -18,7 +18,7 @@ export default function LoginPage() {
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
             <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
           </div>
-          <h2 style={{ whiteSpace: "nowrap", textAlign: "center" }}>Welcome, Pharmacist!</h2>
+          <h2 style={{ whiteSpace: "nowrap" }}>Welcome, Pharmacist!</h2>
           <p>Access your official PharmaTrack portal.</p>
         </div>
 

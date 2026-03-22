@@ -714,6 +714,14 @@ input, select, textarea {
   font-weight: 800;
 }
 
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  text-align: center;
+  align-items: center;
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;
