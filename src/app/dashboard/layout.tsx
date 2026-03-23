@@ -1,28 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { logoutUser, getCurrentUser } from "@/lib/auth-client";
-
-const studentNav = [
-  { href: "/dashboard", label: "Overview", icon: "🏠" },
-  { href: "/dashboard/records", label: "My Records", icon: "📋" },
-  { href: "/dashboard/schedule", label: "Events Calendar", icon: "🗓️" },
-];
-
-const adminNav = [
-  { href: "/dashboard", label: "Admin Panel", icon: "⚙️" },
-  { href: "/dashboard/admin/scanner", label: "QR Scanner", icon: "📷" },
-  { href: "/dashboard/admin/events", label: "Manage Events", icon: "📍" },
-  { href: "/dashboard/admin/reports", label: "Attendance Reports", icon: "📊" },
-];
-
-const accountNav = [
-  { href: "/dashboard/profile", label: "Profile", icon: "👤" },
-];
+import Sidebar from "@/components/Sidebar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -72,17 +54,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const navItems = user?.account_type === "admin" ? adminNav : studentNav;
-
-  const NavLink = ({ href, label, icon }: { href: string; label: string; icon: string }) => (
-    <Link
-      href={href}
-      className={`nav-item ${pathname === href ? "active" : ""}`}
-      onClick={() => setSidebarOpen(false)}
-    >
-      <span className="ni-icon">{icon}</span> {label}
-    </Link>
-  );
+  const role = user?.account_type || "student";
+  const userName = user?.full_name || "User";
+  const userSub = role === "admin" ? "System Admin" : role === "faculty" ? "Faculty" : "Student";
+  const avatarInitials = typeof userName === "string" ? userName.substring(0, 2).toUpperCase() : "U";
 
   return (
     <div className="dash-layout">
@@ -98,33 +73,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         className="mobile-menu-btn"
       >☰</button>
 
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="sidebar-logo">
-          <Link href="/" className="logo-mark" style={{ fontSize: "1.4rem", textDecoration: "none", color: "var(--gold)", fontWeight: "bold", display: "flex", alignItems: "center", gap: "10px" }}>
-            ⚗️ <span style={{ fontSize: "1rem", letterSpacing: "1px" }}>PHARMATRACK</span>
-          </Link>
-        </div>
-        <div className="nav-section">
-          <div className="nav-section-label">Main</div>
-          {navItems.map((n) => <NavLink key={n.href} {...n} />)}
-        </div>
-        <div className="nav-section">
-          <div className="nav-section-label">Settings</div>
-          {accountNav.map((n) => <NavLink key={n.href} {...n} />)}
-        </div>
-        <div className="sidebar-footer">
-          <div className="user-chip" onClick={handleLogout} style={{ cursor: "pointer" }}>
-            <div className="avatar">{user?.full_name?.substring(0, 2).toUpperCase() || "U"}</div>
-            <div className="user-info">
-              <strong>{user?.full_name || "User"}</strong>
-              <span style={{ textTransform: "capitalize" }}>{user?.account_type}</span>
-            </div>
-            <span style={{ color: "var(--muted)", marginLeft: "auto" }}>⏻</span>
-          </div>
-        </div>
-      </aside>
+      {/* Wrapping Sidebar in a div that controls mobile open state if needed, 
+          though the Sidebar component itself doesn't have the `open` class out of the box. 
+          We'll add a wrapper to apply the class. */}
+      <div className={`sidebar-wrapper ${sidebarOpen ? "open" : ""}`}>
+        <Sidebar 
+          role={role as any} 
+          userName={userName}
+          userSub={userSub}
+          avatarInitials={avatarInitials}
+        />
+      </div>
 
-      <main className="main-content page-enter">{children}</main>
+      <main className="main-content page-enter" onClick={() => { if(sidebarOpen) setSidebarOpen(false); }}>
+        {children}
+      </main>
     </div>
   );
 }
