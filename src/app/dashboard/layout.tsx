@@ -100,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-logo">
-          <Link href="/" className="logo-mark" style={{ fontSize: "1.4rem", textDecoration: "none", color: "var(--gold)", fontWeight: "bold", display: "flex", alignItems: "center", gap: "10px" }}>
+          <Link href={(user?.account_type === "admin" ? "/dashboard/admin" : "/dashboard") as any} className="logo-mark" style={{ fontSize: "1.4rem", textDecoration: "none", color: "var(--gold)", fontWeight: "bold", display: "flex", alignItems: "center", gap: "10px" }}>
             ⚗️ <span style={{ fontSize: "1rem", letterSpacing: "1px" }}>PHARMATRACK</span>
           </Link>
         </div>

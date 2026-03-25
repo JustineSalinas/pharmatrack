@@ -3,7 +3,7 @@
 import { registerStudent, registerAdmin } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -16,8 +16,18 @@ export default function RegisterPage() {
   const [year, setYear] = useState("");
   const [section, setSection] = useState("");
   const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(3);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Auto-redirect countdown after successful student registration
+  useEffect(() => {
+    if (!isSuccess) return;
+    if (countdown <= 0) { router.push("/login"); return; }
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [isSuccess, countdown, router]);
 
   const sectionsByYear: Record<string, string[]> = {
     "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
@@ -58,7 +68,8 @@ export default function RegisterPage() {
           section: section,
           current_year: year
         });
-        router.push("/dashboard");
+        // Destroy session and redirect to login for email verification
+        setIsSuccess(true);
       }
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
@@ -87,6 +98,11 @@ export default function RegisterPage() {
               <h2 style={{ color: "#FBBF24" }}>Pending Approval</h2>
               <p>Your Admin account has been created successfully.</p>
             </>
+          ) : isSuccess ? (
+            <>
+              <h2 style={{ color: "#4ADE80" }}>Account Created!</h2>
+              <p>Redirecting you to login...</p>
+            </>
           ) : (
             <>
               <h2>Create Account</h2>
@@ -106,6 +122,22 @@ export default function RegisterPage() {
             </p>
             <Link href="/login" className="btn btn-gold" style={{ display: "inline-block", width: "100%", textDecoration: "none" }}>
               Return to Login
+            </Link>
+          </div>
+        ) : isSuccess ? (
+          <div className="pending-box fade-in" style={{ textAlign: "center", padding: "20px 0" }}>
+            <div style={{ fontSize: "3rem", marginBottom: "15px" }}>✅</div>
+            <p style={{ color: "var(--white)", marginBottom: "12px", lineHeight: "1.6" }}>
+              Your student account has been <strong>registered successfully</strong>.
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", marginBottom: "30px" }}>
+              Please log in with your credentials to access your dashboard.
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", marginBottom: "16px" }}>
+              Redirecting in {countdown}s...
+            </p>
+            <Link href="/login" className="btn btn-gold" style={{ display: "inline-block", width: "100%", textDecoration: "none" }}>
+              Go to Login Now
             </Link>
           </div>
         ) : (
