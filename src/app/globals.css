@@ -1325,35 +1325,41 @@ textarea {
 
   /* Navbar: Balanced mobile layout */
   .land-nav {
-    padding: 14px 16px !important;
+    padding: 12px 14px !important;
     top: 10px !important;
     margin: 0 12px !important;
-    gap: 12px;
+    gap: 8px;
     justify-content: space-between;
     flex-direction: row !important;
-    border-radius: 16px !important;
+    border-radius: 14px !important;
+    max-width: calc(100vw - 24px) !important;
+    box-sizing: border-box !important;
+    overflow: hidden;
   }
 
   .logo-row {
     font-size: 1rem !important;
-    gap: 8px;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
   .logo-row img {
-    height: 28px !important;
+    height: 26px !important;
   }
 
   .logo-row span {
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.5px !important;
   }
 
   .nav-btns {
-    gap: 8px !important;
+    gap: 6px !important;
+    flex-shrink: 0;
   }
 
-  .btn {
-    padding: 9px 14px !important;
-    font-size: 0.75rem !important;
+  .nav-btns .btn {
+    padding: 8px 12px !important;
+    font-size: 0.72rem !important;
     white-space: nowrap;
     min-width: fit-content !important;
     border-radius: 10px !important;
