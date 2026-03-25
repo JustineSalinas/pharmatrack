@@ -51,10 +51,10 @@ const Typewriter = () => {
 
 export default function LandingPage() {
   return (
-    <>
-      <div className="hero-watermark"></div>
+    <div className="page-wrapper">
       {/* ANIMATED BACKGROUND */}
       <div className="animated-bg">
+        <div className="hero-watermark"></div>
         <div className="blob blob-1"></div>
         <div className="blob blob-2"></div>
         <div className="blob blob-3"></div>
@@ -238,6 +238,6 @@ export default function LandingPage() {
         <span>© 2026 University of San Agustin - Pharmacy Department. All rights reserved.</span>
       </footer>
     </div>
-    </>
+    </div>
   );
 }

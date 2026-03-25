@@ -71,7 +71,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <Link href="/" className="logo-row" style={{ margin: 0, justifyContent: "flex-start" }}>
+        <Link href={(role === "admin" ? "/dashboard/admin" : role === "faculty" ? "/dashboard/faculty" : "/dashboard") as any} className="logo-row" style={{ margin: 0, justifyContent: "flex-start" }}>
           <div className="logo-mark" style={{ width: 34, height: 34, fontSize: 14 }}>⚗️</div>
           <span style={{ fontSize: 13 }}>PHARMATRACK</span>
         </Link>

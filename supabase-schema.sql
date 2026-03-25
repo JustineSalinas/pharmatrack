@@ -96,6 +96,16 @@ create policy "Admins can read all student profiles"
   on public.student_profiles for select
   using (public.is_council());
 
+drop policy if exists "Students can insert their own profile" on public.student_profiles;
+create policy "Students can insert their own profile"
+  on public.student_profiles for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Admins can insert student profiles" on public.student_profiles;
+create policy "Admins can insert student profiles"
+  on public.student_profiles for insert
+  with check (public.is_admin());
+
 -- ============================================================
 -- EVENTS (Council Activities)
 -- ============================================================
