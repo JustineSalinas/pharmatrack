@@ -1411,6 +1411,18 @@ textarea {
     font-size: 0.95rem;
   }
 
+  /* Footer Mobile Overrides */
+  .land-footer {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 16px !important;
+    padding: 30px 20px !important;
+  }
+
+  .land-footer span {
+    justify-content: center !important;
+  }
+
   .how-it-works-card .section-title {
     font-size: 1.6rem !important;
     margin-bottom: 30px;
