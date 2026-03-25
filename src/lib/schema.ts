@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export type AccountType = "student" | "faculty" | "admin";
-export type AttendanceStatus = "present" | "absent" | "late";
+export type AttendanceStatus = "present" | "absent" | "late" | "incomplete";
 
 export interface User {
   id: string;
@@ -17,36 +17,34 @@ export interface StudentProfile {
   student_id_number: string;
   section: string;
   current_year: string;
+  qr_code_id: string;
 }
 
-export interface FacultyProfile {
+export interface Event {
   id: string;
-  user_id: string;
-  department: string;
-}
-
-export interface QRSession {
-  id: string;
-  faculty_id: string;
-  subject: string;
-  section: string;
+  name: string;
+  description: string | null;
+  location: string;
   date: string;
-  expires_at: string;
-  code: string;
+  check_in_start: string;
+  check_in_late: string;
+  check_in_end: string;
+  check_out_start: string | null;
+  check_out_end: string | null;
+  created_by: string;
   created_at: string;
 }
 
 export interface AttendanceRecord {
   id: string;
   student_id: string;
-  session_id: string;
+  event_id: string;
   status: AttendanceStatus;
   time_in: string | null;
   time_out: string | null;
-  date: string;
-  subject: string;
-  section: string;
-  remarks: string;
+  scanned_by: string | null;
+  remarks: string | null;
+  created_at: string;
 }
 
 export const UpdateProfileSchema = z.object({
