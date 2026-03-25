@@ -1300,6 +1300,33 @@ textarea {
     background: radial-gradient(circle at center, rgba(45, 27, 105, 0.6) 0%, rgba(5, 5, 20, 0.9) 100%) !important;
   }
 
+  /* PERFORMANCE OVERRIDES: Disable expensive CSS on mobile to fix laggy scrolling */
+  body::before {
+    display: none !important; /* Disable SVG noise texture filter on mobile */
+  }
+
+  .blob {
+    animation: none !important; /* Disable blob floating animations */
+    filter: none !important; /* Extremely expensive on mobile GPU */
+    opacity: 0.1 !important; /* Fallback since blur is removed */
+  }
+
+  .animated-bg {
+    animation: none !important; /* Disable Ken Burns background effect */
+  }
+
+  /* Simplify or remove backdrop-filters */
+  .land-nav, .hero-badge, .card, .step-icon-box {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Simplify heavy box-shadows */
+  .card, .step-icon-box {
+    box-shadow: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
   /* TYPOGRAPHY: Scale and Wrap Fixes */
   .hero h1 {
     font-size: clamp(2.2rem, 10vw, 3rem) !important;
