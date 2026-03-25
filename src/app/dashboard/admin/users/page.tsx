@@ -1,100 +1,203 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { getCurrentUser } from "@/lib/auth-client";
+import { Loader2, Search, CheckCircle, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-const users = [
-  { name: "Juan Dela Cruz", email: "j.delacruz@usa.edu.ph", role: "Student", status: "Active", joined: "Jan 2026" },
-  { name: "Dr. Maria Reyes", email: "m.reyes@usa.edu.ph", role: "Faculty", status: "Active", joined: "Aug 2024" },
-  { name: "Ana Santos", email: "a.santos@usa.edu.ph", role: "Student", status: "Active", joined: "Jan 2026" },
-  { name: "Prof. Carlos Santos", email: "c.santos@usa.edu.ph", role: "Faculty", status: "Active", joined: "Aug 2023" },
-  { name: "Clara Tan", email: "c.tan@usa.edu.ph", role: "Student", status: "Inactive", joined: "Jan 2026" },
-  { name: "Ben Cruz", email: "b.cruz@usa.edu.ph", role: "Student", status: "Active", joined: "Jan 2026" },
-  { name: "Dr. Joel Mendez", email: "j.mendez@usa.edu.ph", role: "Faculty", status: "Active", joined: "Jun 2022" },
-];
-
-type FilterRole = "All" | "Students" | "Faculty" | "Admins";
+type FilterRole = "All" | "student" | "faculty" | "admin";
 
 export default function AdminUsers() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterRole>("All");
   const [search, setSearch] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  async function fetchUsers() {
+    try {
+      setLoading(true);
+      const u = await getCurrentUser();
+      if (!u || u.account_type !== "admin") {
+        router.push("/dashboard");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (err) {
+      console.error("Error fetching users", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleUpdateStatus(userId: string, newStatus: string) {
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({ status: newStatus })
+        .eq("id", userId);
+
+      if (error) throw error;
+      
+      // Update local state without refetching fully
+      setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+    } catch (err: any) {
+      alert("Error updating status: " + err.message);
+    }
+  }
 
   const filtered = users.filter(u => {
-    const roleMatch = filter === "All" || (filter === "Students" && u.role === "Student") || (filter === "Faculty" && u.role === "Faculty") || filter === "Admins";
-    const searchMatch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
+    const roleMatch = filter === "All" || u.account_type === filter;
+    const searchMatch = u.full_name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
     return roleMatch && searchMatch;
   });
 
+  const studentsCount = users.filter(u => u.account_type === "student").length;
+  const facultyCount = users.filter(u => u.account_type === "faculty").length;
+  const adminsCount = users.filter(u => u.account_type === "admin").length;
+
+  if (loading) {
+    return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+      <Loader2 className="animate-spin" size={48} color="var(--gold)" />
+    </div>;
+  }
+
   return (
-    <>
+    <div className="fade-in">
       <div className="page-header">
         <div>
           <div className="breadcrumb"><span>Admin</span><span>›</span><span>Users</span></div>
           <h2>User Management</h2>
-          <p>{users.length} total accounts</p>
+          <p>{users.length} total registered accounts</p>
         </div>
         <div className="header-actions">
-          <input className="inp" placeholder="🔍 Search..." style={{ width: 200, padding: "9px 14px", fontSize: 13 }} value={search} onChange={(e) => setSearch(e.target.value)} />
-          <button className="btn btn-gold" style={{ width: "auto", padding: "9px 18px", fontSize: 13 }} onClick={() => setShowAdd(true)}>+ Add User</button>
+          <div className="input-wrap" style={{ display: "flex", alignItems: "center", background: "var(--surface2)", borderRadius: "8px", padding: "0 12px", width: "250px" }}>
+            <Search size={16} color="var(--muted)" />
+            <input 
+              className="inp" 
+              placeholder="Search names or emails..." 
+              style={{ border: "none", background: "transparent", padding: "10px", width: "100%", outline: "none" }} 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+            />
+          </div>
         </div>
       </div>
 
       {/* Filter tabs */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {(["All", "Students", "Faculty", "Admins"] as FilterRole[]).map((f) => (
-          <button key={f} className={`btn ${filter === f ? "btn-gold" : "btn-outline"}`} style={{ width: "auto", padding: "7px 18px", fontSize: 13 }} onClick={() => setFilter(f)}>
-            {f} {f === "All" ? `(${users.length})` : f === "Students" ? `(${users.filter(u => u.role === "Student").length})` : f === "Faculty" ? `(${users.filter(u => u.role === "Faculty").length})` : "(2)"}
-          </button>
-        ))}
+        {(["All", "student", "faculty", "admin"] as FilterRole[]).map((f) => {
+          const count = f === "All" ? users.length : f === "student" ? studentsCount : f === "faculty" ? facultyCount : adminsCount;
+          const label = f === "student" ? "Students" : f === "faculty" ? "Faculty" : f === "admin" ? "Admins" : "All";
+          return (
+            <button key={f} className={`btn ${filter === f ? "btn-gold" : "btn-outline"}`} style={{ width: "auto", padding: "7px 18px", fontSize: 13, textTransform: "capitalize" }} onClick={() => setFilter(f)}>
+              {label} ({count})
+            </button>
+          );
+        })}
       </div>
 
       <div className="panel">
-        <table>
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
-          <tbody>
-            {filtered.map((u) => (
-              <tr key={u.email}>
-                <td>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div className="avatar" style={{ width: 30, height: 30, fontSize: 12, flexShrink: 0 }}>
-                      {u.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                    </div>
-                    {u.name}
-                  </div>
-                </td>
-                <td style={{ fontSize: 12, color: "var(--muted)" }}>{u.email}</td>
-                <td><span className="tag">{u.role}</span></td>
-                <td><span className={`badge badge-${u.status === "Active" ? "present" : "absent"}`}>{u.status}</span></td>
-                <td style={{ fontSize: 12, color: "var(--muted)" }}>{u.joined}</td>
-                <td>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button className="btn btn-ghost" style={{ width: "auto", padding: "4px 10px", fontSize: 11 }}>Edit</button>
-                    <button className="btn btn-danger" style={{ width: "auto", padding: "4px 10px", fontSize: 11 }}>Del</button>
-                  </div>
-                </td>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((u) => {
+                const initials = u.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "U";
+                const dateJoined = new Date(u.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric", day: "numeric" });
+                
+                return (
+                  <tr key={u.id}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div className="avatar" style={{ width: 30, height: 30, fontSize: 12, flexShrink: 0 }}>
+                          {initials}
+                        </div>
+                        <span style={{ fontWeight: 600 }}>{u.full_name}</span>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: 13, color: "var(--muted)" }}>{u.email}</td>
+                    <td><span className="tag" style={{ textTransform: "capitalize", background: "rgba(255,255,255,0.05)" }}>{u.account_type}</span></td>
+                    <td>
+                      <span className={`badge badge-${u.status === "approved" ? "present" : u.status === "pending" ? "late" : "absent"}`} style={{ textTransform: "capitalize" }}>
+                        {u.status}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: 12, color: "var(--muted)" }}>{dateJoined}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {u.status === "pending" && (
+                          <button 
+                            className="btn" 
+                            style={{ width: "auto", padding: "4px 10px", fontSize: 11, background: "#10b981", color: "white", border: "1px solid #059669" }}
+                            onClick={() => handleUpdateStatus(u.id, "approved")}
+                            title="Approve Account"
+                          >
+                            <CheckCircle size={14} />
+                          </button>
+                        )}
+                        {u.status === "pending" && (
+                          <button 
+                            className="btn" 
+                            style={{ width: "auto", padding: "4px 10px", fontSize: 11, background: "#ef4444", color: "white", border: "1px solid #b91c1c" }}
+                            onClick={() => handleUpdateStatus(u.id, "rejected")}
+                            title="Reject Account"
+                          >
+                            <XCircle size={14} />
+                          </button>
+                        )}
+                        {u.status === "approved" && u.account_type !== "student" && (
+                          <button 
+                           className="btn btn-danger" 
+                           style={{ width: "auto", padding: "4px 10px", fontSize: 11 }}
+                           onClick={() => {
+                             if (confirm(`Suspend access for ${u.full_name}?`)) {
+                               handleUpdateStatus(u.id, "rejected");
+                             }
+                           }}
+                          >
+                            Suspend
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px", color: "var(--muted)" }}>
+            No users found matching your search.
+          </div>
+        )}
       </div>
 
-      {/* Add user modal */}
-      {showAdd && (
-        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: "left" }}>
-            <h3 style={{ marginBottom: 20 }}>Add New User</h3>
-            <div className="input-group"><label>Full Name</label><div className="input-wrap"><span className="icon">👤</span><input className="inp" placeholder="Full Name" /></div></div>
-            <div className="input-group"><label>Email</label><div className="input-wrap"><span className="icon">✉️</span><input className="inp" type="email" placeholder="email@usa.edu.ph" /></div></div>
-            <div className="input-group">
-              <label>Role</label>
-              <div className="input-wrap select-wrap"><select className="inp"><option>Student</option><option>Faculty</option><option>Admin</option></select></div>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-              <button className="btn btn-gold" onClick={() => setShowAdd(false)}>Create User</button>
-              <button className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      <style jsx>{`
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
   );
 }

@@ -18,6 +18,7 @@ export default function StudentDashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
+  const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -29,7 +30,6 @@ export default function StudentDashboard() {
           return;
         }
 
-        // Redirect admin users to their specific dashboard
         if (u.account_type === "admin") {
           router.push("/dashboard/admin");
           return;
@@ -38,15 +38,28 @@ export default function StudentDashboard() {
         setUser(u);
         
         if (u.account_type === "student") {
+          // Load overall stats
           const { data } = await supabase
             .from("student_attendance_summary")
             .select("*")
             .eq("student_id", u.id)
             .single();
           setStats(data);
+
+          // Load the next upcoming event
+          const today = new Date().toISOString().split("T")[0];
+          const { data: upcoming } = await supabase
+            .from("events")
+            .select("*")
+            .gte("date", today)
+            .order("date", { ascending: true })
+            .limit(1)
+            .single();
+
+          if (upcoming) setUpcomingEvent(upcoming);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error loading student dashboard", err);
       } finally {
         setLoading(false);
       }
@@ -54,11 +67,11 @@ export default function StudentDashboard() {
     loadDashboard();
   }, [router]);
 
-  if (loading) return null; // Handled by layout loader
+  if (loading) return null;
 
   const isStudent = user?.account_type === "student";
   const studentProfile = user?.student_profiles?.[0];
-  const qrCodeValue = studentProfile?.qr_code_id || "NOT_READY_YET";
+  const qrCodeValue = studentProfile?.qr_code_id || "NOT-FOUND";
 
   return (
     <div className="fade-in">
@@ -126,12 +139,9 @@ export default function StudentDashboard() {
             <p className="qr-help">Present this to any Council Member for scanning.</p>
             
             <div className="student-actions">
-              <button className="btn btn-outline" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
-                <Download size={16} /> Save
-              </button>
-              <button className="btn btn-outline" style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
-                <Maximize2 size={16} /> Full
-              </button>
+              <Link href="/check-in" className="btn btn-outline" style={{ padding: "8px 12px", fontSize: "0.85rem", width: "100%" }}>
+                <Maximize2 size={16} /> Open Full Screen Presenter
+              </Link>
             </div>
           </div>
         </div>
@@ -144,25 +154,35 @@ export default function StudentDashboard() {
           <div className="trend-subtitle">Next required attendance</div>
           
           <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", borderRadius: "12px", padding: "20px", marginTop: "16px" }}>
-            <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-              <div style={{ background: "var(--surface2)", padding: "12px", borderRadius: "12px", textAlign: "center", minWidth: "60px" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--gold)", fontWeight: 700, textTransform: "uppercase" }}>Mar</div>
-                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--white)" }}>28</div>
-              </div>
-              <div>
-                <h4 style={{ fontSize: "1.1rem", color: "var(--white)", fontWeight: 700, marginBottom: "4px" }}>Pharmacy Council Week Launch</h4>
-                <div style={{ fontSize: "0.85rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                  <Clock size={12} /> 9:00 AM - 12:00 PM
+            {upcomingEvent ? (
+              <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                <div style={{ background: "var(--surface2)", padding: "12px", borderRadius: "12px", textAlign: "center", minWidth: "60px" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--gold)", fontWeight: 700, textTransform: "uppercase" }}>
+                    {new Date(upcomingEvent.date).toLocaleDateString("en-US", { month: "short" })}
+                  </div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--white)" }}>
+                    {new Date(upcomingEvent.date).toLocaleDateString("en-US", { day: "numeric" })}
+                  </div>
                 </div>
-                <div style={{ fontSize: "0.85rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span style={{ fontSize: "12px" }}>📍</span> USA Alumni Hall
+                <div>
+                  <h4 style={{ fontSize: "1.1rem", color: "var(--white)", fontWeight: 700, marginBottom: "4px" }}>{upcomingEvent.name}</h4>
+                  <div style={{ fontSize: "0.85rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <Clock size={12} /> {new Date(upcomingEvent.check_in_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'})} - {new Date(upcomingEvent.check_in_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'})}
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "12px" }}>📍</span> {upcomingEvent.location}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ textAlign: "center", padding: "30px 0", color: "var(--muted)", fontSize: "0.9rem" }}>
+                No upcoming events scheduled. Enjoy your free time!
+              </div>
+            )}
           </div>
 
-          <Link href="/dashboard/schedule" style={{ display: "inline-block", marginTop: "20px", color: "var(--gold)", fontSize: "0.85rem", fontWeight: 600 }}>
-            View full calendar →
+          <Link href="/dashboard/records" style={{ display: "inline-block", marginTop: "20px", color: "var(--gold)", fontSize: "0.85rem", fontWeight: 600 }}>
+            View my attendance records →
           </Link>
         </div>
       </div>
