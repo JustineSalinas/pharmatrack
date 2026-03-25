@@ -1327,14 +1327,13 @@ textarea {
   .land-nav {
     padding: 12px 14px !important;
     top: 10px !important;
-    margin: 0 12px !important;
-    gap: 8px;
+    margin: 0 6px !important;
+    gap: 10px;
     justify-content: space-between;
     flex-direction: row !important;
     border-radius: 14px !important;
-    max-width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 12px) !important;
     box-sizing: border-box !important;
-    overflow: hidden;
   }
 
   .logo-row {
