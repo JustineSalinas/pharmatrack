@@ -683,14 +683,17 @@ textarea {
 
 @media (max-width: 768px) {
   .hero h1, .hero-title {
-    font-size: clamp(2.2rem, 10vw, 3rem);
+    font-size: clamp(1.8rem, 9vw, 2.6rem);
     letter-spacing: -1px;
+    padding: 0 16px;
   }
 
   .attendance-title {
-    font-size: clamp(1rem, 5vw, 1.3rem);
-    padding: 0 10px;
-    line-height: 1.3;
+    font-size: clamp(0.85rem, 4.5vw, 1.2rem);
+    padding: 0 16px;
+    line-height: 1.4;
+    white-space: normal;
+    word-break: break-word;
   }
 
   .hero-badge {
@@ -1299,13 +1302,11 @@ textarea {
 
   /* TYPOGRAPHY: Scale and Wrap Fixes */
   .hero h1 {
-    font-size: 11vw !important;
-    /* Slightly smaller to fit single line */
-    padding: 0 10px;
-    line-height: 1;
+    font-size: clamp(1.8rem, 9vw, 2.6rem) !important;
+    padding: 0 16px;
+    line-height: 1.05;
     letter-spacing: -1px;
-    white-space: nowrap;
-    /* Prevent mid-word breaks */
+    white-space: normal;
     margin-bottom: 5px;
   }
 
@@ -1373,12 +1374,14 @@ textarea {
 
   /* Section Titles */
   .attendance-title {
-    font-size: 5vw !important;
-    /* Shrunk significantly to fit one line */
+    font-size: clamp(0.85rem, 4.5vw, 1.2rem) !important;
     color: var(--gold) !important;
     margin-top: -5px;
-    letter-spacing: 2px;
-    white-space: nowrap;
+    letter-spacing: 1px;
+    white-space: normal;
+    word-break: break-word;
+    padding: 0 16px;
+    line-height: 1.4;
   }
 
   .cards-row {
