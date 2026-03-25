@@ -1,107 +1,193 @@
 import Link from "next/link";
-
-const activityLog = [
-  { msg: "Dr. Reyes created a QR session for Pharmacology 301", time: "10:24 AM", icon: "📲" },
-  { msg: "Juan Dela Cruz checked in — PharmA", time: "10:25 AM", icon: "✅" },
-  { msg: "Clara Tan marked absent — PharmB", time: "10:25 AM", icon: "❌" },
-  { msg: "New student registered: Felix Tan", time: "9:58 AM", icon: "👤" },
-  { msg: "System backup completed successfully", time: "9:00 AM", icon: "💾" },
-  { msg: "QR session expired — Pharmacognosy PharmB", time: "8:50 AM", icon: "⏱️" },
-];
-
-const systemHealth = [
-  { name: "Database", status: "Online", ok: true },
-  { name: "QR Service", status: "Active", ok: true },
-  { name: "Email Notifications", status: "Active", ok: true },
-  { name: "Last Backup", status: "9:00 AM", ok: true },
-  { name: "API Status", status: "Operational", ok: true },
-];
+import { Search, Bell, Plus, Users, Calendar, ScanLine, TrendingUp, CalendarDays } from "lucide-react";
 
 export default function AdminDashboard() {
-  const r = 54, circ = 2 * Math.PI * r, dash = circ * 0.873;
-
   return (
-    <>
-      <div className="page-header">
-        <div>
-          <div className="breadcrumb"><span>Admin</span><span>›</span><span>Dashboard</span></div>
-          <h2>Admin Dashboard <span className="admin-badge" style={{ fontSize: 14 }}>ADMIN</span></h2>
-          <p>System-wide overview · Pharmacy Department</p>
+    <div className="fade-in">
+      {/* HEADER */}
+      <header className="dash-header">
+        <div className="dash-header-left">
+          <span className="breadcrumb-text">Admin Panel</span>
+          <h1>Dashboard</h1>
         </div>
-        <div className="header-actions">
-          <Link href="/dashboard/admin/reports" className="btn btn-gold" style={{ width: "auto", padding: "9px 18px", fontSize: 13 }}>📊 Generate Report</Link>
+        <div className="dash-header-right">
+          <button className="dash-search">
+            <Search size={16} /> Search
+          </button>
+          <select className="dash-month-picker" defaultValue="mar2026">
+            <option value="feb2026">Feb 2026</option>
+            <option value="mar2026">Mar 2026</option>
+            <option value="apr2026">Apr 2026</option>
+          </select>
+          <Link href="/dashboard/admin/events/new" className="btn btn-gold" style={{ padding: "8px 16px", borderRadius: "10px", gap: "6px", backgroundColor: "#8B5CF6", backgroundImage: "none", color: "white", boxShadow: "none" }}>
+            <Plus size={16} /> New Event
+          </Link>
+          <button className="dash-notif-btn">
+            <Bell size={18} />
+            <span className="notif-dot"></span>
+          </button>
+        </div>
+      </header>
+
+      {/* STAT CARDS */}
+      <div className="stat-cards-row">
+        <div className="admin-stat-card">
+          <div className="stat-icon-badge purple"><Users size={20} /></div>
+          <div>
+            <div className="stat-value">142</div>
+            <div className="stat-label">Total Students</div>
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="stat-icon-badge blue"><Calendar size={20} /></div>
+          <div>
+            <div className="stat-value">2</div>
+            <div className="stat-label">Active Events</div>
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="stat-icon-badge green"><ScanLine size={20} /></div>
+          <div>
+            <div className="stat-value">87</div>
+            <div className="stat-label">Scans Today</div>
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="stat-icon-badge orange"><TrendingUp size={20} /></div>
+          <div>
+            <div className="stat-value">91.3%</div>
+            <div className="stat-label">Attendance Rate</div>
+          </div>
         </div>
       </div>
 
-      <div className="stats-grid">
-        {[
-          { icon: "👥", label: "Total Users", value: "186", sub: "124 students, 12 faculty" },
-          { icon: "📅", label: "Sessions Today", value: "8", trend: "Active now", trendClass: "trend-up" },
-          { icon: "✅", label: "Avg Rate Today", value: "87%", color: "var(--success)" },
-          { icon: "🚨", label: "At-Risk Students", value: "14", color: "var(--danger)", sub: "Below 75%" },
-        ].map((s) => (
-          <div className="stat-card" key={s.label}>
-            <div className="stat-icon">{s.icon}</div>
-            <div className="stat-label">{s.label}</div>
-            <div className="stat-val" style={{ color: s.color }}>{s.value}</div>
-            {s.sub && <div className="stat-sub">{s.sub}</div>}
-            {s.trend && <span className={`stat-trend ${s.trendClass}`}>{s.trend}</span>}
-          </div>
-        ))}
-      </div>
-
-      <div className="content-grid">
-        {/* Activity log */}
-        <div className="panel">
-          <div className="panel-header">
-            <h3>Recent Activity Log</h3>
-            <Link href="/dashboard/admin/attendance" style={{ color: "var(--gold)", fontSize: 12 }}>View All →</Link>
-          </div>
-          {activityLog.map((l, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <span style={{ fontSize: 18 }}>{l.icon}</span>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 13 }}>{l.msg}</p>
-                <span style={{ fontSize: 11, color: "var(--muted)" }}>{l.time}</span>
-              </div>
+      <div className="dash-content-grid">
+        {/* LEFT COL: CHART */}
+        <div className="trend-panel">
+          <div className="trend-header">
+            <h3>Attendance trend</h3>
+            <div className="trend-tabs">
+              <button className="trend-tab">7d</button>
+              <button className="trend-tab active">30d</button>
+              <button className="trend-tab">90d</button>
             </div>
-          ))}
+          </div>
+          <div className="trend-subtitle">Weekly scan totals</div>
+          
+          <div className="trend-chart-area">
+            {/* Mockup bars */}
+            <div className="chart-bar" style={{ height: "40%" }}></div>
+            <div className="chart-bar" style={{ height: "65%" }}></div>
+            <div className="chart-bar" style={{ height: "55%" }}></div>
+            <div className="chart-bar" style={{ height: "45%" }}></div>
+            <div className="chart-bar" style={{ height: "80%" }}></div>
+            <div className="chart-bar" style={{ height: "75%" }}></div>
+            <div className="chart-bar" style={{ height: "65%" }}></div>
+            <div className="chart-bar" style={{ height: "60%" }}></div>
+            <div className="chart-bar" style={{ height: "70%" }}></div>
+            
+            {/* SVG Line Overlay to match mockup */}
+            <svg className="chart-line-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path 
+                d="M 5 60 Q 15 35 25 45 T 45 55 T 65 20 T 75 35 T 85 40 T 95 30" 
+                fill="none" 
+                stroke="#d8b4fe" 
+                strokeWidth="2" 
+                strokeLinecap="round"
+                strokeLinejoin="round" 
+              />
+              <circle cx="5" cy="60" r="1.5" fill="#e9d5ff" />
+              <circle cx="25" cy="45" r="1.5" fill="#e9d5ff" />
+              <circle cx="45" cy="55" r="1.5" fill="#e9d5ff" />
+              <circle cx="65" cy="20" r="1.5" fill="#e9d5ff" />
+              <circle cx="75" cy="35" r="1.5" fill="#e9d5ff" />
+              <circle cx="85" cy="40" r="1.5" fill="#e9d5ff" />
+              <circle cx="95" cy="30" r="1.5" fill="#e9d5ff" />
+            </svg>
+          </div>
+          
+          {/* X Axis labels */}
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 5px 0", fontSize: "0.65rem", color: "var(--muted)" }}>
+            <span>Mar 1</span>
+            <span>Mar 5</span>
+            <span>Mar 8</span>
+            <span>Mar 12</span>
+            <span>Mar 15</span>
+            <span>Mar 19</span>
+            <span>Mar 22</span>
+          </div>
         </div>
 
-        <div>
-          {/* Overall rate ring */}
-          <div className="panel" style={{ marginBottom: 16 }}>
-            <div className="panel-header"><h3>Department Rate</h3></div>
-            <div className="rate-ring-wrap">
-              <svg width="130" height="130" viewBox="0 0 130 130">
-                <circle cx="65" cy="65" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="10" />
-                <circle cx="65" cy="65" r={r} fill="none" stroke="var(--gold)" strokeWidth="10"
-                  strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" transform="rotate(-90 65 65)" />
-                <text x="65" y="68" textAnchor="middle" fill="white" fontSize="20" fontFamily="Syne, sans-serif" fontWeight="800">87.3%</text>
-                <text x="65" y="84" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="10">Dept Average</text>
-              </svg>
-              <div className="rate-legend">
-                {[["var(--success)", "Present (87.3%)"], ["var(--danger)", "Absent (8.7%)"], ["var(--gold)", "Late (4.0%)"]].map(([c, l]) => (
-                  <div className="leg-item" key={l}><div className="leg-dot" style={{ background: c }} /><span style={{ fontSize: 12 }}>{l}</span></div>
-                ))}
-              </div>
+        {/* RIGHT COL: ACTIONS & QUICK STATS */}
+        <div className="dash-actions-col">
+          <Link href="/dashboard/admin/scanner" className="action-card purple-grad">
+            <div className="action-card-icon"><ScanLine size={24} /></div>
+            <div className="action-card-text">
+              <h4>Open<br/>Scanner</h4>
+              <p>Scan student QR codes</p>
             </div>
-          </div>
+          </Link>
+          
+          <Link href="/dashboard/admin/events" className="action-card orange-grad">
+            <div className="action-card-icon"><CalendarDays size={24} /></div>
+            <div className="action-card-text">
+              <h4>Manage<br/>Events</h4>
+              <p>Create & edit events</p>
+            </div>
+          </Link>
 
-          {/* System health */}
-          <div className="panel">
-            <div className="panel-header"><h3>System Health</h3></div>
-            {systemHealth.map((s) => (
-              <div key={s.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", fontSize: 13 }}>
-                <span>{s.name}</span>
-                <span style={{ color: s.ok ? "var(--success)" : "var(--danger)", fontWeight: 600 }}>
-                  {s.ok ? "● " : "● "}{s.status}
-                </span>
-              </div>
-            ))}
+          <div className="quick-stats-card">
+            <div className="quick-stat-item">
+              <div className="qs-value green">79</div>
+              <div className="qs-label">Present</div>
+            </div>
+            <div className="quick-stat-item">
+              <div className="qs-value yellow">5</div>
+              <div className="qs-label">Late</div>
+            </div>
+            <div className="quick-stat-item">
+              <div className="qs-value red">3</div>
+              <div className="qs-label">Absent</div>
+            </div>
           </div>
         </div>
       </div>
-    </>
+
+      {/* RECENT SCANS LIST */}
+      <div className="recent-scans">
+        <div className="recent-scans-header">
+          <h3>Recent Scans</h3>
+          <Link href="/dashboard/admin/attendance">View all →</Link>
+        </div>
+        
+        <div className="scan-item">
+          <div className="scan-avatar">JD</div>
+          <div className="scan-info">
+            <div className="scan-name">Juan Dela Cruz</div>
+            <div className="scan-detail">Pharmacy General Assembly · Time In: 3:02 PM</div>
+          </div>
+          <div className="status-badge present">Present</div>
+        </div>
+        
+        <div className="scan-item">
+          <div className="scan-avatar">MS</div>
+          <div className="scan-info">
+            <div className="scan-name">Maria Santos</div>
+            <div className="scan-detail">Pharmacology 301 · Time In: 3:15 PM</div>
+          </div>
+          <div className="status-badge late">Late</div>
+        </div>
+        
+        <div className="scan-item">
+          <div className="scan-avatar">CT</div>
+          <div className="scan-info">
+            <div className="scan-name">Clara Tan</div>
+            <div className="scan-detail">Pharmacy General Assembly · No record</div>
+          </div>
+          <div className="status-badge absent">Absent</div>
+        </div>
+      </div>
+      
+    </div>
   );
 }

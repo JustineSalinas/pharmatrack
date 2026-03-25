@@ -1,4 +1,4 @@
-#PharmaTrack — Attendance Monitoring System
+PharmaTrack — Attendance Monitoring System
 
 QR-based attendance tracking for the University of San Agustin Pharmacy Department.
 
@@ -103,7 +103,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Next.js 14** (App Router)
 - **Supabase** (Auth + PostgreSQL)
