@@ -683,7 +683,7 @@ textarea {
 
 @media (max-width: 768px) {
   .hero h1, .hero-title {
-    font-size: clamp(1.8rem, 9vw, 2.6rem);
+    font-size: clamp(2.2rem, 10vw, 3rem);
     letter-spacing: -1px;
     padding: 0 16px;
   }
@@ -1302,7 +1302,7 @@ textarea {
 
   /* TYPOGRAPHY: Scale and Wrap Fixes */
   .hero h1 {
-    font-size: clamp(1.8rem, 9vw, 2.6rem) !important;
+    font-size: clamp(2.2rem, 10vw, 3rem) !important;
     padding: 0 16px;
     line-height: 1.05;
     letter-spacing: -1px;
@@ -1323,39 +1323,40 @@ textarea {
     margin-bottom: 15px;
   }
 
-  /* Navbar: High-impact compact UI */
+  /* Navbar: Balanced mobile layout */
   .land-nav {
-    padding: 10px 12px !important;
+    padding: 14px 16px !important;
     top: 10px !important;
-    margin: 0 10px !important;
-    gap: 10px;
+    margin: 0 12px !important;
+    gap: 12px;
     justify-content: space-between;
     flex-direction: row !important;
-    /* Keep it on one line but shrink items */
+    border-radius: 16px !important;
   }
 
   .logo-row {
     font-size: 1rem !important;
-    gap: 6px;
+    gap: 8px;
   }
 
   .logo-row img {
-    height: 24px !important;
+    height: 28px !important;
   }
 
   .logo-row span {
-    font-size: 0.8rem !important;
+    font-size: 0.9rem !important;
   }
 
   .nav-btns {
-    gap: 6px !important;
+    gap: 8px !important;
   }
 
   .btn {
-    padding: 8px 10px !important;
-    font-size: 0.7rem !important;
+    padding: 9px 14px !important;
+    font-size: 0.75rem !important;
     white-space: nowrap;
     min-width: fit-content !important;
+    border-radius: 10px !important;
   }
 
   .hero-cta {
