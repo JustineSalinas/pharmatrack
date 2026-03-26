@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutUser } from "@/lib/auth-client";
+import { Home, Camera, ClipboardList, Calendar, User, Bell, QrCode, Users, BarChart, Settings } from "lucide-react";
 
-interface NavItem { href: string; label: string; icon: string; }
+interface NavItem { href: string; label: string; icon: React.ReactNode; }
 
 interface SidebarProps {
   role: "student" | "faculty" | "admin";
@@ -17,17 +18,17 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
     {
       section: "Main",
       items: [
-        { href: "/dashboard", label: "Overview", icon: "🏠" },
-        { href: "/check-in", label: "Check-In", icon: "📷" },
-        { href: "/dashboard/records", label: "My Records", icon: "📋" },
-        { href: "/dashboard/schedule", label: "Schedule", icon: "🗓️" },
+        { href: "/dashboard", label: "Overview", icon: <Home size={18} /> },
+        { href: "/check-in", label: "Check-In", icon: <Camera size={18} /> },
+        { href: "/dashboard/records", label: "My Records", icon: <ClipboardList size={18} /> },
+        { href: "/dashboard/schedule", label: "Schedule", icon: <Calendar size={18} /> },
       ],
     },
     {
       section: "Account",
       items: [
-        { href: "/dashboard/profile", label: "Profile", icon: "👤" },
-        { href: "/dashboard/notifications", label: "Notifications", icon: "🔔" },
+        { href: "/dashboard/profile", label: "Profile", icon: <User size={18} /> },
+        { href: "/dashboard/notifications", label: "Notifications", icon: <Bell size={18} /> },
       ],
     },
   ],
@@ -35,26 +36,26 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
     {
       section: "Main",
       items: [
-        { href: "/dashboard/faculty", label: "Overview", icon: "🏠" },
-        { href: "/dashboard/faculty/generate", label: "Generate QR", icon: "📲" },
-        { href: "/dashboard/faculty/students", label: "Students", icon: "👥" },
-        { href: "/dashboard/faculty/reports", label: "Reports", icon: "📊" },
+        { href: "/dashboard/faculty", label: "Overview", icon: <Home size={18} /> },
+        { href: "/dashboard/faculty/generate", label: "Generate QR", icon: <QrCode size={18} /> },
+        { href: "/dashboard/faculty/students", label: "Students", icon: <Users size={18} /> },
+        { href: "/dashboard/faculty/reports", label: "Reports", icon: <BarChart size={18} /> },
       ],
     },
     {
       section: "Account",
-      items: [{ href: "/dashboard/profile", label: "Profile", icon: "👤" }],
+      items: [{ href: "/dashboard/profile", label: "Profile", icon: <User size={18} /> }],
     },
   ],
   admin: [
     {
       section: "Admin",
       items: [
-        { href: "/dashboard/admin", label: "Dashboard", icon: "🏠" },
-        { href: "/dashboard/admin/users", label: "User Management", icon: "👥" },
-        { href: "/dashboard/admin/attendance", label: "Attendance Logs", icon: "📋" },
-        { href: "/dashboard/admin/reports", label: "Analytics", icon: "📊" },
-        { href: "/dashboard/admin/settings", label: "Settings", icon: "⚙️" },
+        { href: "/dashboard/admin", label: "Dashboard", icon: <Home size={18} /> },
+        { href: "/dashboard/admin/users", label: "User Management", icon: <Users size={18} /> },
+        { href: "/dashboard/admin/attendance", label: "Attendance Logs", icon: <ClipboardList size={18} /> },
+        { href: "/dashboard/admin/reports", label: "Analytics", icon: <BarChart size={18} /> },
+        { href: "/dashboard/admin/settings", label: "Settings", icon: <Settings size={18} /> },
       ],
     },
   ],
@@ -72,7 +73,9 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
     <aside className="sidebar">
       <div className="sidebar-logo">
         <Link href="/" className="logo-row" style={{ margin: 0, justifyContent: "flex-start" }}>
-          <div className="logo-mark" style={{ width: 34, height: 34, fontSize: 14 }}>⚗️</div>
+          <div style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <img src="/pham-logo.png" alt="Pharmacy Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          </div>
           <span style={{ fontSize: 13 }}>PHARMATRACK</span>
         </Link>
       </div>
@@ -86,7 +89,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
               href={item.href}
               className={`nav-item ${pathname === item.href ? "active" : ""}`}
             >
-              <span className="ni-icon">{item.icon}</span>
+              <span className="ni-icon" style={{ display: "flex", alignItems: "center" }}>{item.icon}</span>
               {item.label}
             </Link>
           ))}
