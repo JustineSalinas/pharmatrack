@@ -1864,6 +1864,162 @@ textarea {
   margin-top: 4px;
 }
 
+/* Custom Stat Cards - Attendance Records */
+.stat-card-custom {
+  background: rgba(255, 255, 255, 0.05); /* slightly lighter than base bg */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.stat-card-custom:hover {
+  transform: translateY(-2px);
+}
+
+.stat-card-custom .stat-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+.stat-card-custom .stat-val {
+  font-size: 2.2rem;
+  font-weight: 600;
+  font-family: inherit; /* DM Sans based on mockup */
+  line-height: 1;
+}
+
+.val-blue { color: #3b82f6; }
+.val-green { color: #22c55e; }
+.val-red { color: #ef4444; }
+.val-orange { color: #eab308; }
+
+/* Filter Buttons */
+.filter-btn {
+  background: rgba(255, 255, 255, 0.08); /* Dark gray/purple pill */
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 99px; /* full pill */
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.filter-btn.active {
+  background: #facc15; /* Yellow */
+  color: #000;
+  border-color: #facc15;
+}
+
+.filter-dropdown {
+  background: #ffffff;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 30px;
+}
+
+/* Custom Table Styles - Attendance Records */
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.attendance-table th, .attendance-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.attendance-table th {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--white);
+  padding-bottom: 20px;
+}
+
+.attendance-table td {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.attendance-table tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.cell-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 12px;
+}
+
+.dot-green { background-color: #22c55e; }
+.dot-orange { background-color: #eab308; }
+.dot-red { background-color: #ef4444; }
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pill-present {
+  background-color: #22c55e;
+  color: white;
+}
+
+.pill-late {
+  background-color: #eab308;
+  color: white;
+}
+
+.pill-absent {
+  background-color: #ef4444;
+  color: white;
+}
+
+.status-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.remark-icon {
+  color: var(--muted);
+  width: 16px;
+  height: 16px;
+}
+
+.remark-icon.success { color: #22c55e; }
+.remark-icon.warning { color: #eab308; }
+.remark-icon.danger { color: #ef4444; }
+
 /* Dashboard Content Grid */
 .dash-content-grid {
   display: grid;
