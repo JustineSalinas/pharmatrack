@@ -83,7 +83,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       </div>
 
-      <main className="main-content page-enter" onClick={() => { if(sidebarOpen) setSidebarOpen(false); }}>
+      {/* Mobile Overlay — only renders when sidebar is open to handle closing without broad listeners */}
+      {sidebarOpen && (
+        <div 
+          className="mobile-sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 40,
+            background: "rgba(0,0,0,0.4)",
+            backdropFilter: "blur(4px)"
+          }}
+        />
+      )}
+
+      <main className="main-content page-enter">
         {children}
       </main>
     </div>

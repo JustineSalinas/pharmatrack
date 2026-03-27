@@ -65,19 +65,26 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
   const pathname = usePathname();
 
   const handleLogout = async () => {
-    await logoutUser();
-    window.location.href = "/login";
+    if (window.confirm("Are you sure you want to log out?")) {
+      await logoutUser();
+      window.location.href = "/login";
+    }
   };
 
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <Link href={(role === "admin" ? "/dashboard/admin" : role === "faculty" ? "/dashboard/faculty" : "/dashboard") as any} className="logo-row" style={{ margin: 0, justifyContent: "flex-start" }}>
+        <div 
+          onClick={() => window.location.reload()} 
+          className="logo-row" 
+          style={{ margin: 0, justifyContent: "flex-start", cursor: "pointer" }}
+          role="button"
+        >
           <div style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <img src="/pham-logo.png" alt="Pharmacy Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
-          <span style={{ fontSize: 13 }}>PHARMATRACK</span>
-        </Link>
+          <span style={{ fontSize: 13, fontWeight: "bold", letterSpacing: "0.5px" }}>PHARMATRACK</span>
+        </div>
       </div>
 
       {(navByRole[role] ?? navByRole.student).map((group) => (
