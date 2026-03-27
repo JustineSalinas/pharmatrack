@@ -87,11 +87,13 @@ export default function AdminAttendance() {
 
   return (
     <div className="fade-in">
-      <div className="page-header">
+      <div className="page-header" style={{ marginBottom: "24px" }}>
         <div>
-          <div className="breadcrumb"><span>Admin</span><span>›</span><span>Attendance Logs</span></div>
-          <h2>Attendance Logs</h2>
-          <p>Complete attendance record database across all events</p>
+          <div className="breadcrumb" style={{ fontSize: "0.85rem", color: "var(--muted)", letterSpacing: "0.5px", marginBottom: "4px" }}>
+            <span>Admin</span><span style={{ margin: "0 6px" }}>·</span><span>Attendance Logs</span>
+          </div>
+          <h2 style={{ fontSize: "2rem", fontWeight: 800, margin: 0, letterSpacing: "-0.5px" }}>Attendance Logs</h2>
+          <p style={{ color: "var(--muted)", margin: "8px 0 0 0", fontSize: "0.95rem" }}>Complete attendance record database across all events</p>
         </div>
         <div className="header-actions">
           <input 
@@ -99,51 +101,51 @@ export default function AdminAttendance() {
             type="date" 
             value={selectedDate} 
             onChange={(e) => setSelectedDate(e.target.value)} 
-            style={{ width: 170, padding: "9px 14px", fontSize: 13, background: "var(--surface2)" }} 
+            style={{ width: 170, padding: "9px 14px", fontSize: 13, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", color: "var(--white)", marginRight: "8px" }} 
           />
-          <button className="btn btn-gold" style={{ display: "flex", alignItems: "center", gap: "8px", width: "auto", padding: "9px 18px", fontSize: 13 }}>
+          <button className="filter-btn" style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 500, padding: "9px 18px" }}>
             <Download size={16} /> Export CSV
           </button>
         </div>
       </div>
 
       {/* Summary chips */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "16px", marginBottom: "32px", flexWrap: "wrap", width: "100%" }}>
         {[
-          ["✅ Present", present, "var(--success)"],
-          ["⏰ Late", late, "var(--gold)"],
-          ["❌ Absent", absent, "var(--danger)"],
-          ["📋 Total", filtered.length, "var(--white)"]
-        ].map(([l, v, c]) => (
-          <div key={l as string} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "12px 20px", display: "flex", gap: 12, alignItems: "center", minWidth: "140px" }}>
-            <span style={{ color: c as string, fontFamily: "Syne, sans-serif", fontSize: 24, fontWeight: 800 }}>{v}</span>
-            <span style={{ fontSize: 13, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>{l as string}</span>
+          { label: "✅ Present", value: present, colorClass: "val-green" },
+          { label: "⏰ Late", value: late, colorClass: "val-orange" },
+          { label: "❌ Absent", value: absent, colorClass: "val-red" },
+          { label: "📋 Total", value: filtered.length, colorClass: "val-blue" }
+        ].map((s) => (
+          <div className="stat-card-custom" key={s.label} style={{ flex: 1, minWidth: "140px", maxWidth: "200px" }}>
+            <div className="stat-label">{s.label}</div>
+            <div className={`stat-val ${s.colorClass}`}>{s.value}</div>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "12px", marginBottom: "24px", flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "10px", color: "var(--muted)", fontSize: "0.85rem" }}>
           <Filter size={14} /> Filter:
         </div>
         {["All", "Present", "Late", "Absent"].map((f) => (
-          <button key={f} className={`btn ${filterStatus === f ? "btn-gold" : "btn-outline"}`} style={{ width: "auto", padding: "6px 16px", fontSize: 12 }} onClick={() => setFilterStatus(f)}>
+          <button key={f} className={`filter-btn ${filterStatus === f ? "active" : ""}`} onClick={() => setFilterStatus(f)}>
             {f}
           </button>
         ))}
-        <div style={{ width: 1, height: "24px", background: "var(--border)", margin: "0 8px" }} />
-        <div className="input-wrap select-wrap" style={{ width: 150, margin: 0 }}>
-          <select className="inp" style={{ padding: "6px 32px 6px 12px", fontSize: 12 }} value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
-            <option value="All">All Sections</option>
-            {sections.map((s) => <option key={s as string} value={s as string}>{s as string}</option>)}
-          </select>
-        </div>
+        
+        <div style={{ width: 1, height: "24px", background: "rgba(255,255,255,0.1)", margin: "0 8px" }} />
+        
+        <select className="filter-dropdown" style={{ marginLeft: "8px" }} value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
+          <option value="All">All Sections</option>
+          {sections.map((s) => <option key={s as string} value={s as string}>{s as string}</option>)}
+        </select>
         
         {(filterStatus !== "All" || filterSection !== "All" || selectedDate) && (
           <button 
-            className="btn btn-ghost" 
-            style={{ width: "auto", padding: "6px 12px", fontSize: 12, marginLeft: "auto", color: "var(--danger)" }} 
+            className="filter-btn" 
+            style={{ marginLeft: "auto", background: "transparent", color: "#ef4444", borderColor: "rgba(239, 68, 68, 0.3)" }} 
             onClick={() => { setFilterStatus("All"); setFilterSection("All"); setSelectedDate(""); }}
           >
             Clear Filters
@@ -151,45 +153,70 @@ export default function AdminAttendance() {
         )}
       </div>
 
-      <div className="panel">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: "50px" }}>ID</th>
-                <th>Student Name</th>
-                <th>Event Name</th>
-                <th>Section</th>
-                <th>Event Date</th>
-                <th>Time In</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
+      <div style={{ overflowX: "auto" }}>
+        <table className="attendance-table">
+          <thead>
+            <tr>
+              <th style={{ width: "50px" }}>ID</th>
+              <th>Student Name</th>
+              <th>Event Name</th>
+              <th>Section</th>
+              <th>Event Date</th>
+              <th>Time In</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((r) => {
+              const dotClass = r.status === "present" ? "dot-green" : r.status === "late" ? "dot-orange" : "dot-red";
+              const pillClass = r.status === "present" ? "pill-present" : r.status === "late" ? "pill-late" : "pill-absent";
+              
+              const CheckIcon = () => (
+                <svg className="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              );
+              const AlertIcon = () => (
+                <svg className="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              );
+              const XIcon = () => (
+                <svg className="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              );
+              const PillIcon = r.status === "present" ? <CheckIcon /> : r.status === "late" ? <AlertIcon /> : <XIcon />;
+
+              return (
                 <tr key={r.id}>
-                  <td style={{ color: "var(--muted)", fontSize: 11, fontFamily: "monospace" }}>{r.id.substring(0, 8)}...</td>
-                  <td style={{ fontWeight: 600 }}>{r.name}</td>
-                  <td style={{ fontSize: 13, color: "var(--muted)" }}>{r.subject}</td>
-                  <td><span className="tag" style={{ background: "rgba(255,255,255,0.05)" }}>{r.section}</span></td>
-                  <td style={{ fontSize: 13 }}>{r.displayDate}</td>
-                  <td style={{ fontFamily: "monospace", fontSize: 13, color: r.timeIn === "—" ? "var(--muted)" : "var(--white)" }}>{r.timeIn}</td>
-                  <td><span className={`badge badge-${r.status}`}>{r.status.toUpperCase()}</span></td>
+                  <td style={{ color: "var(--muted)", fontSize: "0.85rem", fontFamily: "monospace" }}>
+                    <span className={`cell-dot ${dotClass}`}></span>
+                    {r.id.substring(0, 8)}...
+                  </td>
+                  <td style={{ fontWeight: 600, color: "var(--white)" }}>{r.name}</td>
+                  <td style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.8)" }}>{r.subject}</td>
                   <td>
-                    <button className="btn btn-ghost" style={{ width: "auto", padding: "4px 10px", fontSize: 11 }}>Edit</button>
+                    <span style={{ background: "rgba(255,255,255,0.1)", padding: "4px 8px", borderRadius: "6px", fontSize: "0.8rem", color: "var(--gold)" }}>
+                      {r.section}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: "0.9rem" }}>{r.displayDate}</td>
+                  <td style={{ fontFamily: "monospace", fontSize: "0.9rem", color: r.timeIn === "—" ? "rgba(255,255,255,0.4)" : "var(--white)" }}>{r.timeIn}</td>
+                  <td>
+                    <span className={`status-pill ${pillClass}`}>
+                      {PillIcon} {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                    </span>
+                  </td>
+                  <td>
+                    <button className="filter-btn" style={{ padding: "4px 12px", fontSize: "0.75rem", background: "transparent", borderColor: "rgba(255,255,255,0.2)" }}>Edit</button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 0", color: "var(--muted)", fontSize: 14 }}>
-            {records.length === 0 ? "No attendance records found in the database." : "No records match the current filters."}
-          </div>
-        )}
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+      {filtered.length === 0 && (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--muted)", fontSize: 14 }}>
+          {records.length === 0 ? "No attendance records found in the database." : "No records match the current filters."}
+        </div>
+      )}
       
       <style jsx>{`
         .animate-spin { animation: spin 1s linear infinite; }
