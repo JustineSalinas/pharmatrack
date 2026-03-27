@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     // Fetch user profile
     const { data: profile } = await supabase.from("users").select("*").eq("id", data.user.id).single();
 
-    const res = NextResponse.json({ user: data.user, profile, session: data.session });
+    const res = NextResponse.json({ user: data.user, profile });
     res.cookies.set("pharmatrack_token", data.session?.access_token ?? "", {
       httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7,
     });
@@ -47,12 +47,27 @@ export async function POST(req: NextRequest) {
 
     const userId = authData.user.id;
 
-    await supabase.from("users").insert({ id: userId, email, full_name, account_type });
+    const { error: userInsertErr } = await supabase.from("users").insert({ id: userId, email, full_name, account_type });
+    if (userInsertErr) {
+      await supabase.auth.admin.deleteUser(userId);
+      return NextResponse.json({ error: userInsertErr.message }, { status: 500 });
+    }
 
     if (account_type === "student") {
-      await supabase.from("student_profiles").insert({ user_id: userId, student_id_number, section, current_year });
-    } else {
-      await supabase.from("faculty_profiles").insert({ user_id: userId, department: "Pharmacy" });
+      const qr_code_id = `QR-${crypto.randomUUID().replace(/-/g, "").substring(0, 8).toUpperCase()}`;
+      const { error: profileErr } = await supabase.from("student_profiles").insert({
+        user_id: userId, student_id_number, section, current_year, qr_code_id,
+      });
+      if (profileErr) {
+        await supabase.auth.admin.deleteUser(userId);
+        return NextResponse.json({ error: profileErr.message }, { status: 500 });
+      }
+    } else if (account_type === "faculty") {
+      const { error: profileErr } = await supabase.from("faculty_profiles").insert({ user_id: userId, department: "Pharmacy" });
+      if (profileErr) {
+        await supabase.auth.admin.deleteUser(userId);
+        return NextResponse.json({ error: profileErr.message }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ ok: true, userId });

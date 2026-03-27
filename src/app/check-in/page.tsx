@@ -1,96 +1,93 @@
 "use client";
-import { useState } from "react";
-import Scanner from "@/components/Scanner";
+import { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
+import { getCurrentUser } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { Loader2, QrCode } from "lucide-react";
 
 export default function CheckInPage() {
-  const [success, setSuccess] = useState(false);
-  const [checkInTime, setCheckInTime] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  const handleSuccess = async (code: string) => {
-    setLoading(true);
-    try {
-      // 1. Look up the QR session by code
-      const { data: session, error: sessionErr } = await supabase
-        .from("qr_sessions")
-        .select("*")
-        .eq("code", code)
-        .single();
+  useEffect(() => {
+    async function fetchQR() {
+      try {
+        const u = await getCurrentUser();
+        if (!u) {
+          router.push("/login");
+          return;
+        }
 
-      if (sessionErr || !session) throw new Error("Invalid or expired QR code");
+        if (u.account_type === "admin") {
+          router.push("/dashboard/admin");
+          return;
+        }
 
-      const now = new Date();
-      if (new Date(session.expires_at) < now) throw new Error("This QR code has expired");
-
-      // 2. Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // 3. Check for duplicate
-      const { data: existing } = await supabase
-        .from("attendance_records")
-        .select("id")
-        .eq("student_id", user.id)
-        .eq("session_id", session.id)
-        .single();
-
-      if (existing) throw new Error("Already checked in for this session");
-
-      // 4. Determine status
-      const sessionStart = new Date(session.date + "T07:30:00");
-      const lateThreshold = new Date(session.date + "T07:35:00");
-      const status = now <= lateThreshold ? "present" : "late";
-
-      // 5. Record attendance
-      const { error: attErr } = await supabase.from("attendance_records").insert({
-        student_id: user.id,
-        session_id: session.id,
-        status,
-        time_in: now.toISOString(),
-        time_out: null,
-        date: session.date,
-        subject: session.subject,
-        section: session.section,
-        remarks: status === "late" ? "Late arrival" : "On time",
-      });
-
-      if (attErr) throw new Error(attErr.message);
-
-      setCheckInTime(now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
-      setSuccess(true);
-    } catch (err: any) {
-      alert("⚠️ " + err.message);
-    } finally {
-      setLoading(false);
+        const profile = u.student_profiles?.[0];
+        if (profile?.qr_code_id) {
+          setQrCode(profile.qr_code_id);
+        } else {
+          // fetch directly if not populated
+          const { data } = await supabase
+            .from("student_profiles")
+            .select("qr_code_id")
+            .eq("user_id", u.id)
+            .single();
+          if (data) setQrCode(data.qr_code_id);
+        }
+      } catch (err) {
+        console.error("Failed to load QR code", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  };
+    fetchQR();
+  }, [router]);
 
   return (
-    <div className="page-enter">
-      <div className="page-header">
-        <div>
-          <div className="breadcrumb"><span>Student</span><span>›</span><span>Check-In</span></div>
-          <h2>QR Check-In</h2>
-          <p>Scan your class QR code to mark attendance</p>
-        </div>
+    <div className="page-enter fade-in" style={{ padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
+      <div style={{ textAlign: "center", marginBottom: "40px" }}>
+        <h2 style={{ fontSize: "2rem", color: "var(--gold)", marginBottom: "10px", display: "flex", alignItems: "center", gap: "10px", justifyContent: "center" }}>
+          <QrCode size={32} /> Code Presenter
+        </h2>
+        <p style={{ color: "var(--muted)", maxWidth: "400px", margin: "0 auto", lineHeight: 1.6 }}>
+          Present this unique QR Code to a Council Administrator to register your attendance for any active event.
+        </p>
       </div>
 
-      {!success ? (
-        <Scanner onSuccess={handleSuccess} />
-      ) : (
-        <div className="modal" style={{ margin: "0 auto", maxWidth: 340, textAlign: "center" }}>
-          <div style={{ fontSize: 52, marginBottom: 16 }}>✅</div>
-          <h3>Check-In Successful!</h3>
-          <p style={{ color: "var(--muted)", marginBottom: 24 }}>
-            Your attendance has been recorded for <strong>Pharmacology 301</strong>
-            <br />at <strong>{checkInTime}</strong>
-          </p>
-          <button className="btn btn-gold" onClick={() => setSuccess(false)}>
-            ← Scan Another
-          </button>
-        </div>
-      )}
+      <div className="card" style={{ padding: "40px", background: "var(--surface)", border: "1px solid var(--gold)", textAlign: "center", borderRadius: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
+        {loading ? (
+          <div style={{ padding: "80px", display: "flex", justifyContent: "center" }}>
+            <Loader2 className="animate-spin" size={48} color="var(--gold)" />
+          </div>
+        ) : qrCode ? (
+          <div style={{ background: "white", padding: "20px", borderRadius: "16px", display: "inline-block" }}>
+            <QRCodeSVG 
+              value={qrCode} 
+              size={240}
+              level="H"
+              includeMargin={false}
+            />
+          </div>
+        ) : (
+          <div style={{ padding: "60px", color: "var(--danger)" }}>
+            QR Code could not be found. Please contact support.
+          </div>
+        )}
+        
+        {qrCode && (
+          <div style={{ marginTop: "24px", fontFamily: "monospace", fontSize: "1.2rem", letterSpacing: "2px", color: "var(--gold)" }}>
+            {qrCode}
+          </div>
+        )}
+      </div>
+      
+      <style jsx>{`
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
