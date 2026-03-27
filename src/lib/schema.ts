@@ -47,6 +47,21 @@ export interface AttendanceRecord {
   created_at: string;
 }
 
+export interface FacultyProfile {
+  id: string;
+  user_id: string;
+  department: string;
+}
+
+export interface QRSession {
+  id: string;
+  subject: string;
+  section: string;
+  date: string;
+  duration_minutes: number;
+  created_at: string;
+}
+
 export const UpdateProfileSchema = z.object({
   full_name: z.string().min(2, "Full name must be at least 2 characters"),
 });
