@@ -14,7 +14,7 @@ const getSupabase = () => {
 
 export async function GET(req: NextRequest) {
   const supabase = getSupabase();
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get("pharmatrack_token")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     .from("attendance_records")
     .select("*")
     .eq("student_id", user.id)
-    .order("date", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (recordsError) {
     console.error("Attendance fetch error:", recordsError);
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const supabase = getSupabase();
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get("pharmatrack_token")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
