@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 import type { User } from "./schema";
 
 export async function getSession() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get("pharmatrack_token")?.value;
   if (!token) return null;
 

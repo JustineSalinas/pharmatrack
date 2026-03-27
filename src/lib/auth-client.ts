@@ -16,7 +16,7 @@ export async function registerStudent(input: StudentRegisterInput) {
   if (authError || !authData.user) throw new Error(authError?.message ?? "Registration failed");
 
   const userId = authData.user.id;
-  const qrCodeId = `QR-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+  const qrCodeId = `QR-${crypto.randomUUID().replace(/-/g, "").substring(0, 8).toUpperCase()}`;
 
   const { error: userErr } = await supabase.from("users").insert({
     id: userId,

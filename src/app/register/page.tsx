@@ -96,7 +96,7 @@ export default function RegisterPage() {
           {isPending ? (
             <>
               <h2 style={{ color: "#FBBF24" }}>Pending Approval</h2>
-              <p>Your Admin account has been created successfully.</p>
+              <p>Your Facilitator account has been created successfully.</p>
             </>
           ) : isSuccess ? (
             <>
@@ -115,7 +115,7 @@ export default function RegisterPage() {
           <div className="pending-box fade-in" style={{ textAlign: "center", padding: "20px 0" }}>
             <div className="pending-icon" style={{ fontSize: "3rem", marginBottom: "15px" }}>⏳</div>
             <p style={{ color: "var(--white)", marginBottom: "20px", lineHeight: "1.6" }}>
-              To maintain security, all Admin profiles must be verified by the <strong>Department Head</strong> before access is granted.
+              To maintain security, all Facilitator profiles must be verified by the <strong>Department Head</strong> before access is granted.
             </p>
             <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", marginBottom: "30px" }}>
               You will receive an email notification once your account has been approved.
@@ -156,7 +156,7 @@ export default function RegisterPage() {
                 className={`role-btn ${role === "admin" ? "active" : ""}`}
                 onClick={() => setRole("admin")}
               >
-                Admin
+                Facilitator
               </button>
             </div>
 
@@ -268,7 +268,7 @@ export default function RegisterPage() {
                 style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem" }}
                 disabled={loading}
               >
-                {loading ? "Creating Account..." : `Create ${role === "student" ? "Student" : "Admin"} Account`}
+                {loading ? "Creating Account..." : `Create ${role === "student" ? "Student" : "Facilitator"} Account`}
               </button>
             </form>
 
