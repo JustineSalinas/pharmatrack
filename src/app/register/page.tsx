@@ -125,20 +125,48 @@ export default function RegisterPage() {
             </Link>
           </div>
         ) : isSuccess ? (
-          <div className="pending-box fade-in" style={{ textAlign: "center", padding: "20px 0" }}>
-            <div style={{ fontSize: "3rem", marginBottom: "15px" }}>✅</div>
-            <p style={{ color: "var(--white)", marginBottom: "12px", lineHeight: "1.6" }}>
-              Your student account has been <strong>registered successfully</strong>.
-            </p>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", marginBottom: "30px" }}>
-              Please log in with your credentials to access your dashboard.
-            </p>
-            <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", marginBottom: "16px" }}>
-              Redirecting in {countdown}s...
-            </p>
-            <Link href="/login" className="btn btn-gold" style={{ display: "inline-block", width: "100%", textDecoration: "none" }}>
-              Go to Login Now
-            </Link>
+          <div className="congratulations-screen fade-in">
+            {/* CSS CONFETTI PARTICLES */}
+            <div className="confetti-container">
+              {[...Array(20)].map((_, i) => (
+                <div key={i} className="confetti-piece" style={{
+                  left: `${Math.random() * 100}%`,
+                  backgroundColor: ['#FFD700', '#4ADE80', '#38BDF8', '#F472B6'][Math.floor(Math.random() * 4)],
+                  animationDelay: `${Math.random() * 3}s`,
+                  width: `${Math.random() * 10 + 5}px`,
+                  height: `${Math.random() * 15 + 10}px`
+                }} />
+              ))}
+            </div>
+
+            <div className="success-icon-wrapper">
+              <div className="success-icon pulse-success">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+            </div>
+
+            <div className="success-content fadeInUp">
+              <h2 className="congrats-title">Congratulations!</h2>
+              <p className="welcome-msg">Welcome to PharmaTrack, <span className="highlight">{fullName || "User"}</span>!</p>
+              
+              <div className="status-badge">
+                {role === "admin" ? "Role: Facilitator (Pending Approval)" : "Role: Student Account Active"}
+              </div>
+
+              <div className="redirect-info">
+                <p>Establishing your secure connection...</p>
+                <div className="progress-bar-container">
+                  <div className="progress-bar-fill" style={{ width: `${(3 - countdown) * 33.33}%` }}></div>
+                </div>
+                <p className="countdown-text">Redirecting to Login in <strong>{countdown}s</strong></p>
+              </div>
+
+              <Link href="/login" className="btn btn-gold glass-btn" style={{ width: "100%", marginTop: "20px" }}>
+                Go to Login Now
+              </Link>
+            </div>
           </div>
         ) : (
           <>
