@@ -191,13 +191,13 @@ html {
   width: 100vw;
   height: 100vh;
   background-image: url("/usa.png");
-  background-size: 80vh auto;
+  background-size: 85vh auto;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.025; /* Very subtle, barely visible */
+  opacity: 0.08; /* Slightly more visible ghost effect as per image */
   pointer-events: none;
-  z-index: -2; /* Behind the moving blobs and everything else */
-  filter: grayscale(1) invert(1);
+  z-index: 0; /* Positioned between background and hero text */
+  filter: sepia(1) hue-rotate(250deg) saturate(2) brightness(0.8); /* Refined Purple/Magenta tint */
 }
 
 .animated-bg::after {
@@ -372,18 +372,18 @@ html {
 }
 
 .hero-badge {
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.6); /* Darker background as per image */
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1.5px solid var(--gold);
-  padding: 8px 20px;
+  border: 1px solid var(--gold); /* Thin gold border */
+  padding: 8px 24px;
   border-radius: 99px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: var(--gold);
   font-weight: 700;
-  letter-spacing: 0.8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  margin-bottom: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 24px;
 }
 
 .hero-title {
