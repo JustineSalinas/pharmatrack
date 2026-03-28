@@ -13,7 +13,14 @@ export async function registerStudent(input: StudentRegisterInput) {
     email: input.email,
     password: input.password,
   });
-  if (authError || !authData.user) throw new Error(authError?.message ?? "Registration failed");
+  if (authError) {
+    if (authError.message.toLowerCase().includes("user already registered")) {
+      throw new Error("This email is already registered. Please try logging in instead.");
+    }
+    throw new Error(authError.message);
+  }
+  if (!authData.user) throw new Error("Registration failed");
+
 
   const userId = authData.user.id;
   

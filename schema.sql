@@ -65,7 +65,7 @@ CREATE POLICY "allow_admin_manage_all" ON public.users FOR ALL USING ((auth.uid(
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.student_profiles (
   id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id             UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id             UUID NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
   student_id_number   TEXT NOT NULL UNIQUE,
   section             TEXT NOT NULL,
   current_year        TEXT NOT NULL,

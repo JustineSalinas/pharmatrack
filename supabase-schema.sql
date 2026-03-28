@@ -76,7 +76,7 @@ for all using ((auth.uid() != id) and public.is_admin());
 -- ============================================================
 create table if not exists public.student_profiles (
   id                  uuid primary key default uuid_generate_v4(),
-  user_id             uuid not null references public.users(id) on delete cascade,
+  user_id             uuid not null unique references public.users(id) on delete cascade,
   student_id_number   text not null unique,
   section             text not null,
   current_year        text not null,
