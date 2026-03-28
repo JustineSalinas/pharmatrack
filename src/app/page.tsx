@@ -78,9 +78,6 @@ export default function LandingPage() {
 
         {/* HERO */}
         <section className="hero fade-in delay-1" style={{ paddingTop: "6vh" }}>
-          <div className="hero-logos" style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-            <img src="/usa.png" alt="University of San Agustin Logo" style={{ height: '100px', objectFit: 'contain' }} />
-          </div>
           <div className="hero-badge">Official Pharmacy Attendance Management System</div>
           
           <h1 className="hero-title">PHARMATRACK</h1>

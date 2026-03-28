@@ -194,10 +194,10 @@ html {
   background-size: 85vh auto;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.08; /* Slightly more visible ghost effect as per image */
+  opacity: 0.1; /* Adjusted for better visibility as a pure background */
   pointer-events: none;
-  z-index: 0; /* Positioned between background and hero text */
-  filter: sepia(1) hue-rotate(250deg) saturate(2) brightness(0.8); /* Refined Purple/Magenta tint */
+  z-index: 0;
+  filter: sepia(1) hue-rotate(250deg) saturate(1.8) brightness(0.7);
 }
 
 .animated-bg::after {
@@ -352,8 +352,8 @@ html {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 20px 0 40px 0;
+  gap: 12px;
+  padding: 0 0 40px 0; /* Shifted upwards by removing top padding */
 }
 
 .hero-logos {
@@ -411,6 +411,7 @@ html {
   align-items: center;
   gap: 32px;
   margin-top: 60px;
+  margin-bottom: 60px; /* Added requested space below features */
   padding: 24px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.02), transparent);
