@@ -190,16 +190,17 @@ html {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 80vh;
-  max-width: 100vw;
-  height: 80vh;
+  width: 75vh;
+  max-width: 90vw;
+  height: 75vh;
   background-image: url("/usa.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.05;
+  opacity: 0.12;
   pointer-events: none;
   z-index: 0;
+  filter: grayscale(1) brightness(0.5);
 }
 
 .animated-bg::after {
@@ -335,17 +336,18 @@ html {
 }
 
 .btn-outline {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(88, 40, 200, 0.1);
   color: #fff;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(139, 92, 246, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(139, 92, 246, 0.2);
 }
 
 .btn-outline:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: #fff;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  background: rgba(139, 92, 246, 0.25);
+  border-color: #a78bfa;
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
 }
 
 .hero {
@@ -991,6 +993,49 @@ html {
 
 .input-field::placeholder {
   color: rgba(255, 255, 255, 0.3);
+}
+
+.select-field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.4)'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px !important;
+}
+
+/* Role Toggle */
+.role-toggle {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 5px;
+}
+
+.role-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.role-btn:hover {
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.role-btn.active {
+  background: var(--gold);
+  color: #000;
+  box-shadow: 0 4px 12px rgba(232, 200, 74, 0.3);
 }
 
 .auth-footer {
