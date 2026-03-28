@@ -1,10 +1,10 @@
-# ⚗️ PharmaTrack — Attendance Monitoring System
+# PharmaTrack — Attendance Monitoring System
 
 QR-based attendance tracking for the University of San Agustin Pharmacy Department.
 
 ---
 
-## 🗂 Project Structure
+## Project Structure
 
 ```
 src/
@@ -51,7 +51,7 @@ src/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install dependencies
 ```bash
@@ -83,7 +83,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 👥 User Roles
+## User Roles
 
 | Role | Access |
 |------|--------|
@@ -93,7 +93,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🔑 Flow
+## Flow
 
 1. **Faculty** creates a timed QR session for a subject/section
 2. **Students** scan the QR code (or enter the session code manually)
@@ -103,7 +103,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Next.js 14** (App Router)
 - **Supabase** (Auth + PostgreSQL)
