@@ -81,7 +81,7 @@ export default function LandingPage() {
           <div className="hero-logos" style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
             <img src="/usa.png" alt="University of San Agustin Logo" style={{ height: '100px', objectFit: 'contain' }} />
           </div>
-          <div className="hero-badge">University of San Agustin · Pharmacy Department</div>
+          <div className="hero-badge">Official Pharmacy Attendance Management System</div>
           
           <h1 className="hero-title">PHARMATRACK</h1>
           <h2 className="attendance-title">Professional Attendance Monitoring</h2>
@@ -95,18 +95,18 @@ export default function LandingPage() {
           </p>
 
           <div className="hero-cta">
-            <Link href="/login" className="btn btn-gold pulse-btn" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>
-              Access Portal
+            <Link href="/check-in" className="btn btn-gold pulse-btn" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>
+              Go to Scanner
             </Link>
             <Link href="/register" className="btn btn-outline" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>
-              Join Platform
+              Create Student Account
             </Link>
           </div>
 
           <div className="feature-preview">
-            <div className="f-item"><div className="f-dot"></div><span>Secure QR Identity</span></div>
-            <div className="f-item"><div className="f-dot"></div><span>Live Reporting</span></div>
-            <div className="f-item"><div className="f-dot"></div><span>Admin Integration</span></div>
+            <div className="f-item"><div className="f-dot"></div><span>SECURE QR IDENTITY</span></div>
+            <div className="f-item"><div className="f-dot"></div><span>LIVE REPORTING</span></div>
+            <div className="f-item"><div className="f-dot"></div><span>FACULTY INTEGRATION</span></div>
           </div>
 
           {/* SCROLL INDICATOR */}

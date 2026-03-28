@@ -58,6 +58,8 @@ export async function ensureStudentProfile(userId: string, data: { student_id_nu
   
   const qrCodeId = (existing as any)?.qr_code_id || `QR-${crypto.randomUUID().replace(/-/g, "").substring(0, 8).toUpperCase()}`;
   
+  // Note: This requires a UNIQUE constraint on user_id in the student_profiles table.
+  // Run: ALTER TABLE public.student_profiles ADD CONSTRAINT student_profiles_user_id_key UNIQUE (user_id);
   const { error } = await supabase.from("student_profiles").upsert({
     user_id: userId,
     student_id_number: data.student_id_number,
@@ -66,7 +68,10 @@ export async function ensureStudentProfile(userId: string, data: { student_id_nu
     qr_code_id: qrCodeId,
   }, { onConflict: "user_id" });
 
-  if (error) throw new Error("Failed to ensure student profile: " + error.message);
+  if (error) {
+    console.error("Profile Upsert Error:", error);
+    throw new Error("Failed to ensure student profile: " + error.message);
+  }
   return qrCodeId;
 }
 
