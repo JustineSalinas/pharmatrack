@@ -186,21 +186,21 @@ html {
 }
 
 .hero-watermark {
-  position: absolute;
+  position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 75vh;
-  max-width: 90vw;
-  height: 75vh;
+  width: 85vh;
+  max-width: 95vw;
+  height: 85vh;
   background-image: url("/usa.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.12;
+  opacity: 0.06;
   pointer-events: none;
-  z-index: 0;
-  filter: grayscale(1) brightness(0.5);
+  z-index: 3; /* Above the gradient overlay and blobs */
+  filter: grayscale(1) invert(1) brightness(1.5);
 }
 
 .animated-bg::after {
