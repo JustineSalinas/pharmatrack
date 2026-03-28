@@ -10,7 +10,7 @@ import {
   Maximize2
 } from "lucide-react";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth-client";
+import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -19,6 +19,7 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
+  const [isRepairing, setIsRepairing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -66,6 +67,34 @@ export default function StudentDashboard() {
     }
     loadDashboard();
   }, [router]);
+
+  async function handleRepairQR() {
+    if (!user || user.account_type !== 'student') return;
+    try {
+      setIsRepairing(true);
+      // We need to ask for ID number if we don't have it, but for now we'll try to find it
+      // or use a placeholder if the record is completely missing.
+      // In a real scenario, we might want a modal to ask for the Student ID number.
+      // For this fix, we'll assume the user might have one in the users table or we use a prompted value.
+      const studentId = prompt("Please confirm your Student ID Number (e.g. USA-2026-XXXX):");
+      if (!studentId) return;
+
+      const year = prompt("Enter your Year Level (e.g. 1st Year):");
+      const section = prompt("Enter your Section (e.g. PH 1A):");
+
+      await ensureStudentProfile(user.id, {
+        student_id_number: studentId,
+        year: year || "Unknown",
+        section: section || "Unknown"
+      } as any);
+      
+      window.location.reload();
+    } catch (err: any) {
+      alert("Repair failed: " + err.message);
+    } finally {
+      setIsRepairing(false);
+    }
+  }
 
   if (loading) return null;
 
@@ -127,16 +156,37 @@ export default function StudentDashboard() {
             <h3>Personal ID QR Code</h3>
             
             <div className="qr-wrapper">
-              <QRCodeSVG 
-                value={qrCodeValue} 
-                size={180}
-                level="H"
-                includeMargin={true}
-              />
+              {qrCodeValue === "NOT-FOUND" ? (
+                <div style={{ height: 180, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "rgba(239, 68, 68, 0.1)", borderRadius: 12, border: "1px dashed var(--danger)" }}>
+                  <AlertCircle color="var(--danger)" size={32} />
+                  <span style={{ fontSize: "0.8rem", color: "var(--danger)" }}>QR Data Missing</span>
+                  <button 
+                    className="btn btn-danger" 
+                    style={{ fontSize: "0.7rem", padding: "4px 8px", width: "auto" }}
+                    onClick={handleRepairQR}
+                    disabled={isRepairing}
+                  >
+                    {isRepairing ? "Repairing..." : "Repair QR Code"}
+                  </button>
+                </div>
+              ) : (
+                <QRCodeSVG 
+                  value={qrCodeValue} 
+                  size={180}
+                  level="H"
+                  includeMargin={true}
+                />
+              )}
             </div>
             
-            <div className="qr-id-text">{qrCodeValue}</div>
-            <p className="qr-help">Present this to any Council Member for scanning.</p>
+            <div className="qr-id-text" style={{ color: qrCodeValue === "NOT-FOUND" ? "var(--danger)" : "inherit" }}>
+              {qrCodeValue}
+            </div>
+            <p className="qr-help">
+              {qrCodeValue === "NOT-FOUND" 
+                ? "There was an error generating your code during registration." 
+                : "Present this to any Council Member for scanning."}
+            </p>
             
             <div className="student-actions">
               <Link href="/check-in" className="btn btn-outline" style={{ padding: "8px 12px", fontSize: "0.85rem", width: "100%" }}>

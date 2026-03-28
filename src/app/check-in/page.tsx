@@ -2,13 +2,15 @@
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth-client";
+import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { Loader2, QrCode } from "lucide-react";
+import { Loader2, QrCode, AlertCircle } from "lucide-react";
 
 export default function CheckInPage() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [isRepairing, setIsRepairing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -19,6 +21,7 @@ export default function CheckInPage() {
           router.push("/login");
           return;
         }
+        setUser(u);
 
         if (u.account_type === "admin") {
           router.push("/dashboard/admin");
@@ -46,6 +49,30 @@ export default function CheckInPage() {
     fetchQR();
   }, [router]);
 
+  async function handleRepairQR() {
+    if (!user || user.account_type !== 'student') return;
+    try {
+      setIsRepairing(true);
+      const studentId = prompt("Confirm your Student ID Number:");
+      if (!studentId) return;
+
+      const year = prompt("Year Level:");
+      const section = prompt("Section:");
+
+      await ensureStudentProfile(user.id, {
+        student_id_number: studentId,
+        year: year || "Unknown",
+        section: section || "Unknown"
+      } as any);
+      
+      window.location.reload();
+    } catch (err: any) {
+      alert("Repair failed: " + err.message);
+    } finally {
+      setIsRepairing(false);
+    }
+  }
+
   return (
     <div className="page-enter fade-in" style={{ padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
       <div style={{ textAlign: "center", marginBottom: "40px" }}>
@@ -72,8 +99,20 @@ export default function CheckInPage() {
             />
           </div>
         ) : (
-          <div style={{ padding: "60px", color: "var(--danger)" }}>
-            QR Code could not be found. Please contact support.
+          <div style={{ padding: "60px", color: "var(--danger)", display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
+            <AlertCircle size={48} />
+            <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>QR Code could not be found.</div>
+            <p style={{ fontSize: "0.9rem", opacity: 0.8, maxWidth: "300px" }}>
+              This usually happens if your profile wasn't fully set up during registration.
+            </p>
+            <button 
+              className="btn btn-gold" 
+              style={{ width: "auto", padding: "10px 20px" }}
+              onClick={handleRepairQR}
+              disabled={isRepairing}
+            >
+              {isRepairing ? "Repairing..." : "Repair My QR Code"}
+            </button>
           </div>
         )}
         
