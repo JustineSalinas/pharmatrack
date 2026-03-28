@@ -187,20 +187,17 @@ html {
 
 .hero-watermark {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 85vh;
-  max-width: 95vw;
-  height: 85vh;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   background-image: url("/usa.png");
-  background-size: contain;
+  background-size: 80vh auto;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.06;
+  opacity: 0.025; /* Very subtle, barely visible */
   pointer-events: none;
-  z-index: 3; /* Above the gradient overlay and blobs */
-  filter: grayscale(1) invert(1) brightness(1.5);
+  z-index: -2; /* Behind the moving blobs and everything else */
+  filter: grayscale(1) invert(1);
 }
 
 .animated-bg::after {
@@ -432,18 +429,16 @@ html {
 }
 
 .f-dot {
-  width: 8px;
-  height: 8px;
-  background: #00ff88;
+  width: 6px;
+  height: 6px;
+  background: rgba(0, 255, 136, 0.4);
   border-radius: 50%;
-  box-shadow: 0 0 10px #00ff88;
-  animation: intensePulse 1.2s infinite ease-in-out;
+  animation: subtlePulse 3s infinite ease-in-out;
 }
 
-@keyframes intensePulse {
-  0% { transform: scale(1); box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px rgba(0, 255, 136, 0.6); }
-  50% { transform: scale(1.4); box-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88, 0 0 60px #00ff88; }
-  100% { transform: scale(1); box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px rgba(0, 255, 136, 0.6); }
+@keyframes subtlePulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
 }
 
 /* Scroll Indicator */
