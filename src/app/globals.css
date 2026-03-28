@@ -787,7 +787,8 @@ html {
   gap: 32px;
   text-align: center;
   padding: 60px 40px !important;
-  background: linear-gradient(180deg, var(--surface), rgba(0,0,0,0.2));
+  background: var(--surface2); /* Matched with Key Features shadowy background */
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
 
 .qr-scanner-frame {

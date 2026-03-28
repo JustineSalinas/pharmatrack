@@ -11,9 +11,9 @@ const Typewriter = () => {
 
   const phrases = [
     "\"Maayong adlaw, future Pharmacists!\"",
-    "\"Professional Pharmacy Solutions.\"",
+    "\"Professional Attendance Solutions.\"",
     "\"Precision Attendance Tracking.\"",
-    "\"Official Augustinian Platform.\"",
+    "\"Augustinian Platform.\"",
     "\"Real-time Cloud Analytics.\"",
     "\"Padayon, mga Augustinians!\""
   ];
@@ -71,8 +71,8 @@ export default function LandingPage() {
             <span style={{ fontWeight: "800", letterSpacing: "1px" }}>PHARMATRACK</span>
           </div>
           <div className="nav-btns">
-            <Link href="/login" className="btn btn-outline" style={{ width: "auto", padding: "9px 20px" }}>Log In</Link>
-            <Link href="/register" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "9px 20px" }}>Sign Up</Link>
+            <Link href="/login" className="btn btn-outline" style={{ width: "auto", padding: "9px 30px" }}>Log In</Link>
+            <Link href="/register" className="btn btn-gold pulse-btn" style={{ width: "auto", padding: "9px 30px" }}>Sign Up</Link>
           </div>
         </nav>
 
