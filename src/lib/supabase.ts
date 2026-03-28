@@ -8,19 +8,19 @@ export type Database = {
   public: {
     Tables: {
       users: {
-        Row: any;
-        Insert: any;
-        Update: any;
+        Row: { id: string; email: string; full_name: string; account_type: string; status: string; created_at: string };
+        Insert: { id: string; email: string; full_name: string; account_type: string; status?: string; created_at?: string };
+        Update: { id?: string; email?: string; full_name?: string; account_type?: string; status?: string };
       };
       student_profiles: {
-        Row: any;
-        Insert: any;
-        Update: any;
+        Row: { user_id: string; student_id_number: string; section: string; current_year: string; qr_code_id?: any; created_at: string };
+        Insert: { user_id: string; student_id_number: string; section: string; current_year: string; qr_code_id?: any; created_at?: string };
+        Update: { student_id_number?: string; section?: string; current_year?: string; qr_code_id?: any };
       };
       facilitator_profiles: {
-        Row: any;
-        Insert: any;
-        Update: any;
+        Row: { user_id: string; department: string; created_at: string };
+        Insert: { user_id: string; department: string; created_at?: string };
+        Update: { department?: string };
       };
       qr_sessions: {
         Row: any;

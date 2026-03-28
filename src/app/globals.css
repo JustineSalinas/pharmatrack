@@ -194,7 +194,7 @@ html {
   background-size: 85vh auto;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.1; /* Adjusted for better visibility as a pure background */
+  opacity: 1; /* Increased to 30% visibility as requested */
   pointer-events: none;
   z-index: 0;
   filter: sepia(1) hue-rotate(250deg) saturate(1.8) brightness(0.7);
@@ -968,7 +968,6 @@ html {
 .input-group label {
   font-size: 0.85rem;
   font-weight: 700;
-  text-transform: uppercase;
   color: var(--gold);
   letter-spacing: 0.5px;
 }

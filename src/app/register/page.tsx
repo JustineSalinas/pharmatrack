@@ -213,7 +213,7 @@ export default function RegisterPage() {
                   <input 
                     type="email" 
                     className="input-field" 
-                    placeholder="juan@usa.edu.ph" 
+                    placeholder="name@usa.edu.ph" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required 
