@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     // Fetch user profile
     const { data: profile } = await supabase.from("users").select("*").eq("id", data.user.id).single();
 
-    const res = NextResponse.json({ user: data.user, profile });
+    const res = NextResponse.json({ user: data.user, profile, session: data.session });
     res.cookies.set("pharmatrack_token", data.session?.access_token ?? "", {
       httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7,
     });
@@ -46,8 +46,16 @@ export async function POST(req: NextRequest) {
     if (authErr) return NextResponse.json({ error: authErr.message }, { status: 400 });
 
     const userId = authData.user.id;
+    const status = account_type === "student" ? "approved" : "pending";
 
-    const { error: userInsertErr } = await supabase.from("users").insert({ id: userId, email, full_name, account_type });
+    const { error: userInsertErr } = await supabase.from("users").insert({ 
+      id: userId, 
+      email, 
+      full_name, 
+      account_type, 
+      status 
+    });
+    
     if (userInsertErr) {
       await supabase.auth.admin.deleteUser(userId);
       return NextResponse.json({ error: userInsertErr.message }, { status: 500 });
@@ -62,8 +70,8 @@ export async function POST(req: NextRequest) {
         await supabase.auth.admin.deleteUser(userId);
         return NextResponse.json({ error: profileErr.message }, { status: 500 });
       }
-    } else if (account_type === "faculty") {
-      const { error: profileErr } = await supabase.from("faculty_profiles").insert({ user_id: userId, department: "Pharmacy" });
+    } else if (account_type === "facilitator") {
+      const { error: profileErr } = await supabase.from("facilitator_profiles").insert({ user_id: userId, department: "Pharmacy" });
       if (profileErr) {
         await supabase.auth.admin.deleteUser(userId);
         return NextResponse.json({ error: profileErr.message }, { status: 500 });

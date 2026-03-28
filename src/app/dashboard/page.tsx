@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { 
@@ -33,6 +34,11 @@ export default function StudentDashboard() {
 
         if (u.account_type === "admin") {
           router.push("/dashboard/admin");
+          return;
+        }
+
+        if (u.account_type === "facilitator") {
+          router.push("/dashboard/facilitator");
           return;
         }
 
@@ -72,10 +78,6 @@ export default function StudentDashboard() {
     if (!user || user.account_type !== 'student') return;
     try {
       setIsRepairing(true);
-      // We need to ask for ID number if we don't have it, but for now we'll try to find it
-      // or use a placeholder if the record is completely missing.
-      // In a real scenario, we might want a modal to ask for the Student ID number.
-      // For this fix, we'll assume the user might have one in the users table or we use a prompted value.
       const studentId = prompt("Please confirm your Student ID Number (e.g. USA-2026-XXXX):");
       if (!studentId) return;
 
@@ -107,7 +109,7 @@ export default function StudentDashboard() {
       {/* HEADER */}
       <header className="dash-header">
         <div className="dash-header-left">
-          <span className="breadcrumb-text">{isStudent ? "Student Portal" : "Faculty Portal"}</span>
+          <span className="breadcrumb-text">{isStudent ? "Student Portal" : "Facilitator Portal"}</span>
           <h1>Dashboard</h1>
         </div>
       </header>
@@ -236,7 +238,6 @@ export default function StudentDashboard() {
           </Link>
         </div>
       </div>
-      
     </div>
   );
 }

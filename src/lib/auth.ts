@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import { supabase } from "./supabase";
-import type { User } from "./schema";
+import type { PharmaUser } from "./schema";
 
 export async function getSession() {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const token = cookieStore.get("pharmatrack_token")?.value;
   if (!token) return null;
 
@@ -12,14 +12,14 @@ export async function getSession() {
   return user;
 }
 
-export async function getUserProfile(userId: string): Promise<User | null> {
+export async function getUserProfile(userId: string): Promise<PharmaUser | null> {
   const { data, error } = await supabase
     .from("users")
     .select("*")
     .eq("id", userId)
     .single();
   if (error) return null;
-  return data;
+  return data as PharmaUser;
 }
 
 export async function getStudentProfile(userId: string) {
@@ -32,7 +32,7 @@ export async function getStudentProfile(userId: string) {
   return data;
 }
 
-export async function requireAuth(accountType?: "student" | "faculty" | "admin") {
+export async function requireAuth(accountType?: "student" | "facilitator" | "admin") {
   const session = await getSession();
   if (!session) throw new Error("Unauthorized");
 
