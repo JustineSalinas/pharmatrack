@@ -86,7 +86,7 @@ export default function LandingPage() {
           <h1 className="hero-title">PHARMATRACK</h1>
           <h2 className="attendance-title">Professional Attendance Monitoring</h2>
           
-          <div style={{ minHeight: "60px", marginBottom: "30px" }}>
+          <div style={{ minHeight: "60px", marginBottom: "30px", marginTop: "15px" }}>
             <Typewriter />
           </div>
 
