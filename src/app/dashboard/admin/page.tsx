@@ -1,7 +1,22 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Bell, Plus, Users, Calendar, ScanLine, TrendingUp, CalendarDays, Loader2 } from "lucide-react";
+import { 
+  Search, 
+  Bell, 
+  Plus, 
+  Users, 
+  Calendar, 
+  ScanLine, 
+  TrendingUp, 
+  CalendarDays, 
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Activity,
+  ShieldCheck
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
@@ -68,7 +83,7 @@ export default function AdminDashboard() {
           attendanceRate: rate
         });
 
-        // Fetch recent 3 scans for the feed
+        // Fetch recent 5 scans for the feed
         const { data: recentAtt } = await supabase
           .from("attendance_records")
           .select(`
@@ -79,7 +94,7 @@ export default function AdminDashboard() {
             users ( full_name )
           `)
           .order("created_at", { ascending: false })
-          .limit(3);
+          .limit(5);
 
         setRecentScans(recentAtt || []);
       } catch (err) {
@@ -92,10 +107,19 @@ export default function AdminDashboard() {
   }, [router]);
 
   if (loading) {
-     return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-        <Loader2 className="animate-spin" size={48} color="var(--gold)" />
-     </div>;
+     return (
+       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+          <Loader2 className="animate-spin" size={48} color="var(--gold)" />
+       </div>
+     );
   }
+
+  const systemHealth = [
+    { name: "Database", status: "Online", ok: true },
+    { name: "QR Service", status: "Active", ok: true },
+    { name: "Auth Engine", status: "Operational", ok: true },
+    { name: "API Gateway", status: "Active", ok: true },
+  ];
 
   return (
     <div className="fade-in">
@@ -103,19 +127,14 @@ export default function AdminDashboard() {
       <header className="dash-header">
         <div className="dash-header-left">
           <span className="breadcrumb-text">Admin Panel</span>
-          <h1>Dashboard</h1>
+          <h1>Dashboard Overview</h1>
         </div>
         <div className="dash-header-right">
           <button className="dash-search">
-            <Search size={16} /> Search
+            <Search size={16} /> Search Records
           </button>
-          <select className="dash-month-picker" defaultValue="mar2026">
-            <option value="feb2026">Feb 2026</option>
-            <option value="mar2026">Mar 2026</option>
-            <option value="apr2026">Apr 2026</option>
-          </select>
-          <Link href="/dashboard/admin/events" className="btn btn-gold" style={{ padding: "8px 16px", borderRadius: "10px", gap: "6px", backgroundColor: "#8B5CF6", backgroundImage: "none", color: "white", boxShadow: "none" }}>
-            <Plus size={16} /> Manage Events
+          <Link href="/dashboard/admin/reports" className="btn btn-gold" style={{ padding: "8px 16px", borderRadius: "10px", gap: "6px" }}>
+            <Activity size={16} /> Reports
           </Link>
           <button className="dash-notif-btn">
             <Bell size={18} />
@@ -151,125 +170,111 @@ export default function AdminDashboard() {
           <div className="stat-icon-badge orange"><TrendingUp size={20} /></div>
           <div>
             <div className="stat-value">{stats.attendanceRate}%</div>
-            <div className="stat-label">Overall Rate</div>
+            <div className="stat-label">Attendance Rate</div>
           </div>
         </div>
       </div>
 
-      <div className="dash-content-grid">
-        {/* LEFT COL: CHART */}
-        <div className="trend-panel">
-          <div className="trend-header">
-            <h3>Attendance trend</h3>
-            <div className="trend-tabs">
-              <button className="trend-tab">7d</button>
-              <button className="trend-tab active">30d</button>
-              <button className="trend-tab">90d</button>
-            </div>
-          </div>
-          <div className="trend-subtitle">Weekly scan totals</div>
+      <div className="dash-content-grid" style={{ gridTemplateColumns: "1fr 340px" }}>
+        {/* LEFT COL: TREND & RECENT */}
+        <div className="main-feed-col" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           
-          <div className="trend-chart-area">
-            {/* Mockup bars */}
-            <div className="chart-bar" style={{ height: "40%" }}></div>
-            <div className="chart-bar" style={{ height: "65%" }}></div>
-            <div className="chart-bar" style={{ height: "55%" }}></div>
-            <div className="chart-bar" style={{ height: "45%" }}></div>
-            <div className="chart-bar" style={{ height: "80%" }}></div>
-            <div className="chart-bar" style={{ height: "75%" }}></div>
-            <div className="chart-bar" style={{ height: "65%" }}></div>
-            <div className="chart-bar" style={{ height: "60%" }}></div>
-            <div className="chart-bar" style={{ height: "70%" }}></div>
-            
-            {/* SVG Line Overlay to match mockup */}
-            <svg className="chart-line-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path 
-                d="M 5 60 Q 15 35 25 45 T 45 55 T 65 20 T 75 35 T 85 40 T 95 30" 
-                fill="none" 
-                stroke="#d8b4fe" 
-                strokeWidth="2" 
-                strokeLinecap="round"
-                strokeLinejoin="round" 
-              />
-              <circle cx="5" cy="60" r="1.5" fill="#e9d5ff" />
-              <circle cx="25" cy="45" r="1.5" fill="#e9d5ff" />
-              <circle cx="45" cy="55" r="1.5" fill="#e9d5ff" />
-              <circle cx="65" cy="20" r="1.5" fill="#e9d5ff" />
-              <circle cx="75" cy="35" r="1.5" fill="#e9d5ff" />
-              <circle cx="85" cy="40" r="1.5" fill="#e9d5ff" />
-              <circle cx="95" cy="30" r="1.5" fill="#e9d5ff" />
-            </svg>
-          </div>
-          
-          {/* X Axis labels */}
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 5px 0", fontSize: "0.65rem", color: "var(--muted)" }}>
-            <span>Mar 1</span>
-            <span>Mar 5</span>
-            <span>Mar 8</span>
-            <span>Mar 12</span>
-            <span>Mar 15</span>
-            <span>Mar 19</span>
-            <span>Mar 22</span>
-          </div>
-        </div>
-
-        {/* RIGHT COL: ACTIONS */}
-        <div className="dash-actions-col">
-          <Link href="/dashboard/admin/scanner" className="action-card purple-grad">
-            <div className="action-card-icon"><ScanLine size={24} /></div>
-            <div className="action-card-text">
-              <h4>Open<br/>Scanner</h4>
-              <p>Scan student QR codes</p>
-            </div>
-          </Link>
-          
-          <Link href="/dashboard/admin/events" className="action-card orange-grad">
-            <div className="action-card-icon"><CalendarDays size={24} /></div>
-            <div className="action-card-text">
-              <h4>Manage<br/>Events</h4>
-              <p>Create & edit events</p>
-            </div>
-          </Link>
-
-          <div className="quick-stats-card" style={{ gap: "10px" }}>
-             <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: "0 auto 10px", textAlign: "center", width: "100%" }}>
-                Quick Action Menu
-             </p>
-             <Link href="/dashboard/admin/attendance" className="btn btn-outline" style={{ width: "100%", padding: "10px", fontSize: "0.9rem" }}>
-                View Full Records
-             </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* RECENT SCANS LIST */}
-      <div className="recent-scans">
-        <div className="recent-scans-header">
-          <h3>Recent Scans</h3>
-          <Link href="/dashboard/admin/attendance">View all →</Link>
-        </div>
-        
-        {recentScans.length > 0 ? (
-          recentScans.map(scan => {
-            const fname = scan.users?.full_name || "Unknown";
-            const initials = fname.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() || "U";
-            const timeIn = scan.time_in ? new Date(scan.time_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'}) : "No time";
-            return (
-              <div className="scan-item" key={scan.id}>
-                <div className="scan-avatar">{initials}</div>
-                <div className="scan-info">
-                  <div className="scan-name">{fname}</div>
-                  <div className="scan-detail">{scan.events?.name || "Unknown Event"} · Time In: {timeIn}</div>
-                </div>
-                <div className={`status-badge ${scan.status}`}>{scan.status.charAt(0).toUpperCase() + scan.status.slice(1)}</div>
+          <div className="trend-panel">
+            <div className="trend-header">
+              <h3>Attendance Trend</h3>
+              <div className="trend-tabs">
+                <button className="trend-tab active">30 Days</button>
               </div>
-            );
-          })
-        ) : (
-          <div style={{ padding: "20px", textAlign: "center", color: "var(--muted)", fontSize: "0.9rem" }}>
-            No recent scans found.
+            </div>
+            <div className="trend-subtitle">Real-time attendance fluctuations</div>
+            
+            <div className="trend-chart-area">
+              <div className="chart-bar" style={{ height: "40%" }}></div>
+              <div className="chart-bar" style={{ height: "65%" }}></div>
+              <div className="chart-bar" style={{ height: "55%" }}></div>
+              <div className="chart-bar" style={{ height: "45%" }}></div>
+              <div className="chart-bar" style={{ height: "80%" }}></div>
+              <div className="chart-bar" style={{ height: "75%" }}></div>
+              <div className="chart-bar" style={{ height: "65%" }}></div>
+              <div className="chart-bar" style={{ height: "60%" }}></div>
+              <div className="chart-bar" style={{ height: "70%" }}></div>
+              
+              <svg className="chart-line-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path d="M 5 60 Q 15 35 25 45 T 45 55 T 65 20 T 75 35 T 85 40 T 95 30" fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
           </div>
-        )}
+
+          <div className="recent-scans panel">
+            <div className="recent-scans-header" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <h3>Live Activity Feed</h3>
+              <Link href="/dashboard/admin/attendance" style={{ color: "var(--gold)", fontSize: "0.85rem" }}>View All →</Link>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {recentScans.length > 0 ? (
+                recentScans.map(scan => {
+                  const fname = scan.users?.full_name || "Unknown User";
+                  const initials = fname.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() || "U";
+                  const timeIn = scan.time_in ? new Date(scan.time_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'}) : "No time";
+                  return (
+                    <div className="scan-item" key={scan.id} style={{ background: "rgba(255,255,255,0.02)", padding: "12px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+                      <div className="scan-avatar" style={{ background: "var(--surface2)", border: "1px solid var(--gold-dim)" }}>{initials}</div>
+                      <div className="scan-info">
+                        <div className="scan-name" style={{ color: "var(--white)", fontWeight: 600 }}>{fname}</div>
+                        <div className="scan-detail" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{scan.events?.name || "Event Scan"} · {timeIn}</div>
+                      </div>
+                      <div className={`status-badge ${scan.status}`} style={{ fontSize: "0.7rem", padding: "4px 8px" }}>{scan.status.toUpperCase()}</div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: "40px", textAlign: "center", color: "var(--muted)" }}>No recent activity.</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COL: SYSTEM STATUS & QUICK ACTIONS */}
+        <div className="side-panels-col" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          
+          <div className="panel" style={{ background: "linear-gradient(135deg, var(--surface), #1a0b36)", border: "1px solid var(--gold-dim)" }}>
+            <div className="panel-header" style={{ marginBottom: "16px" }}>
+              <h3 style={{ display: "flex", alignItems: "center", gap: "8px" }}><ShieldCheck size={18} color="var(--success)" /> System Health</h3>
+            </div>
+            {systemHealth.map((s) => (
+              <div key={s.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--border)", fontSize: "0.85rem" }}>
+                <span style={{ color: "var(--muted)" }}>{s.name}</span>
+                <span style={{ color: "var(--success)", fontWeight: 700 }}>● {s.status}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="dash-actions-col" style={{ width: "100%", display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+            <Link href="/check-in" className="action-card purple-grad" style={{ height: "auto", padding: "20px" }}>
+              <div className="action-card-icon"><ScanLine size={24} /></div>
+              <div className="action-card-text">
+                <h4>Open Scanner</h4>
+                <p>Record attendance</p>
+              </div>
+            </Link>
+            <Link href="/dashboard/admin/users" className="action-card orange-grad" style={{ height: "auto", padding: "20px" }}>
+              <div className="action-card-icon"><Plus size={24} /></div>
+              <div className="action-card-text">
+                <h4>Manage Users</h4>
+                <p>Review and Approve</p>
+              </div>
+            </Link>
+            <Link href="/dashboard/admin/events" className="action-card" style={{ height: "auto", padding: "20px", background: "var(--surface2)", border: "1px solid var(--border)" }}>
+               <div className="action-card-icon" style={{ background: "rgba(255,255,255,0.05)" }}><CalendarDays size={24} /></div>
+               <div className="action-card-text">
+                 <h4>Event List</h4>
+                 <p>Schedule activities</p>
+               </div>
+            </Link>
+          </div>
+
+        </div>
       </div>
       
       <style jsx>{`

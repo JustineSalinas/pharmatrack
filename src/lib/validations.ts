@@ -10,7 +10,7 @@ export const registerBaseSchema = z.object({
   full_name: z.string().min(3, "Full name is required"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirm_password: z.string(),
-  account_type: z.enum(["student", "faculty", "admin"]),
+  account_type: z.enum(["student", "facilitator", "admin"]),
 });
 
 export const studentRegisterSchema = registerBaseSchema.extend({
@@ -18,6 +18,13 @@ export const studentRegisterSchema = registerBaseSchema.extend({
   student_id_number: z.string().min(5, "ID is required"), // e.g., USA-2026-0001
   section: z.string().min(1, "Section is required"),
   current_year: z.string().min(1, "Year is required"),
+}).refine((d) => d.password === d.confirm_password, {
+  message: "Passwords do not match",
+  path: ["confirm_password"],
+});
+
+export const facilitatorRegisterSchema = registerBaseSchema.extend({
+  account_type: z.literal("facilitator"),
 }).refine((d) => d.password === d.confirm_password, {
   message: "Passwords do not match",
   path: ["confirm_password"],
@@ -39,5 +46,6 @@ export const qrSessionSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type StudentRegisterInput = z.infer<typeof studentRegisterSchema>;
+export type FacilitatorRegisterInput = z.infer<typeof facilitatorRegisterSchema>;
 export type AdminRegisterInput = z.infer<typeof adminRegisterSchema>;
 export type QRSessionInput = z.infer<typeof qrSessionSchema>;

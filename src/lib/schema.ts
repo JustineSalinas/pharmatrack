@@ -1,13 +1,14 @@
 import { z } from "zod";
 
-export type AccountType = "student" | "faculty" | "admin";
+export type AccountType = "student" | "facilitator" | "admin";
 export type AttendanceStatus = "present" | "absent" | "late" | "incomplete";
 
-export interface User {
+export interface PharmaUser {
   id: string;
   email: string;
   full_name: string;
   account_type: AccountType;
+  status: string;
   created_at: string;
 }
 
@@ -18,6 +19,12 @@ export interface StudentProfile {
   section: string;
   current_year: string;
   qr_code_id: string;
+}
+
+export interface FacilitatorProfile {
+  id: string;
+  user_id: string;
+  department: string;
 }
 
 export interface Event {
@@ -35,30 +42,31 @@ export interface Event {
   created_at: string;
 }
 
-export interface AttendanceRecord {
-  id: string;
-  student_id: string;
-  event_id: string;
-  status: AttendanceStatus;
-  time_in: string | null;
-  time_out: string | null;
-  scanned_by: string | null;
-  remarks: string | null;
-  created_at: string;
-}
-
-export interface FacultyProfile {
-  id: string;
-  user_id: string;
-  department: string;
-}
-
 export interface QRSession {
   id: string;
+  facilitator_id: string;
   subject: string;
   section: string;
   date: string;
-  duration_minutes: number;
+  expires_at: string;
+  code: string;
+  duration_minutes?: number;
+  created_at: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  student_id: string;
+  event_id?: string;
+  session_id?: string;
+  status: AttendanceStatus;
+  time_in: string | null;
+  time_out: string | null;
+  date?: string;
+  subject?: string;
+  section?: string;
+  scanned_by?: string | null;
+  remarks?: string | null;
   created_at: string;
 }
 

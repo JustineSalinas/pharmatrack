@@ -1,21 +1,42 @@
 import { createClient } from "@supabase/supabase-js";
-import type { User, StudentProfile, FacultyProfile, QRSession, AttendanceRecord } from "./schema";
+import type { PharmaUser, StudentProfile, FacilitatorProfile, QRSession, AttendanceRecord } from "./schema";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export type Database = {
   public: {
     Tables: {
-      users: { Row: User; Insert: Omit<User, "id" | "created_at">; Update: Partial<User> };
-      student_profiles: { Row: StudentProfile; Insert: Omit<StudentProfile, "id">; Update: Partial<StudentProfile> };
-      faculty_profiles: { Row: FacultyProfile; Insert: Omit<FacultyProfile, "id">; Update: Partial<FacultyProfile> };
-      qr_sessions: { Row: QRSession; Insert: Omit<QRSession, "id" | "created_at">; Update: Partial<QRSession> };
-      attendance_records: { Row: AttendanceRecord; Insert: Omit<AttendanceRecord, "id">; Update: Partial<AttendanceRecord> };
+      users: {
+        Row: any;
+        Insert: any;
+        Update: any;
+      };
+      student_profiles: {
+        Row: any;
+        Insert: any;
+        Update: any;
+      };
+      facilitator_profiles: {
+        Row: any;
+        Insert: any;
+        Update: any;
+      };
+      qr_sessions: {
+        Row: any;
+        Insert: any;
+        Update: any;
+      };
+      attendance_records: {
+        Row: any;
+        Insert: any;
+        Update: any;
+      };
+    };
+    Views: {
+      student_attendance_summary: { Row: any };
     };
   };
 };
 
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
-  : (null as any);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);

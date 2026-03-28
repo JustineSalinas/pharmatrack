@@ -1,15 +1,14 @@
--- PharmaTrack Database Schema
+-- PharmaTrack Unified Database Schema
 -- Run this in Supabase SQL Editor to set up all tables
 
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
 -- ============================================================
--- SECURITY HELPERS (To avoid RLS recursion)
+-- SECURITY HELPERS
 -- ============================================================
 
--- Function to check if the current user is an approved admin
--- SECURITY DEFINER skips RLS checks inside the function to avoid recursion.
+-- Check if current user is an approved admin
 create or replace function public.is_admin()
 returns boolean as $$
 begin
@@ -22,14 +21,14 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 
--- Function to check if the current user is an approved council member
+-- Check if current user is an admin or approved facilitator (Council)
 create or replace function public.is_council()
 returns boolean as $$
 begin
   return exists (
     select 1 from public.users
     where id = auth.uid()
-    and account_type in ('faculty', 'admin')
+    and account_type in ('facilitator', 'admin')
     and status = 'approved'
   );
 end;
@@ -42,14 +41,14 @@ create table if not exists public.users (
   id          uuid primary key references auth.users(id) on delete cascade,
   email       text not null unique,
   full_name   text not null,
-  account_type text not null check (account_type in ('student', 'faculty', 'admin')),
+  account_type text not null check (account_type in ('student', 'facilitator', 'admin')),
   status      text not null default 'approved' check (status in ('pending', 'approved', 'rejected')),
   created_at  timestamptz default now()
 );
 
 alter table public.users enable row level security;
 
--- Nuke all policies on users to ensure a clean slate
+-- Nuke and recreate clean policies
 do $$ 
 declare 
     pol record;
@@ -59,17 +58,10 @@ begin
     end loop;
 end $$;
 
--- 1. Allow signup (anyone can insert if it matches their UID)
-create policy "allow_signup" on public.users 
-for insert with check (auth.uid() = id);
-
--- 2. Allow own select
-create policy "allow_own_read" on public.users 
-for select using (auth.uid() = id);
-
--- 3. Allow admins to manage (using loop-safe check)
-create policy "allow_admin_manage_all" on public.users 
-for all using ((auth.uid() != id) and public.is_admin());
+create policy "allow_signup" on public.users for insert with check (auth.uid() = id);
+create policy "allow_own_read" on public.users for select using (auth.uid() = id);
+create policy "allow_own_update" on public.users for update using (auth.uid() = id);
+create policy "allow_admin_manage_all" on public.users for all using ((auth.uid() != id) and public.is_admin());
 
 -- ============================================================
 -- STUDENT PROFILES
@@ -80,34 +72,38 @@ create table if not exists public.student_profiles (
   student_id_number   text not null unique,
   section             text not null,
   current_year        text not null,
-  qr_code_id          text not null unique, -- Permanent unique QR identifier
+  qr_code_id          text not null unique, -- Permanent unique identity QR
   created_at          timestamptz default now()
 );
 
 alter table public.student_profiles enable row level security;
 
 drop policy if exists "Students can read their own profile" on public.student_profiles;
-create policy "Students can read their own profile"
-  on public.student_profiles for select
-  using (auth.uid() = user_id);
+create policy "Students can read their own profile" on public.student_profiles for select using (auth.uid() = user_id);
 
 drop policy if exists "Admins can read all student profiles" on public.student_profiles;
-create policy "Admins can read all student profiles"
-  on public.student_profiles for select
-  using (public.is_council());
+create policy "Admins and Facilitators can read all student profiles" on public.student_profiles for select using (public.is_council());
 
 drop policy if exists "Students can insert their own profile" on public.student_profiles;
-create policy "Students can insert their own profile"
-  on public.student_profiles for insert
-  with check (auth.uid() = user_id);
-
-drop policy if exists "Admins can insert student profiles" on public.student_profiles;
-create policy "Admins can insert student profiles"
-  on public.student_profiles for insert
-  with check (public.is_admin());
+create policy "Students can insert their own profile" on public.student_profiles for insert with check (auth.uid() = user_id);
 
 -- ============================================================
--- EVENTS (Council Activities)
+-- FACILITATOR PROFILES (Renamed from Faculty)
+-- ============================================================
+create table if not exists public.facilitator_profiles (
+  id          uuid primary key default uuid_generate_v4(),
+  user_id     uuid not null unique references public.users(id) on delete cascade,
+  department  text not null default 'Pharmacy',
+  created_at  timestamptz default now()
+);
+
+alter table public.facilitator_profiles enable row level security;
+
+create policy "Facilitators can read their own profile" on public.facilitator_profiles for select using (auth.uid() = user_id);
+create policy "Admins can manage facilitator profiles" on public.facilitator_profiles for all using (public.is_admin());
+
+-- ============================================================
+-- EVENTS (School-wide activities)
 -- ============================================================
 create table if not exists public.events (
   id                  uuid primary key default uuid_generate_v4(),
@@ -115,65 +111,69 @@ create table if not exists public.events (
   description         text,
   location            text not null,
   date                date not null,
-  
-  -- Time Windows for Scanning
   check_in_start     timestamptz not null,
-  check_in_late      timestamptz not null, -- After this is "Late"
+  check_in_late      timestamptz not null,
   check_in_end       timestamptz not null,
-  
   check_out_start    timestamptz,
   check_out_end      timestamptz,
-  
   created_by         uuid not null references public.users(id),
   created_at         timestamptz default now()
 );
 
 alter table public.events enable row level security;
-
-drop policy if exists "Everyone can view events" on public.events;
-create policy "Everyone can view events"
-  on public.events for select
-  using (true);
-
-drop policy if exists "Admins can manage events" on public.events;
-create policy "Admins can manage events"
-  on public.events for all
-  using (public.is_admin());
+create policy "Everyone can view events" on public.events for select using (true);
+create policy "Admins can manage events" on public.events for all using (public.is_admin());
 
 -- ============================================================
--- ATTENDANCE RECORDS
+-- QR SESSIONS (Class or specific activity scanning)
+-- ============================================================
+create table if not exists public.qr_sessions (
+  id                  uuid primary key default uuid_generate_v4(),
+  facilitator_id      uuid not null references public.users(id) on delete cascade,
+  subject             text not null,
+  section             text not null,
+  date                date not null,
+  expires_at          timestamptz not null,
+  code                text not null unique,
+  created_at          timestamptz default now()
+);
+
+alter table public.qr_sessions enable row level security;
+
+create policy "Facilitators can create sessions" on public.qr_sessions for insert with check (auth.uid() = facilitator_id AND public.is_council());
+create policy "Authenticated users can read sessions" on public.qr_sessions for select using (auth.role() = 'authenticated');
+create policy "Admins and creators can manage sessions" on public.qr_sessions for all using (public.is_admin() OR auth.uid() = facilitator_id);
+
+-- ============================================================
+-- ATTENDANCE RECORDS (Combined model)
 -- ============================================================
 create table if not exists public.attendance_records (
   id          uuid primary key default uuid_generate_v4(),
   student_id  uuid not null references public.users(id) on delete cascade,
-  event_id    uuid not null references public.events(id) on delete cascade,
+  event_id    uuid references public.events(id) on delete cascade,   -- For school-wide events
+  session_id  uuid references public.qr_sessions(id) on delete cascade, -- For classroom sessions
   
   status      text not null check (status in ('present', 'late', 'absent', 'incomplete')),
   
   time_in     timestamptz,
   time_out    timestamptz,
   
-  scanned_by  uuid references public.users(id), -- Admin who scanned the student
+  scanned_by  uuid references public.users(id),
   remarks     text default '',
   created_at  timestamptz default now(),
   
-  unique (student_id, event_id)
+  -- Constraint: an attendance record must be for either an event or a session
+  constraint check_attendance_target check (event_id is not null or session_id is not null)
 );
 
 alter table public.attendance_records enable row level security;
 
-drop policy if exists "Students can read their own attendance" on public.attendance_records;
-create policy "Students can read their own attendance"
-  on public.attendance_records for select
-  using (auth.uid() = student_id);
-
-drop policy if exists "Admins can manage attendance" on public.attendance_records;
-create policy "Admins can manage attendance"
-  on public.attendance_records for all
-  using (public.is_council());
+create policy "Students can read their own attendance" on public.attendance_records for select using (auth.uid() = student_id);
+create policy "Facilitators and Admins manage attendance" on public.attendance_records for all using (public.is_council());
+create policy "Students can insert own attendance for sessions" on public.attendance_records for insert with check (auth.uid() = student_id);
 
 -- ============================================================
--- VIEWS & ANALYTICS
+-- HELPER VIEWS
 -- ============================================================
 
 drop view if exists public.student_attendance_summary;
@@ -184,7 +184,7 @@ select
   sp.student_id_number,
   sp.section,
   sp.current_year,
-  count(*) as total_events,
+  count(*) as total_records,
   count(*) filter (where ar.status = 'present') as present_count,
   count(*) filter (where ar.status = 'late') as late_count,
   count(*) filter (where ar.status = 'absent') as absent_count,
@@ -198,3 +198,8 @@ left join public.attendance_records ar on ar.student_id = u.id
 where u.account_type = 'student'
 group by u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year;
 
+-- ============================================================
+-- READY-MADE ADMIN INITIALIZATION
+-- ============================================================
+-- TO BE RUN MANUALLY: 
+-- update public.users set account_type = 'admin', status = 'approved' where email = 'your-admin@email.com';
