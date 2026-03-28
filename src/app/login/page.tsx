@@ -52,19 +52,19 @@ export default function LoginPage() {
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
               <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
             </div>
-            <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 2.2rem)", lineHeight: 1.2 }}>Welcome, Pharmacists!</h2>
-            <p>Access your official PharmaTrack portal.</p>
+            <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 2.2rem)", lineHeight: 1.2 }}>Welcome, pharmacists!</h2>
+            <p>Access your official Pharmatrack portal.</p>
           </div>
 
           <form className="auth-form" onSubmit={handleLogin}>
             {error && <div style={{ color: "var(--danger)", textAlign: "center", fontSize: "0.85rem", marginBottom: "10px" }}>{error}</div>}
 
             <div className="input-group">
-              <label>USA Email</label>
+              <label>Usa email</label>
               <input
                 type="email"
                 className="input-field"
-                placeholder="student@usa.edu.ph"
+                placeholder="Student@usa.edu.ph"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -88,12 +88,12 @@ export default function LoginPage() {
               style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem", border: "none" }}
               disabled={loading}
             >
-              {loading ? "Authenticating..." : "Secure Log In"}
+              {loading ? "Authenticating..." : "Secure log in"}
             </button>
           </form>
 
           <div className="auth-footer">
-            Don't have an account? <Link href="/register" className="auth-link">Register Here</Link>
+            Don't have an account? <Link href="/register" className="auth-link">Register here</Link>
           </div>
         </div>
       </div>
