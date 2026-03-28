@@ -112,8 +112,8 @@ export default function LandingPage() {
               className="scroll-circle" 
               onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="bounce">
-                <path d="M12 5v14M19 12l-7 7-7-7"/>
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
               </svg>
             </div>
           </div>
