@@ -1437,7 +1437,7 @@ html {
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .sidebar.open {
+  .sidebar-wrapper.open .sidebar {
     left: 0;
   }
 
@@ -2417,7 +2417,6 @@ html {
 
 .main-content {
   flex: 1;
-  margin-left: var(--sidebar-width);
   padding: 40px;
   min-height: 100vh;
   position: relative;
@@ -2484,7 +2483,7 @@ html {
     padding-bottom: env(safe-area-inset-bottom, 20px);
   }
 
-  .sidebar.open {
+  .sidebar-wrapper.open .sidebar {
     left: 0;
   }
 
