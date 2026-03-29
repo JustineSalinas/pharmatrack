@@ -233,7 +233,7 @@ export default function RegisterPage() {
                         required 
                       />
                     </div>
-                    <div className="two-col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div className="two-col-grid">
                       <div className="input-group">
                         <label>Current Year</label>
                         <select 
