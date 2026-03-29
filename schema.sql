@@ -1,5 +1,5 @@
--- ============================================================
--- PharmaTrack Database Schema (Spec v1.0)
+-- PharmaTrack Unified Database Schema
+-- Run this in your Supabase SQL Editor
 -- ============================================================
 
 -- Enable UUID extension
@@ -27,7 +27,7 @@ BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.users
     WHERE id = auth.uid()
-    AND account_type IN ('faculty', 'admin')
+    AND account_type IN ('facilitator', 'admin')
     AND status = 'approved'
   );
 END;
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email       TEXT NOT NULL UNIQUE,
   full_name   TEXT NOT NULL,
-  account_type TEXT NOT NULL CHECK (account_type IN ('student', 'faculty', 'admin')),
+  account_type TEXT NOT NULL CHECK (account_type IN ('student', 'facilitator', 'admin')),
   status      TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -58,6 +58,7 @@ END $$;
 
 CREATE POLICY "allow_signup" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "allow_own_read" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "allow_own_update" ON public.users FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "allow_admin_manage_all" ON public.users FOR ALL USING ((auth.uid() != id) AND public.is_admin());
 
 -- ============================================================
@@ -65,7 +66,7 @@ CREATE POLICY "allow_admin_manage_all" ON public.users FOR ALL USING ((auth.uid(
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.student_profiles (
   id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id             UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id             UUID NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
   student_id_number   TEXT NOT NULL UNIQUE,
   section             TEXT NOT NULL,
   current_year        TEXT NOT NULL,
@@ -74,11 +75,23 @@ CREATE TABLE IF NOT EXISTS public.student_profiles (
 );
 
 ALTER TABLE public.student_profiles ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Student reads own" ON public.student_profiles;
-CREATE POLICY "Student reads own" ON public.student_profiles FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Student reads own profile" ON public.student_profiles FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Council reads all profiles" ON public.student_profiles FOR SELECT USING (public.is_council());
+CREATE POLICY "Student inserts own profile" ON public.student_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Admins read all students" ON public.student_profiles;
-CREATE POLICY "Admins read all students" ON public.student_profiles FOR SELECT USING (public.is_council());
+-- ============================================================
+-- FACILITATOR PROFILES
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.facilitator_profiles (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
+  department  TEXT NOT NULL DEFAULT 'Pharmacy',
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.facilitator_profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Facilitator reads own profile" ON public.facilitator_profiles FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Admin manages facilitators" ON public.facilitator_profiles FOR ALL USING (public.is_admin());
 
 -- ============================================================
 -- EVENTS
@@ -99,11 +112,27 @@ CREATE TABLE IF NOT EXISTS public.events (
 );
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Everyone views events" ON public.events;
 CREATE POLICY "Everyone views events" ON public.events FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Admins manage events" ON public.events;
 CREATE POLICY "Admins manage events" ON public.events FOR ALL USING (public.is_admin());
+
+-- ============================================================
+-- QR SESSIONS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.qr_sessions (
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  facilitator_id      UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  subject             TEXT NOT NULL,
+  section             TEXT NOT NULL,
+  date                DATE NOT NULL,
+  expires_at          TIMESTAMPTZ NOT NULL,
+  code                TEXT NOT NULL UNIQUE,
+  created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.qr_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Facilitators create sessions" ON public.qr_sessions FOR INSERT WITH CHECK (auth.uid() = facilitator_id AND public.is_council());
+CREATE POLICY "Everyone authenticated reads sessions" ON public.qr_sessions FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Admins manage sessions" ON public.qr_sessions FOR ALL USING (public.is_admin() OR auth.uid() = facilitator_id);
 
 -- ============================================================
 -- ATTENDANCE RECORDS
@@ -111,22 +140,21 @@ CREATE POLICY "Admins manage events" ON public.events FOR ALL USING (public.is_a
 CREATE TABLE IF NOT EXISTS public.attendance_records (
   id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id  UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  event_id    UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  event_id    UUID REFERENCES public.events(id) ON DELETE CASCADE,
+  session_id  UUID REFERENCES public.qr_sessions(id) ON DELETE CASCADE,
   status      TEXT NOT NULL CHECK (status IN ('present', 'late', 'absent', 'incomplete')),
   time_in     TIMESTAMPTZ,
   time_out    TIMESTAMPTZ,
   scanned_by  UUID REFERENCES public.users(id),
   remarks     TEXT DEFAULT '',
   created_at  TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (student_id, event_id)
+  CONSTRAINT check_attendance_target CHECK (event_id IS NOT NULL OR session_id IS NOT NULL)
 );
 
 ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Student reads own attendance" ON public.attendance_records;
 CREATE POLICY "Student reads own attendance" ON public.attendance_records FOR SELECT USING (auth.uid() = student_id);
-
-DROP POLICY IF EXISTS "Admins manage attendance" ON public.attendance_records;
-CREATE POLICY "Admins manage attendance" ON public.attendance_records FOR ALL USING (public.is_council());
+CREATE POLICY "Council manages attendance" ON public.attendance_records FOR ALL USING (public.is_council());
+CREATE POLICY "Student scans session attendance" ON public.attendance_records FOR INSERT WITH CHECK (auth.uid() = student_id);
 
 -- ============================================================
 -- VIEWS
@@ -139,7 +167,7 @@ SELECT
   sp.student_id_number,
   sp.section,
   sp.current_year,
-  COUNT(*) AS total_events,
+  COUNT(*) AS total_records,
   COUNT(*) FILTER (WHERE ar.status = 'present') AS present_count,
   COUNT(*) FILTER (WHERE ar.status = 'late') AS late_count,
   COUNT(*) FILTER (WHERE ar.status = 'absent') AS absent_count,

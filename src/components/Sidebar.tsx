@@ -1,4 +1,5 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutUser } from "@/lib/auth-client";
@@ -7,7 +8,7 @@ import { Home, Camera, ClipboardList, Calendar, User, Bell, QrCode, Users, BarCh
 interface NavItem { href: string; label: string; icon: React.ReactNode; }
 
 interface SidebarProps {
-  role: "student" | "faculty" | "admin";
+  role: "student" | "facilitator" | "admin";
   userName: string;
   userSub: string;
   avatarInitials: string;
@@ -32,14 +33,14 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
       ],
     },
   ],
-  faculty: [
+  facilitator: [
     {
       section: "Main",
       items: [
-        { href: "/dashboard/faculty", label: "Overview", icon: <Home size={18} /> },
-        { href: "/dashboard/faculty/generate", label: "Generate QR", icon: <QrCode size={18} /> },
-        { href: "/dashboard/faculty/students", label: "Students", icon: <Users size={18} /> },
-        { href: "/dashboard/faculty/reports", label: "Reports", icon: <BarChart size={18} /> },
+        { href: "/dashboard/facilitator", label: "Overview", icon: <Home size={18} /> },
+        { href: "/dashboard/facilitator/generate", label: "Generate QR", icon: <QrCode size={18} /> },
+        { href: "/dashboard/facilitator/students", label: "Students", icon: <Users size={18} /> },
+        { href: "/dashboard/facilitator/reports", label: "Reports", icon: <BarChart size={18} /> },
       ],
     },
     {
