@@ -78,6 +78,16 @@ create table if not exists public.student_profiles (
 
 alter table public.student_profiles enable row level security;
 
+-- Nuke and recreate clean policies
+do $$ 
+declare 
+    pol record;
+begin 
+    for pol in (select policyname from pg_policies where tablename = 'student_profiles' and schemaname = 'public') loop
+        execute format('drop policy %I on public.student_profiles', pol.policyname);
+    end loop;
+end $$;
+
 drop policy if exists "Students can read their own profile" on public.student_profiles;
 create policy "Students can read their own profile" on public.student_profiles for select using (auth.uid() = user_id);
 
@@ -98,6 +108,16 @@ create table if not exists public.facilitator_profiles (
 );
 
 alter table public.facilitator_profiles enable row level security;
+
+-- Nuke and recreate clean policies
+do $$ 
+declare 
+    pol record;
+begin 
+    for pol in (select policyname from pg_policies where tablename = 'facilitator_profiles' and schemaname = 'public') loop
+        execute format('drop policy %I on public.facilitator_profiles', pol.policyname);
+    end loop;
+end $$;
 
 create policy "Facilitators can read their own profile" on public.facilitator_profiles for select using (auth.uid() = user_id);
 create policy "Admins can manage facilitator profiles" on public.facilitator_profiles for all using (public.is_admin());
@@ -121,6 +141,16 @@ create table if not exists public.events (
 );
 
 alter table public.events enable row level security;
+
+-- Nuke and recreate clean policies
+do $$ 
+declare 
+    pol record;
+begin 
+    for pol in (select policyname from pg_policies where tablename = 'events' and schemaname = 'public') loop
+        execute format('drop policy %I on public.events', pol.policyname);
+    end loop;
+end $$;
 create policy "Everyone can view events" on public.events for select using (true);
 create policy "Admins can manage events" on public.events for all using (public.is_admin());
 
@@ -139,6 +169,16 @@ create table if not exists public.qr_sessions (
 );
 
 alter table public.qr_sessions enable row level security;
+
+-- Nuke and recreate clean policies
+do $$ 
+declare 
+    pol record;
+begin 
+    for pol in (select policyname from pg_policies where tablename = 'qr_sessions' and schemaname = 'public') loop
+        execute format('drop policy %I on public.qr_sessions', pol.policyname);
+    end loop;
+end $$;
 
 create policy "Facilitators can create sessions" on public.qr_sessions for insert with check (auth.uid() = facilitator_id AND public.is_council());
 create policy "Authenticated users can read sessions" on public.qr_sessions for select using (auth.role() = 'authenticated');
@@ -167,6 +207,16 @@ create table if not exists public.attendance_records (
 );
 
 alter table public.attendance_records enable row level security;
+
+-- Nuke and recreate clean policies
+do $$ 
+declare 
+    pol record;
+begin 
+    for pol in (select policyname from pg_policies where tablename = 'attendance_records' and schemaname = 'public') loop
+        execute format('drop policy %I on public.attendance_records', pol.policyname);
+    end loop;
+end $$;
 
 create policy "Students can read their own attendance" on public.attendance_records for select using (auth.uid() = student_id);
 create policy "Facilitators and Admins manage attendance" on public.attendance_records for all using (public.is_council());
