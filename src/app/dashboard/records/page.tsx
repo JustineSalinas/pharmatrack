@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
@@ -37,10 +38,9 @@ export default function StudentRecords() {
 
         if (error) throw error;
         
-        // Map data to the format we need
         const formatted = (data || []).map(r => ({
           id: r.id,
-          date: new Date(r.events?.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          date: r.events?.date ? new Date(r.events.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
           subject: r.events?.name || "Unknown Event",
           timeIn: r.time_in ? new Date(r.time_in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—",
           timeOut: r.time_out ? new Date(r.time_out).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—",
@@ -89,7 +89,7 @@ export default function StudentRecords() {
           <h2 style={{ fontSize: "2rem", fontWeight: 800, margin: 0, letterSpacing: "-0.5px" }}>Attendance Records</h2>
         </div>
         <div className="header-actions">
-          <button className="filter-btn" style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 500 }}>
+          <button className="btn btn-outline" style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 500, width: "auto", padding: "8px 16px" }}>
             <Download size={16} /> Export CSV
           </button>
         </div>
@@ -104,7 +104,7 @@ export default function StudentRecords() {
           { label: "Late", value: late, colorClass: "val-orange" },
           { label: "Rate", value: `${rate}%`, colorClass: rate >= 85 ? "val-green" : rate > 0 ? "val-orange" : "val-red" },
         ].map((s) => (
-          <div className="stat-card-custom" key={s.label} style={{ flex: 1, minWidth: "120px", maxWidth: "160px" }}>
+          <div className="stat-card" key={s.label} style={{ flex: 1, minWidth: "120px", maxWidth: "160px" }}>
             <div className="stat-label">{s.label}</div>
             <div className={`stat-val ${s.colorClass}`}>{s.value}</div>
           </div>
@@ -113,10 +113,15 @@ export default function StudentRecords() {
 
       {/* Filters */}
       <div style={{ display: "flex", gap: "12px", marginBottom: "24px", flexWrap: "wrap", alignItems: "center" }}>
-        <button className={`filter-btn ${statusFilter === "All" ? "active" : ""}`} onClick={() => setStatusFilter("All")}>All</button>
-        <button className={`filter-btn ${statusFilter === "Present" ? "active" : ""}`} onClick={() => setStatusFilter("Present")}>Present</button>
-        <button className={`filter-btn ${statusFilter === "Late" ? "active" : ""}`} onClick={() => setStatusFilter("Late")}>Late</button>
-        <button className={`filter-btn ${statusFilter === "Absent" ? "active" : ""}`} onClick={() => setStatusFilter("Absent")}>Absent</button>
+        {["All", "Present", "Late", "Absent"].map((f) => (
+          <button 
+            key={f}
+            className={`filter-btn ${statusFilter === f ? "active" : ""}`} 
+            onClick={() => setStatusFilter(f)}
+          >
+            {f}
+          </button>
+        ))}
         
         <select className="filter-dropdown" style={{ marginLeft: "16px" }} value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)}>
           {subjects.map((s) => <option key={s as string} value={s as string}>{s as string}</option>)}
@@ -188,6 +193,11 @@ export default function StudentRecords() {
             })}
           </tbody>
         </table>
+        {filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px 0", color: "var(--muted)", fontSize: "0.95rem" }}>
+            No records match the current filters.
+          </div>
+        )}
       </div>
       
       <style jsx>{`

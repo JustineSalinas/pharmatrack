@@ -1,4 +1,4 @@
-PharmaTrack — Attendance Monitoring System
+# PharmaTrack — Attendance Monitoring System
 
 QR-based attendance tracking for the University of San Agustin Pharmacy Department.
 
@@ -51,7 +51,7 @@ src/
 
 ---
 
-## Start
+## Quick Start
 
 ### 1. Install dependencies
 ```bash

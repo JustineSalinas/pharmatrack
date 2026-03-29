@@ -14,7 +14,7 @@ const getSupabase = () => {
 
 export async function GET(req: NextRequest) {
   const supabase = getSupabase();
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const token = cookieStore.get("pharmatrack_token")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const supabase = getSupabase();
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const token = cookieStore.get("pharmatrack_token")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

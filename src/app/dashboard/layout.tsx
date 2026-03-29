@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { logoutUser, getCurrentUser } from "@/lib/auth-client";
@@ -56,7 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const role = user?.account_type || "student";
   const userName = user?.full_name || "User";
-  const userSub = role === "admin" ? "System Admin" : role === "faculty" ? "Faculty" : "Student";
+  const userSub = role === "admin" ? "System Admin" : role === "facilitator" ? "Facilitator" : "Student";
   const avatarInitials = typeof userName === "string" ? userName.substring(0, 2).toUpperCase() : "U";
 
   return (
