@@ -24,14 +24,14 @@ export async function registerStudent(input: StudentRegisterInput) {
   if (!authData.user) throw new Error("Registration failed");
 
   const userId = authData.user.id;
-  
+
   // 1. Create User Record
   const { error: userErr } = await supabase.from("users").insert({
     id: userId,
     email: input.email,
     full_name: input.full_name,
     account_type: "student" as AccountType,
-    status: "approved", 
+    status: "approved",
   });
   if (userErr) throw new Error(userErr.message);
 
@@ -55,9 +55,9 @@ export async function ensureStudentProfile(userId: string, data: { student_id_nu
     .select("qr_code_id")
     .eq("user_id", userId)
     .single();
-  
+
   const qrCodeId = (existing as any)?.qr_code_id || `QR-${crypto.randomUUID().replace(/-/g, "").substring(0, 8).toUpperCase()}`;
-  
+
   // Note: This requires a UNIQUE constraint on user_id in the student_profiles table.
   // Run: ALTER TABLE public.student_profiles ADD CONSTRAINT student_profiles_user_id_key UNIQUE (user_id);
   const { error } = await supabase.from("student_profiles").upsert({
@@ -91,7 +91,7 @@ export async function registerFacilitator(input: FacilitatorRegisterInput) {
     email: input.email,
     full_name: input.full_name,
     account_type: "facilitator" as AccountType,
-    status: "pending", 
+    status: "pending",
   });
   if (userErr) throw new Error(userErr.message);
 
@@ -117,7 +117,7 @@ export async function registerAdmin(input: AdminRegisterInput) {
     email: input.email,
     full_name: input.full_name,
     account_type: "admin" as AccountType,
-    status: "pending", 
+    status: "pending",
   });
   if (error) throw new Error(error.message);
 
@@ -131,13 +131,13 @@ export async function logoutUser() {
 export async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  
+
   const { data: profile, error } = await supabase
     .from("users")
     .select("*, student_profiles(*), facilitator_profiles(*)")
     .eq("id", user.id)
     .single();
-    
+
   if (error) return null;
   return profile;
 }

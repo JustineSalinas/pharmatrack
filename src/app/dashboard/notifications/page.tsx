@@ -15,7 +15,7 @@ interface Notif {
 
 const initialNotifs: Notif[] = [
   { id: 1, icon: "✅", type: "success", title: "Check-In Confirmed", body: "Attendance confirmed for Pharmacology 301 at 7:28 AM.", time: "2 hours ago", read: false },
-  { id: 2, icon: "⚠️", type: "warning", title: "Absent Record", body: "You were marked absent for Clinical Pharmacy on Mar 21. Contact your faculty if this is an error.", time: "Yesterday", read: false },
+  { id: 2, icon: "⚠️", type: "warning", title: "Absent Record", body: "You were marked absent for Clinical Pharmacy on Mar 21. Contact your facilitator if this is an error.", time: "Yesterday", read: false },
   { id: 3, icon: "📲", type: "info", title: "New QR Session", body: "A new QR code has been generated for Pharmacognosy — PharmA.", time: "Mar 21", read: true },
   { id: 4, icon: "📉", type: "danger", title: "Attendance Alert", body: "Your attendance in Clinical Pharmacy dropped to 84%. Minimum required is 75%.", time: "Mar 20", read: true },
   { id: 5, icon: "✅", type: "success", title: "Check-In Confirmed", body: "Attendance confirmed for Pharma Chem at 7:45 AM (marked as Late).", time: "Mar 20", read: true },

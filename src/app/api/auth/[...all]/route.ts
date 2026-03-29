@@ -48,14 +48,14 @@ export async function POST(req: NextRequest) {
     const userId = authData.user.id;
     const status = account_type === "student" ? "approved" : "pending";
 
-    const { error: userInsertErr } = await supabase.from("users").insert({ 
-      id: userId, 
-      email, 
-      full_name, 
-      account_type, 
-      status 
+    const { error: userInsertErr } = await supabase.from("users").insert({
+      id: userId,
+      email,
+      full_name,
+      account_type,
+      status
     });
-    
+
     if (userInsertErr) {
       await supabase.auth.admin.deleteUser(userId);
       return NextResponse.json({ error: userInsertErr.message }, { status: 500 });

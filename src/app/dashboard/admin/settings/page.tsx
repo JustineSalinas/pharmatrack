@@ -13,7 +13,7 @@ interface Setting {
 export default function AdminSettings() {
   const [settings, setSettings] = useState<Setting[]>([
     { icon: "🔔", title: "Absence Notifications", desc: "Send automated alerts to students who are absent", type: "toggle", value: true },
-    { icon: "📧", title: "Weekly Email Reports", desc: "Send summary reports to faculty every Monday", type: "toggle", value: true },
+    { icon: "📧", title: "Weekly Email Reports", desc: "Send summary reports to facilitators every Monday", type: "toggle", value: true },
     { icon: "⏰", title: "Late Check-In Threshold", desc: "Students are marked late after this time", type: "select", value: "7:35 AM", options: ["7:30 AM", "7:35 AM", "7:40 AM", "7:45 AM"] },
     { icon: "📅", title: "Academic Period", desc: "Current semester configuration", type: "input", value: "2025–2026 · 2nd Semester" },
     { icon: "🔑", title: "QR Code Expiry", desc: "Default session duration if not specified", type: "select", value: "10 min", options: ["5 min", "10 min", "15 min", "30 min"] },

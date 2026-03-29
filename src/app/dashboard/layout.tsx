@@ -76,8 +76,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Wrapping Sidebar in a div that controls mobile open state if needed */}
       <div className={`sidebar-wrapper ${sidebarOpen ? "open" : ""}`}>
-        <Sidebar 
-          role={role as any} 
+        <Sidebar
+          role={role as any}
           userName={userName}
           userSub={userSub}
           avatarInitials={avatarInitials}
@@ -86,7 +86,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile Overlay — only renders when sidebar is open to handle closing without broad listeners */}
       {sidebarOpen && (
-        <div 
+        <div
           className="mobile-sidebar-overlay"
           onClick={() => setSidebarOpen(false)}
           style={{

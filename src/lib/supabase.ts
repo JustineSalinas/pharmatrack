@@ -23,14 +23,14 @@ export type Database = {
         Update: { department?: string };
       };
       qr_sessions: {
-        Row: any;
-        Insert: any;
-        Update: any;
+        Row: { id: string; facilitator_id: string; subject: string; section: string; date: string; expires_at: string; code: string; created_at: string };
+        Insert: { id?: string; facilitator_id: string; subject: string; section: string; date: string; expires_at: string; code: string; created_at?: string };
+        Update: { facilitator_id?: string; subject?: string; section?: string; date?: string; expires_at?: string; code?: string };
       };
       attendance_records: {
-        Row: any;
-        Insert: any;
-        Update: any;
+        Row: { id: string; student_id: string; session_id: string; status: string; time_in: string | null; time_out: string | null; date: string; subject: string; section: string; remarks: string | null; created_at: string };
+        Insert: { id?: string; student_id: string; session_id: string; status: string; time_in?: string | null; time_out?: string | null; date: string; subject: string; section: string; remarks?: string | null; created_at?: string };
+        Update: { status?: string; time_in?: string | null; time_out?: string | null; remarks?: string | null };
       };
     };
     Views: {

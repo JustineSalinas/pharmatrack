@@ -25,17 +25,17 @@ const stats = [
   { icon: "📚", label: "Active Sessions", value: "3" },
 ];
 
-export default function FacultyOverview() {
+export default function FacilitatorOverview() {
   return (
     <>
       <div className="page-header">
         <div>
-          <div className="breadcrumb"><span>Faculty</span><span>›</span><span>Overview</span></div>
-          <h2>Faculty Dashboard</h2>
+          <div className="breadcrumb"><span>Facilitator</span><span>›</span><span>Overview</span></div>
+          <h2>Facilitator Dashboard</h2>
           <p>Dr. Maria Reyes · Pharmacology Department</p>
         </div>
         <div className="header-actions">
-          <Link href="/dashboard/faculty/generate" className="btn btn-gold" style={{ width: "auto", padding: "9px 18px", fontSize: 13 }}>
+          <Link href="/dashboard/facilitator/generate" className="btn btn-gold" style={{ width: "auto", padding: "9px 18px", fontSize: 13 }}>
             📲 New QR Session
           </Link>
         </div>
@@ -97,9 +97,9 @@ export default function FacultyOverview() {
           <div className="panel">
             <div className="panel-header"><h3>Quick Actions</h3></div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <Link href="/dashboard/faculty/generate" className="btn btn-gold" style={{ fontSize: 13 }}>📲 Generate QR Code</Link>
-              <Link href="/dashboard/faculty/reports" className="btn btn-outline" style={{ fontSize: 13 }}>📊 View Reports</Link>
-              <Link href="/dashboard/faculty/students" className="btn btn-outline" style={{ fontSize: 13 }}>👥 Manage Students</Link>
+              <Link href="/dashboard/facilitator/generate" className="btn btn-gold" style={{ fontSize: 13 }}>📲 Generate QR Code</Link>
+              <Link href="/dashboard/facilitator/reports" className="btn btn-outline" style={{ fontSize: 13 }}>📊 View Reports</Link>
+              <Link href="/dashboard/facilitator/students" className="btn btn-outline" style={{ fontSize: 13 }}>👥 Manage Students</Link>
             </div>
           </div>
         </div>

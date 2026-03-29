@@ -93,7 +93,7 @@ export default function RegisterPage() {
         <div className="auth-card">
           <div className="auth-header">
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
-               <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
+              <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
             </div>
             {isPending ? (
               <>
@@ -151,7 +151,7 @@ export default function RegisterPage() {
               <div className="success-content fadeInUp">
                 <h2 className="congrats-title">Congratulations!</h2>
                 <p className="welcome-msg">Welcome to PharmaTrack, <span className="highlight">{fullName || "User"}</span>!</p>
-                
+
                 <div className="status-badge" style={{ display: 'inline-block', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '8px 20px', borderRadius: '99px', fontSize: '0.85rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.6)', marginBottom: '40px' }}>
                   {role === "facilitator" ? "Role: Facilitator (Pending Approval)" : "Role: Student Account Active"}
                 </div>
@@ -173,14 +173,14 @@ export default function RegisterPage() {
             <>
               {/* ROLE TOGGLE */}
               <div className="role-toggle">
-                <button 
+                <button
                   type="button"
                   className={`role-btn ${role === "student" ? "active" : ""}`}
                   onClick={() => setRole("student")}
                 >
                   Student
                 </button>
-                <button 
+                <button
                   type="button"
                   className={`role-btn ${role === "facilitator" ? "active" : ""}`}
                   onClick={() => setRole("facilitator")}
@@ -198,25 +198,25 @@ export default function RegisterPage() {
               <form className="auth-form" onSubmit={handleRegister}>
                 <div className="input-group">
                   <label>Full Name</label>
-                  <input 
-                    type="text" 
-                    className="input-field" 
-                    placeholder="Juan Dela Cruz" 
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Juan Dela Cruz"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    required 
+                    required
                   />
                 </div>
-                
+
                 <div className="input-group">
                   <label>USA Email</label>
-                  <input 
-                    type="email" 
-                    className="input-field" 
-                    placeholder="name@usa.edu.ph" 
+                  <input
+                    type="email"
+                    className="input-field"
+                    placeholder="name@usa.edu.ph"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    required 
+                    required
                   />
                 </div>
 
@@ -224,21 +224,21 @@ export default function RegisterPage() {
                   <>
                     <div className="input-group">
                       <label>Student ID Number</label>
-                      <input 
-                        type="text" 
-                        className="input-field" 
-                        placeholder="USA-2026-0001" 
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="USA-2026-0001"
                         value={studentId}
                         onChange={(e) => setStudentId(e.target.value)}
-                        required 
+                        required
                       />
                     </div>
                     <div className="two-col-grid">
                       <div className="input-group">
                         <label>Current Year</label>
-                        <select 
-                          className="input-field select-field" 
-                          value={year} 
+                        <select
+                          className="input-field select-field"
+                          value={year}
                           onChange={(e) => { setYear(e.target.value); setSection(""); }}
                           required
                           style={{ appearance: 'none' }}
@@ -251,9 +251,9 @@ export default function RegisterPage() {
                       </div>
                       <div className="input-group">
                         <label>Section</label>
-                        <select 
-                          className="input-field select-field" 
-                          value={section} 
+                        <select
+                          className="input-field select-field"
+                          value={section}
                           onChange={(e) => setSection(e.target.value)}
                           disabled={!year}
                           required
@@ -271,31 +271,31 @@ export default function RegisterPage() {
 
                 <div className="input-group">
                   <label>Password</label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
-                    placeholder="••••••••" 
+                  <input
+                    type="password"
+                    className="input-field"
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required 
+                    required
                   />
                 </div>
 
                 <div className="input-group">
                   <label>Confirm Password</label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
-                    placeholder="••••••••" 
+                  <input
+                    type="password"
+                    className="input-field"
+                    placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    required 
+                    required
                   />
                 </div>
-                
-                <button 
-                  type="submit" 
-                  className={`btn btn-gold pulse-btn ${loading ? 'opacity-50' : ''}`} 
+
+                <button
+                  type="submit"
+                  className={`btn btn-gold pulse-btn ${loading ? 'opacity-50' : ''}`}
                   style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem" }}
                   disabled={loading}
                 >
