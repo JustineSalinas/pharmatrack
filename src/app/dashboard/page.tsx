@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { 
-  Calendar, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle, 
+import {
+  Calendar,
+  CheckCircle,
+  Clock,
+  AlertCircle,
   Download,
   Maximize2
 } from "lucide-react";
@@ -43,7 +43,7 @@ export default function StudentDashboard() {
         }
 
         setUser(u);
-        
+
         if (u.account_type === "student") {
           // Load overall stats
           const { data } = await supabase
@@ -89,7 +89,7 @@ export default function StudentDashboard() {
         year: year || "Unknown",
         section: section || "Unknown"
       } as any);
-      
+
       window.location.reload();
     } catch (err: any) {
       alert("Repair failed: " + err.message);
@@ -151,19 +151,19 @@ export default function StudentDashboard() {
       </div>
 
       <div className="dash-content-grid" style={{ gridTemplateColumns: "320px 1fr" }}>
-        
+
         {/* LEFT COL: QR CODE */}
         <div className="dash-actions-col">
           <div className="student-qr-card">
             <h3>Personal ID QR Code</h3>
-            
+
             <div className="qr-wrapper">
               {qrCodeValue === "NOT-FOUND" ? (
                 <div style={{ height: 180, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "rgba(239, 68, 68, 0.1)", borderRadius: 12, border: "1px dashed var(--danger)" }}>
                   <AlertCircle color="var(--danger)" size={32} />
                   <span style={{ fontSize: "0.8rem", color: "var(--danger)" }}>QR Data Missing</span>
-                  <button 
-                    className="btn btn-danger" 
+                  <button
+                    className="btn btn-danger"
                     style={{ fontSize: "0.7rem", padding: "4px 8px", width: "auto" }}
                     onClick={handleRepairQR}
                     disabled={isRepairing}
@@ -172,24 +172,24 @@ export default function StudentDashboard() {
                   </button>
                 </div>
               ) : (
-                <QRCodeSVG 
-                  value={qrCodeValue} 
+                <QRCodeSVG
+                  value={qrCodeValue}
                   size={180}
                   level="H"
                   includeMargin={true}
                 />
               )}
             </div>
-            
+
             <div className="qr-id-text" style={{ color: qrCodeValue === "NOT-FOUND" ? "var(--danger)" : "inherit" }}>
               {qrCodeValue}
             </div>
             <p className="qr-help">
-              {qrCodeValue === "NOT-FOUND" 
-                ? "There was an error generating your code during registration." 
+              {qrCodeValue === "NOT-FOUND"
+                ? "There was an error generating your code during registration."
                 : "Present this to any Council Member for scanning."}
             </p>
-            
+
             <div className="student-actions">
               <Link href="/check-in" className="btn btn-outline" style={{ padding: "8px 12px", fontSize: "0.85rem", width: "100%" }}>
                 <Maximize2 size={16} /> Open Full Screen Presenter
@@ -204,7 +204,7 @@ export default function StudentDashboard() {
             <h3>Upcoming Activity</h3>
           </div>
           <div className="trend-subtitle">Next required attendance</div>
-          
+
           <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", borderRadius: "12px", padding: "20px", marginTop: "16px" }}>
             {upcomingEvent ? (
               <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
@@ -219,7 +219,7 @@ export default function StudentDashboard() {
                 <div>
                   <h4 style={{ fontSize: "1.1rem", color: "var(--white)", fontWeight: 700, marginBottom: "4px" }}>{upcomingEvent.name}</h4>
                   <div style={{ fontSize: "0.85rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                    <Clock size={12} /> {new Date(upcomingEvent.check_in_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'})} - {new Date(upcomingEvent.check_in_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'})}
+                    <Clock size={12} /> {new Date(upcomingEvent.check_in_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(upcomingEvent.check_in_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                   <div style={{ fontSize: "0.85rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "6px" }}>
                     <span style={{ fontSize: "12px" }}>📍</span> {upcomingEvent.location}

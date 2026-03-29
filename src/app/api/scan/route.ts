@@ -14,7 +14,7 @@ const getSupabase = () => {
 export async function POST(req: NextRequest) {
   const supabase = getSupabase();
 
-  // ── Auth: require logged-in admin / faculty ──────────────
+  // ── Auth: require logged-in admin / facilitator ──────────
   const cookieStore = await cookies();
   const token = cookieStore.get("pharmatrack_token")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  if (!scanner || !["admin", "faculty"].includes(scanner.account_type) || scanner.status !== "approved") {
-    return NextResponse.json({ error: "Only approved admins/faculty can scan" }, { status: 403 });
+  if (!scanner || !["admin", "facilitator"].includes(scanner.account_type) || scanner.status !== "approved") {
+    return NextResponse.json({ error: "Only approved admins/facilitator can scan" }, { status: 403 });
   }
 
   // ── Parse body ───────────────────────────────────────────

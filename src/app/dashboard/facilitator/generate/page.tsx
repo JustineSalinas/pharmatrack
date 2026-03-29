@@ -49,8 +49,8 @@ export default function GenerateQRPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from("qr_sessions").insert({
-          faculty_id: user.id,
+        await (supabase.from("qr_sessions") as any).insert({
+          facilitator_id: user.id,
           subject: form.subject,
           section: form.section,
           date: form.date,
@@ -80,7 +80,7 @@ export default function GenerateQRPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="breadcrumb"><span>Faculty</span><span>›</span><span>Generate QR</span></div>
+          <div className="breadcrumb"><span>Facilitator</span><span>›</span><span>Generate QR</span></div>
           <h2>Generate QR Code</h2>
           <p>Create a timed session QR for attendance tracking</p>
         </div>

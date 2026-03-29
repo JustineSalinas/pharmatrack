@@ -75,9 +75,9 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <div 
-          onClick={() => window.location.reload()} 
-          className="logo-row" 
+        <div
+          onClick={() => window.location.reload()}
+          className="logo-row"
           style={{ margin: 0, justifyContent: "flex-start", cursor: "pointer" }}
           role="button"
         >

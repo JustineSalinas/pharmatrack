@@ -21,7 +21,7 @@ export default function LoginPage() {
       await loginUser({ email, password });
 
       // Fetch profile to check role
-      const user = await getCurrentUser();
+      const user = await getCurrentUser() as any;
 
       // Check account type for redirect
       if (user?.account_type === "admin") {

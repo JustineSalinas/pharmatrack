@@ -22,7 +22,7 @@ export default function AdminUsers() {
   async function fetchUsers() {
     try {
       setLoading(true);
-      const u = await getCurrentUser();
+      const u = await getCurrentUser() as any;
       if (!u || u.account_type !== "admin") {
         router.push("/dashboard");
         return;
@@ -44,13 +44,12 @@ export default function AdminUsers() {
 
   async function handleUpdateStatus(userId: string, newStatus: string) {
     try {
-      const { error } = await supabase
-        .from("users")
+      const { error } = await (supabase.from("users") as any)
         .update({ status: newStatus })
         .eq("id", userId);
 
       if (error) throw error;
-      
+
       setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
     } catch (err: any) {
       alert("Error updating status: " + err.message);
@@ -64,7 +63,7 @@ export default function AdminUsers() {
   });
 
   const studentsCount = users.filter(u => u.account_type === "student").length;
-  const facilitatorCount = users.filter(u => u.account_type === "facilitator" || u.account_type === "faculty").length;
+  const facilitatorCount = users.filter(u => u.account_type === "facilitator").length;
   const adminsCount = users.filter(u => u.account_type === "admin").length;
 
   if (loading) {
@@ -86,19 +85,19 @@ export default function AdminUsers() {
           <p style={{ color: "var(--muted)", marginTop: "4px" }}>{users.length} registered accounts in the database</p>
         </div>
         <div className="header-actions">
-           <div className="search-bar-wrap" style={{ position: "relative", width: "280px" }}>
+          <div className="search-bar-wrap" style={{ position: "relative", width: "280px" }}>
             <Search style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} size={18} />
-            <input 
-              className="inp" 
-              placeholder="Search by name or email..." 
+            <input
+              className="inp"
+              placeholder="Search by name or email..."
               style={{ paddingLeft: "42px", height: "44px", borderRadius: "12px" }}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-           </div>
-           <button className="btn btn-gold" style={{ width: "auto", padding: "0 20px", height: "44px", borderRadius: "12px", gap: "8px" }}>
-             <UserPlus size={18} /> Add User
-           </button>
+          </div>
+          <button className="btn btn-gold" style={{ width: "auto", padding: "0 20px", height: "44px", borderRadius: "12px", gap: "8px" }}>
+            <UserPlus size={18} /> Add User
+          </button>
         </div>
       </div>
 
@@ -111,9 +110,9 @@ export default function AdminUsers() {
           const count = f === "All" ? users.length : f === "student" ? studentsCount : f === "facilitator" ? facilitatorCount : adminsCount;
           const label = f === "student" ? "Students" : f === "facilitator" ? "Facilitators" : f === "admin" ? "Admins" : "All";
           return (
-            <button 
-              key={f} 
-              className={`btn ${filter === f ? "btn-gold" : "btn-outline"}`} 
+            <button
+              key={f}
+              className={`btn ${filter === f ? "btn-gold" : "btn-outline"}`}
               style={{ width: "auto", padding: "8px 18px", fontSize: "0.85rem", height: "38px", borderRadius: "10px" }}
               onClick={() => setFilter(f)}
             >
@@ -141,7 +140,7 @@ export default function AdminUsers() {
               {filtered.map((u) => {
                 const initials = u.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "U";
                 const dateJoined = new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-                
+
                 return (
                   <tr key={u.id}>
                     <td>
@@ -155,7 +154,7 @@ export default function AdminUsers() {
                     <td style={{ color: "var(--muted)", fontSize: "0.9rem" }}>{u.email}</td>
                     <td>
                       <span className="tag" style={{ textTransform: "capitalize", background: "rgba(255,255,255,0.03)", color: "var(--white)" }}>
-                        {u.account_type === 'facilitator' ? 'Facilitator' : u.account_type === 'faculty' ? 'Facilitator' : u.account_type.charAt(0).toUpperCase() + u.account_type.slice(1)}
+                        {u.account_type.charAt(0).toUpperCase() + u.account_type.slice(1)}
                       </span>
                     </td>
                     <td>
@@ -168,16 +167,16 @@ export default function AdminUsers() {
                       <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
                         {u.status === "pending" && (
                           <>
-                            <button 
-                              className="btn" 
+                            <button
+                              className="btn"
                               style={{ width: "36px", height: "36px", padding: 0, borderRadius: "10px", background: "var(--success)", border: "none", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}
                               onClick={() => handleUpdateStatus(u.id, "approved")}
                               title="Approve User"
                             >
                               <CheckCircle size={18} />
                             </button>
-                            <button 
-                              className="btn" 
+                            <button
+                              className="btn"
                               style={{ width: "36px", height: "36px", padding: 0, borderRadius: "10px", background: "var(--danger)", border: "none", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}
                               onClick={() => handleUpdateStatus(u.id, "rejected")}
                               title="Reject User"
@@ -187,8 +186,8 @@ export default function AdminUsers() {
                           </>
                         )}
                         {u.status === "approved" && u.account_type !== "admin" && (
-                          <button 
-                            className="btn btn-outline" 
+                          <button
+                            className="btn btn-outline"
                             style={{ padding: "6px 12px", width: "auto", fontSize: "0.75rem", color: "var(--danger)", borderColor: "rgba(239, 68, 68, 0.3)", gap: "6px" }}
                             onClick={() => {
                               if (confirm(`Are you sure you want to suspend access for ${u.full_name}?`)) {
@@ -200,8 +199,8 @@ export default function AdminUsers() {
                           </button>
                         )}
                         {u.status === "rejected" && (
-                          <button 
-                            className="btn btn-outline" 
+                          <button
+                            className="btn btn-outline"
                             style={{ padding: "6px 12px", width: "auto", fontSize: "0.75rem" }}
                             onClick={() => handleUpdateStatus(u.id, "approved")}
                           >
