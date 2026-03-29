@@ -60,7 +60,7 @@ export default function LoginPage() {
             {error && <div style={{ color: "var(--danger)", textAlign: "center", fontSize: "0.85rem", marginBottom: "10px" }}>{error}</div>}
 
             <div className="input-group">
-              <label>Usa email</label>
+              <label>USA Email</label>
               <input
                 type="email"
                 className="input-field"

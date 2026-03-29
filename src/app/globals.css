@@ -194,18 +194,18 @@ html {
   background-size: 85vh auto;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 1; /* Increased to 30% visibility as requested */
+  opacity: 0.3; /* 30% as requested */
   pointer-events: none;
-  z-index: 0;
-  filter: sepia(1) hue-rotate(250deg) saturate(1.8) brightness(0.7);
+  z-index: 0; 
+  filter: sepia(1) hue-rotate(250deg) saturate(1.8) brightness(0.8);
 }
 
 .animated-bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(60, 30, 150, 0.4) 0%, rgba(15, 10, 40, 0.9) 100%);
-  z-index: 2;
+  background: radial-gradient(circle at center, rgba(60, 30, 150, 0.3) 0%, rgba(15, 10, 40, 0.85) 100%);
+  z-index: -2; /* Ensure the overlay is BEHIND the watermark seal */
 }
 
 .blob {
