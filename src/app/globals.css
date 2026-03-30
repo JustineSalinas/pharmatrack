@@ -248,8 +248,8 @@ html {
   background-size: 85vh auto;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.3;
-  /* 30% as requested */
+  opacity: 0.8;
+  /* 80% as requested */
   pointer-events: none;
   z-index: 0;
   filter: sepia(1) hue-rotate(250deg) saturate(1.8) brightness(0.8);
