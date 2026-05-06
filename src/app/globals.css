@@ -253,6 +253,8 @@ html {
   pointer-events: none;
   z-index: 0;
   filter: sepia(1) hue-rotate(250deg) saturate(1.8) brightness(0.8);
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .animated-bg::after {
@@ -272,6 +274,7 @@ html {
   z-index: 1;
   animation: floatBlobs 30s infinite ease-in-out alternate;
   will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 .blob-1 {
@@ -339,8 +342,9 @@ html {
   top: 20px;
   z-index: 100;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transform: translateZ(0);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
 
@@ -625,8 +629,9 @@ html {
   flex-direction: column;
   gap: 24px;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transform: translateZ(0);
 }
 
 .card p {
@@ -1057,8 +1062,9 @@ html {
   border-radius: 24px;
   padding: 50px 40px;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateZ(0);
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -1582,8 +1588,9 @@ html {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transform: translateZ(0);
   overflow-y: auto;
 }
 
@@ -2809,3 +2816,34 @@ html {
     letter-spacing: -0.5px !important;
   }
 }
+
+/* Accessibility & Performance: Respect reduced motion settings */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+
+  .blob,
+  .hero-watermark,
+  .land-nav,
+  .card,
+  .auth-card,
+  .sidebar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+
+  .blob {
+    display: none !important;
+  }
+}
