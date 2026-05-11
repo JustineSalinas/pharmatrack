@@ -138,7 +138,6 @@ export default function AdminDashboard() {
           </Link>
           <button className="dash-notif-btn">
             <Bell size={18} />
-            <span className="notif-dot"></span>
           </button>
         </div>
       </header>
@@ -176,36 +175,9 @@ export default function AdminDashboard() {
       </div>
 
       <div className="dash-content-grid" style={{ gridTemplateColumns: "1fr 340px" }}>
-        {/* LEFT COL: TREND & RECENT */}
+        {/* LEFT COL: RECENT ACTIVITY */}
         <div className="main-feed-col" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          
-          <div className="trend-panel">
-            <div className="trend-header">
-              <h3>Attendance Trend</h3>
-              <div className="trend-tabs">
-                <button className="trend-tab active">30 Days</button>
-              </div>
-            </div>
-            <div className="trend-subtitle">Real-time attendance fluctuations</div>
-            
-            <div className="trend-chart-area">
-              <div className="chart-bar" style={{ height: "40%" }}></div>
-              <div className="chart-bar" style={{ height: "65%" }}></div>
-              <div className="chart-bar" style={{ height: "55%" }}></div>
-              <div className="chart-bar" style={{ height: "45%" }}></div>
-              <div className="chart-bar" style={{ height: "80%" }}></div>
-              <div className="chart-bar" style={{ height: "75%" }}></div>
-              <div className="chart-bar" style={{ height: "65%" }}></div>
-              <div className="chart-bar" style={{ height: "60%" }}></div>
-              <div className="chart-bar" style={{ height: "70%" }}></div>
-              
-              <svg className="chart-line-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <path d="M 5 60 Q 15 35 25 45 T 45 55 T 65 20 T 75 35 T 85 40 T 95 30" fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="recent-scans panel">
+          <div className="recent-scans panel" style={{ flex: 1 }}>
             <div className="recent-scans-header" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "12px", marginBottom: "16px" }}>
               <h3>Live Activity Feed</h3>
               <Link href="/dashboard/admin/attendance" style={{ color: "var(--gold)", fontSize: "0.85rem" }}>View All →</Link>
@@ -235,21 +207,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* RIGHT COL: SYSTEM STATUS & QUICK ACTIONS */}
+        {/* RIGHT COL: QUICK ACTIONS */}
         <div className="side-panels-col" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          
-          <div className="panel" style={{ background: "linear-gradient(135deg, var(--surface), #1a0b36)", border: "1px solid var(--gold-dim)" }}>
-            <div className="panel-header" style={{ marginBottom: "16px" }}>
-              <h3 style={{ display: "flex", alignItems: "center", gap: "8px" }}><ShieldCheck size={18} color="var(--success)" /> System Health</h3>
-            </div>
-            {systemHealth.map((s) => (
-              <div key={s.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--border)", fontSize: "0.85rem" }}>
-                <span style={{ color: "var(--muted)" }}>{s.name}</span>
-                <span style={{ color: "var(--success)", fontWeight: 700 }}>● {s.status}</span>
-              </div>
-            ))}
-          </div>
-
           <div className="dash-actions-col" style={{ width: "100%", display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
             <Link href="/check-in" className="action-card purple-grad" style={{ height: "auto", padding: "20px" }}>
               <div className="action-card-icon"><ScanLine size={24} /></div>
@@ -273,7 +232,6 @@ export default function AdminDashboard() {
                </div>
             </Link>
           </div>
-
         </div>
       </div>
       
