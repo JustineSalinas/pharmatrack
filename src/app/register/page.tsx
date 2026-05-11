@@ -1,9 +1,10 @@
 "use client";
 
-import { registerStudent, registerFacilitator, registerAdmin } from "@/lib/auth-client";
+import { registerStudent, registerFacilitator } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Mail } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,22 +16,12 @@ export default function RegisterPage() {
   const [studentId, setStudentId] = useState("");
   const [year, setYear] = useState("");
   const [section, setSection] = useState("");
-  const [isPending, setIsPending] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [countdown, setCountdown] = useState(3);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Auto-redirect countdown after successful student registration
-  useEffect(() => {
-    if (!isSuccess) return;
-    if (countdown <= 0) {
-      router.push("/login");
-      return;
-    }
-    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [isSuccess, countdown, router]);
+  // Post-registration states
+  const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [registeredRole, setRegisteredRole] = useState<"student" | "facilitator">("student");
 
   const sectionsByYear: Record<string, string[]> = {
     "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
@@ -59,7 +50,6 @@ export default function RegisterPage() {
           confirm_password: confirmPassword,
           account_type: "facilitator"
         });
-        setIsPending(true);
       } else {
         await registerStudent({
           full_name: fullName,
@@ -71,8 +61,9 @@ export default function RegisterPage() {
           section: section,
           current_year: year
         });
-        setIsSuccess(true);
       }
+      setRegisteredRole(role);
+      setRegistrationComplete(true);
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
     } finally {
@@ -91,86 +82,98 @@ export default function RegisterPage() {
 
       <div className="auth-page fade-in">
         <div className="auth-card">
-          <div className="auth-header">
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
-              <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
-            </div>
-            {isPending ? (
-              <>
-                <h2 style={{ color: "#FBBF24" }}>Pending Approval</h2>
-                <p>Your Facilitator account has been created successfully.</p>
-              </>
-            ) : isSuccess ? (
-              <>
-                <h2 style={{ color: "#4ADE80" }}>Account Created!</h2>
-                <p>Redirecting you to login...</p>
-              </>
-            ) : (
-              <>
-                <h2>Create Account</h2>
-                <p>Register for your secure University profile.</p>
-              </>
-            )}
-          </div>
-
-          {isPending ? (
-            <div className="pending-box fade-in" style={{ textAlign: "center", padding: "20px 0" }}>
-              <div className="pending-icon" style={{ fontSize: "3rem", marginBottom: "15px" }}>⏳</div>
-              <p style={{ color: "var(--white)", marginBottom: "20px", lineHeight: "1.6" }}>
-                To maintain security, all Facilitator profiles must be verified by the <strong>Admin</strong> before access is granted.
-              </p>
-              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", marginBottom: "30px" }}>
-                You will receive an email notification once your account has been approved.
-              </p>
-              <Link href="/login" className="btn btn-gold" style={{ display: "inline-block", width: "100%", textDecoration: "none" }}>
-                Return to Login
-              </Link>
-            </div>
-          ) : isSuccess ? (
-            <div className="congratulations-screen fade-in">
-              <div className="confetti-container">
-                {[...Array(20)].map((_, i) => (
-                  <div key={i} className="confetti-piece" style={{
-                    left: `${Math.random() * 100}%`,
-                    backgroundColor: ['#FFD700', '#4ADE80', '#38BDF8', '#F472B6'][Math.floor(Math.random() * 4)],
-                    animationDelay: `${Math.random() * 3}s`,
-                    width: `${Math.random() * 10 + 5}px`,
-                    height: `${Math.random() * 15 + 10}px`
-                  }} />
-                ))}
+          {registrationComplete ? (
+            /* ========== EMAIL VERIFICATION SCREEN ========== */
+            <>
+              <div className="auth-header">
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+                  <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
+                </div>
+                <h2 style={{ color: "#4ADE80", fontSize: "clamp(1.3rem, 5vw, 1.8rem)", lineHeight: 1.2 }}>Account Created!</h2>
               </div>
 
-              <div className="success-icon-wrapper">
-                <div className="success-icon pulse-success">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                </div>
-              </div>
-
-              <div className="success-content fadeInUp">
-                <h2 className="congrats-title">Congratulations!</h2>
-                <p className="welcome-msg">Welcome to PharmaTrack, <span className="highlight">{fullName || "User"}</span>!</p>
-
-                <div className="status-badge" style={{ display: 'inline-block', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '8px 20px', borderRadius: '99px', fontSize: '0.85rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.6)', marginBottom: '40px' }}>
-                  {role === "facilitator" ? "Role: Facilitator (Pending Approval)" : "Role: Student Account Active"}
+              <div className="fade-in" style={{ textAlign: "center", padding: "10px 0 20px" }}>
+                {/* Email icon */}
+                <div style={{
+                  width: "90px", height: "90px", borderRadius: "50%",
+                  background: "rgba(74, 222, 128, 0.08)", border: "2px solid rgba(74, 222, 128, 0.25)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 24px"
+                }}>
+                  <Mail size={40} color="#4ADE80" strokeWidth={1.5} />
                 </div>
 
-                <div className="redirect-info">
-                  <p>Establishing your secure connection...</p>
-                  <div className="progress-bar-container">
-                    <div className="progress-bar-fill" style={{ width: `${(3 - countdown) * 33.33}%` }}></div>
+                <h3 style={{ color: "var(--white)", fontSize: "1.15rem", fontWeight: 700, marginBottom: "12px" }}>
+                  Verify Your Email
+                </h3>
+
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.9rem", lineHeight: "1.6", marginBottom: "8px" }}>
+                  We&apos;ve sent a verification link to:
+                </p>
+                <p style={{
+                  color: "var(--gold)", fontWeight: 700, fontSize: "1rem",
+                  background: "rgba(251, 191, 36, 0.08)", padding: "10px 16px",
+                  borderRadius: "10px", border: "1px solid rgba(251, 191, 36, 0.15)",
+                  marginBottom: "20px", wordBreak: "break-all"
+                }}>
+                  {email}
+                </p>
+
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", lineHeight: "1.6", marginBottom: "8px" }}>
+                  Please check your inbox and click the verification link to activate your account.
+                </p>
+
+                {registeredRole === "facilitator" && (
+                  <div style={{
+                    background: "rgba(251, 191, 36, 0.08)",
+                    border: "1px solid rgba(251, 191, 36, 0.2)",
+                    borderRadius: "10px",
+                    padding: "14px",
+                    marginTop: "16px",
+                    marginBottom: "8px"
+                  }}>
+                    <p style={{ color: "var(--gold)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>
+                      ⚠ Facilitator Accounts Require Approval
+                    </p>
+                    <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem", lineHeight: "1.5" }}>
+                      After verifying your email, the System Administrator must approve your account before you can access the portal.
+                    </p>
                   </div>
-                  <p className="countdown-text">Redirecting to Login in <strong>{countdown}s</strong></p>
+                )}
+
+                <div style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "10px",
+                  padding: "12px",
+                  marginTop: "16px",
+                  marginBottom: "24px"
+                }}>
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.78rem", lineHeight: "1.5" }}>
+                    💡 Didn&apos;t receive the email? Check your spam folder. The link expires in 24 hours.
+                  </p>
                 </div>
 
-                <Link href="/login" className="btn btn-gold glass-btn" style={{ width: "100%", marginTop: "20px" }}>
-                  Go to Login Now
+                <Link
+                  href="/login"
+                  className="btn btn-gold"
+                  style={{ width: "100%", display: "block", padding: "14px", fontSize: "1rem", textDecoration: "none", textAlign: "center" }}
+                >
+                  Go to Login
                 </Link>
               </div>
-            </div>
+            </>
           ) : (
+            /* ========== REGISTRATION FORM ========== */
             <>
+              <div className="auth-header">
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+                  <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
+                </div>
+                <h2>Create Account</h2>
+                <p>Register for your secure University profile.</p>
+              </div>
+
               {/* ROLE TOGGLE */}
               <div className="role-toggle">
                 <button
