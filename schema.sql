@@ -1,3 +1,4 @@
+-- ============================================================
 -- PharmaTrack Unified Database Schema
 -- Run this in your Supabase SQL Editor
 -- ============================================================
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies to avoid conflicts
 DO $$ 
 DECLARE 
     pol record;
@@ -75,6 +77,9 @@ CREATE TABLE IF NOT EXISTS public.student_profiles (
 );
 
 ALTER TABLE public.student_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Student reads own profile" ON public.student_profiles;
+DROP POLICY IF EXISTS "Council reads all profiles" ON public.student_profiles;
+DROP POLICY IF EXISTS "Student inserts own profile" ON public.student_profiles;
 CREATE POLICY "Student reads own profile" ON public.student_profiles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Council reads all profiles" ON public.student_profiles FOR SELECT USING (public.is_council());
 CREATE POLICY "Student inserts own profile" ON public.student_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
@@ -90,6 +95,8 @@ CREATE TABLE IF NOT EXISTS public.facilitator_profiles (
 );
 
 ALTER TABLE public.facilitator_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Facilitator reads own profile" ON public.facilitator_profiles;
+DROP POLICY IF EXISTS "Admin manages facilitators" ON public.facilitator_profiles;
 CREATE POLICY "Facilitator reads own profile" ON public.facilitator_profiles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admin manages facilitators" ON public.facilitator_profiles FOR ALL USING (public.is_admin());
 
@@ -112,6 +119,8 @@ CREATE TABLE IF NOT EXISTS public.events (
 );
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Everyone views events" ON public.events;
+DROP POLICY IF EXISTS "Admins manage events" ON public.events;
 CREATE POLICY "Everyone views events" ON public.events FOR SELECT USING (true);
 CREATE POLICY "Admins manage events" ON public.events FOR ALL USING (public.is_admin());
 
@@ -130,6 +139,9 @@ CREATE TABLE IF NOT EXISTS public.qr_sessions (
 );
 
 ALTER TABLE public.qr_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Facilitators create sessions" ON public.qr_sessions;
+DROP POLICY IF EXISTS "Everyone authenticated reads sessions" ON public.qr_sessions;
+DROP POLICY IF EXISTS "Admins manage sessions" ON public.qr_sessions;
 CREATE POLICY "Facilitators create sessions" ON public.qr_sessions FOR INSERT WITH CHECK (auth.uid() = facilitator_id AND public.is_council());
 CREATE POLICY "Everyone authenticated reads sessions" ON public.qr_sessions FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Admins manage sessions" ON public.qr_sessions FOR ALL USING (public.is_admin() OR auth.uid() = facilitator_id);
@@ -152,6 +164,9 @@ CREATE TABLE IF NOT EXISTS public.attendance_records (
 );
 
 ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Student reads own attendance" ON public.attendance_records;
+DROP POLICY IF EXISTS "Council manages attendance" ON public.attendance_records;
+DROP POLICY IF EXISTS "Student scans session attendance" ON public.attendance_records;
 CREATE POLICY "Student reads own attendance" ON public.attendance_records FOR SELECT USING (auth.uid() = student_id);
 CREATE POLICY "Council manages attendance" ON public.attendance_records FOR ALL USING (public.is_council());
 CREATE POLICY "Student scans session attendance" ON public.attendance_records FOR INSERT WITH CHECK (auth.uid() = student_id);
@@ -180,3 +195,15 @@ JOIN public.student_profiles sp ON sp.user_id = u.id
 LEFT JOIN public.attendance_records ar ON ar.student_id = u.id
 WHERE u.account_type = 'student'
 GROUP BY u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year;
+
+-- ============================================================
+-- SEED: Admin account
+-- ============================================================
+-- STEP 1: Create the admin in Supabase Dashboard → Authentication → Users → Add User
+--   Email:    admin@usa.edu.ph
+--   Password: PharmaAdmin2026!
+--   ✅ Check "Auto Confirm User"
+--
+-- STEP 2: Copy the UUID, then run:
+-- INSERT INTO public.users (id, email, full_name, account_type, status)
+-- VALUES ('<PASTE-UUID-HERE>', 'admin@usa.edu.ph', 'System Administrator', 'admin', 'approved');

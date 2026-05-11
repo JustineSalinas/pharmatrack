@@ -1,7 +1,7 @@
 "use client";
 import { supabase } from "./supabase";
 import type { AccountType } from "./schema";
-import type { LoginInput, StudentRegisterInput, FacilitatorRegisterInput, AdminRegisterInput } from "./validations";
+import type { LoginInput, StudentRegisterInput, FacilitatorRegisterInput } from "./validations";
 
 export async function loginUser({ email, password }: LoginInput) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -9,10 +9,28 @@ export async function loginUser({ email, password }: LoginInput) {
   return data;
 }
 
+/**
+ * Returns auth user info including email_confirmed_at for verification checks.
+ */
+export async function getAuthUser() {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return null;
+  return user;
+}
+
 export async function registerStudent(input: StudentRegisterInput) {
+  const redirectTo = `${window.location.origin}/auth/callback`;
+
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email: input.email,
     password: input.password,
+    options: {
+      emailRedirectTo: redirectTo,
+      data: {
+        full_name: input.full_name,
+        account_type: "student",
+      },
+    },
   });
 
   if (authError) {
@@ -76,9 +94,18 @@ export async function ensureStudentProfile(userId: string, data: { student_id_nu
 }
 
 export async function registerFacilitator(input: FacilitatorRegisterInput) {
+  const redirectTo = `${window.location.origin}/auth/callback`;
+
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email: input.email,
     password: input.password,
+    options: {
+      emailRedirectTo: redirectTo,
+      data: {
+        full_name: input.full_name,
+        account_type: "facilitator",
+      },
+    },
   });
 
   if (authError || !authData.user) throw new Error(authError?.message ?? "Registration failed");
@@ -101,25 +128,6 @@ export async function registerFacilitator(input: FacilitatorRegisterInput) {
     department: "Pharmacy" // Default or allow input
   });
   if (profileErr) throw new Error(profileErr.message);
-
-  return authData;
-}
-
-export async function registerAdmin(input: AdminRegisterInput) {
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: input.email,
-    password: input.password,
-  });
-  if (authError || !authData.user) throw new Error(authError?.message ?? "Registration failed");
-
-  const { error } = await supabase.from("users").insert({
-    id: authData.user.id,
-    email: input.email,
-    full_name: input.full_name,
-    account_type: "admin" as AccountType,
-    status: "pending",
-  });
-  if (error) throw new Error(error.message);
 
   return authData;
 }
@@ -173,4 +181,18 @@ export async function getCurrentUser() {
   }
 
   return profile;
+}
+
+/**
+ * Resend verification email to the current user.
+ */
+export async function resendVerificationEmail(email: string) {
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+  if (error) throw new Error(error.message);
 }
