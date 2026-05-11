@@ -23,10 +23,16 @@ export default function LoginPage() {
       // Fetch profile to check role
       const user = await getCurrentUser() as any;
 
+      if (!user) {
+        setError("Your account was found, but your profile record is missing. Please contact support or try registering again.");
+        setLoading(false);
+        return;
+      }
+
       // Check account type for redirect
-      if (user?.account_type === "admin") {
+      if (user.account_type === "admin") {
         router.push("/dashboard/admin");
-      } else if (user?.account_type === "facilitator") {
+      } else if (user.account_type === "facilitator") {
         router.push("/dashboard/facilitator");
       } else {
         router.push("/dashboard");

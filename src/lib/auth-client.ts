@@ -129,8 +129,17 @@ export async function logoutUser() {
 }
 
 export async function getCurrentUser() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError) {
+    console.error("Auth error fetching user:", authError.message);
+    return null;
+  }
+  
+  if (!user) {
+    console.log("No authenticated user session found.");
+    return null;
+  }
 
   const { data: profile, error } = await supabase
     .from("users")
@@ -138,6 +147,11 @@ export async function getCurrentUser() {
     .eq("id", user.id)
     .single();
 
-  if (error) return null;
+  if (error) {
+    console.error("Profile fetch error for user", user.id, ":", error.message);
+    // If user exists in Auth but not in public.users, error.code will be 'PGRST116' (for .single())
+    return null;
+  }
+  
   return profile;
 }
