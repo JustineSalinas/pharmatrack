@@ -141,17 +141,36 @@ export async function getCurrentUser() {
     return null;
   }
 
+  // Fetch base user profile first
   const { data: profile, error } = await supabase
     .from("users")
-    .select("*, student_profiles(*), facilitator_profiles(*)")
+    .select("*")
     .eq("id", user.id)
     .single();
 
   if (error) {
     console.error("Profile fetch error for user", user.id, ":", error.message);
-    // If user exists in Auth but not in public.users, error.code will be 'PGRST116' (for .single())
     return null;
   }
-  
+
+  // Fetch related profiles separately to avoid FK relationship issues
+  if (profile.account_type === "student") {
+    const { data: studentProfile } = await supabase
+      .from("student_profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+    return { ...profile, student_profiles: studentProfile || null };
+  }
+
+  if (profile.account_type === "facilitator") {
+    const { data: facilitatorProfile } = await supabase
+      .from("facilitator_profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+    return { ...profile, facilitator_profiles: facilitatorProfile || null };
+  }
+
   return profile;
 }
