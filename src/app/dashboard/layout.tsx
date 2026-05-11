@@ -16,11 +16,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       try {
         const u = await getCurrentUser();
         if (!u) {
+          console.log("Dashboard layout: No user profile found, redirecting to login.");
           router.push("/login");
           return;
         }
+        console.log("Dashboard layout: User loaded successfully:", u.email);
         setUser(u);
-      } catch (err) {
+      } catch (err: any) {
+        console.error("Dashboard layout: Error loading user:", err.message);
         router.push("/login");
       } finally {
         setLoading(false);
