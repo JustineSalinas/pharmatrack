@@ -116,36 +116,42 @@ export default function StudentDashboard() {
 
       {/* STAT CARDS */}
       <div className="stat-cards-row">
-        <div className="admin-stat-card">
+        {/* HERO METRIC: Attendance Rate */}
+        <div className="hero-stat-card">
+          <div className="hero-stat-content">
+            <div className="hero-stat-label">
+              <Activity size={20} color="var(--gold)" />
+              Overall Attendance
+            </div>
+            <div className="hero-stat-value">{stats?.attendance_rate ?? 0}%</div>
+            <div className="hero-stat-sub">
+              <CheckCircle size={14} /> Good standing
+            </div>
+          </div>
+        </div>
+
+        {/* SECONDARY METRICS */}
+        <div className="secondary-stat-card">
           <div className="stat-icon-badge green"><CheckCircle size={20} /></div>
           <div>
-            <div className="stat-value">{stats?.present_count ?? 0}</div>
+            <div className="stat-value" style={{ color: "var(--white)" }}>{stats?.present_count ?? 0}</div>
             <div className="stat-label">Present</div>
           </div>
         </div>
-        <div className="admin-stat-card">
+        <div className="secondary-stat-card">
           <div className="stat-icon-badge orange"><Clock size={20} /></div>
           <div>
-            <div className="stat-value">{stats?.late_count ?? 0}</div>
+            <div className="stat-value" style={{ color: "var(--white)" }}>{stats?.late_count ?? 0}</div>
             <div className="stat-label">Late</div>
           </div>
         </div>
-        <div className="admin-stat-card">
+        <div className="secondary-stat-card">
           <div className="stat-icon-badge" style={{ background: "rgba(239,68,68,0.2)", color: "#ef4444" }}>
             <AlertCircle size={20} />
           </div>
           <div>
-            <div className="stat-value">{stats?.absent_count ?? 0}</div>
+            <div className="stat-value" style={{ color: "var(--white)" }}>{stats?.absent_count ?? 0}</div>
             <div className="stat-label">Absent</div>
-          </div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon-badge purple" style={{ color: "var(--gold)", background: "var(--gold-dim)" }}>
-            <Calendar size={20} />
-          </div>
-          <div>
-            <div className="stat-value">{stats?.attendance_rate ?? 0}%</div>
-            <div className="stat-label">Attendance Rate</div>
           </div>
         </div>
       </div>
@@ -154,17 +160,21 @@ export default function StudentDashboard() {
 
         {/* LEFT COL: QR CODE */}
         <div className="dash-actions-col">
-          <div className="student-qr-card">
-            <h3>Personal ID QR Code</h3>
+          <div className="medical-id-badge">
+            <div className="badge-clip"></div>
+            
+            <div className="badge-header">
+              <h3>Student ID</h3>
+              <p>PharmaTrack Access Pass</p>
+            </div>
 
-            <div className="qr-wrapper">
+            <div className="badge-body">
               {qrCodeValue === "NOT-FOUND" ? (
-                <div style={{ height: 180, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "rgba(239, 68, 68, 0.1)", borderRadius: 12, border: "1px dashed var(--danger)" }}>
-                  <AlertCircle color="var(--danger)" size={32} />
-                  <span style={{ fontSize: "0.8rem", color: "var(--danger)" }}>QR Data Missing</span>
+                <div className="qr-error-state">
+                  <AlertCircle color="#ef4444" size={36} />
+                  <p>ID Data Missing</p>
                   <button
-                    className="btn btn-danger"
-                    style={{ fontSize: "0.7rem", padding: "4px 8px", width: "auto" }}
+                    className="btn-repair"
                     onClick={handleRepairQR}
                     disabled={isRepairing}
                   >
@@ -172,27 +182,28 @@ export default function StudentDashboard() {
                   </button>
                 </div>
               ) : (
-                <QRCodeSVG
-                  value={qrCodeValue}
-                  size={180}
-                  level="H"
-                  includeMargin={true}
-                />
+                <>
+                  <div className="badge-qr-wrapper">
+                    <QRCodeSVG
+                      value={qrCodeValue}
+                      size={180}
+                      level="H"
+                      includeMargin={false}
+                    />
+                  </div>
+                  <div className="qr-id-text" style={{ color: "inherit", fontWeight: 700, margin: "8px 0" }}>
+                    {qrCodeValue}
+                  </div>
+                  <p className="qr-help" style={{ color: "#64748b", margin: 0, fontSize: "0.8rem", textAlign: "center", maxWidth: "200px" }}>
+                    Present this to any Council Member for scanning.
+                  </p>
+                </>
               )}
             </div>
 
-            <div className="qr-id-text" style={{ color: qrCodeValue === "NOT-FOUND" ? "var(--danger)" : "inherit" }}>
-              {qrCodeValue}
-            </div>
-            <p className="qr-help">
-              {qrCodeValue === "NOT-FOUND"
-                ? "There was an error generating your code during registration."
-                : "Present this to any Council Member for scanning."}
-            </p>
-
-            <div className="student-actions">
-              <Link href="/check-in" className="btn btn-outline" style={{ padding: "8px 12px", fontSize: "0.85rem", width: "100%" }}>
-                <Maximize2 size={16} /> Open Full Screen Presenter
+            <div className="badge-footer" style={{ background: "#f8fafc", padding: "16px 24px", borderTop: "1px solid #e2e8f0" }}>
+              <Link href="/check-in" className="btn" style={{ width: "100%", background: "var(--teal)", color: "white", borderRadius: "12px" }}>
+                <Maximize2 size={16} /> Open Presenter
               </Link>
             </div>
           </div>

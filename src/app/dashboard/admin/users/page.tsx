@@ -69,54 +69,78 @@ export default function AdminUsers() {
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
-        <Loader2 className="animate-spin" size={48} color="var(--gold)" />
+        <Loader2 className="animate-spin" size={24} color="var(--dimmed)" />
       </div>
     );
   }
 
   return (
     <div className="fade-in">
-      <div className="page-header" style={{ marginBottom: "24px" }}>
+      {/* Header and Actions in a single row */}
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "32px" }}>
         <div>
-          <div className="breadcrumb" style={{ fontSize: "0.85rem", color: "var(--muted)", letterSpacing: "0.5px", marginBottom: "4px" }}>
-            <span>Admin Control</span><span style={{ margin: "0 6px" }}>·</span><span>Users</span>
+          <div className="breadcrumb" style={{ fontSize: "11px", textTransform: "uppercase", fontWeight: 600, color: "var(--dimmed)", letterSpacing: "0.06em", marginBottom: "8px" }}>
+            <span>Admin Control</span><span style={{ margin: "0 8px" }}>/</span><span>Users</span>
           </div>
-          <h2 style={{ fontSize: "2rem", fontWeight: 800, margin: 0, letterSpacing: "-0.5px" }}>User Management</h2>
-          <p style={{ color: "var(--muted)", marginTop: "4px" }}>{users.length} registered accounts in the database</p>
+          <h2 style={{ fontSize: "28px", fontWeight: 700, margin: 0, letterSpacing: "-0.03em", color: "var(--white)" }}>User Management</h2>
+          <p style={{ color: "var(--dimmed)", fontSize: "13px", marginTop: "4px", margin: 0 }}>{users.length} registered accounts in the database</p>
         </div>
-        <div className="header-actions">
-          <div className="search-bar-wrap" style={{ position: "relative", width: "280px" }}>
-            <Search style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} size={18} />
+        <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <div className="search-bar-wrap" style={{ position: "relative", width: "260px" }}>
+            <Search style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--dimmed)" }} size={14} />
             <input
-              className="inp"
+              className="search-input"
               placeholder="Search by name or email..."
-              style={{ paddingLeft: "42px", height: "44px", borderRadius: "12px" }}
+              style={{ paddingLeft: "36px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", width: "100%", fontSize: "13px", outline: "none", transition: "border-color 0.15s ease" }}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <button className="btn btn-gold" style={{ width: "auto", padding: "0 20px", height: "44px", borderRadius: "12px", gap: "8px" }}>
-            <UserPlus size={18} /> Add User
+          <button 
+            className="btn-ghost-amber"
+            style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
+          >
+            <UserPlus size={14} /> Add User
           </button>
         </div>
       </div>
 
-      {/* Role Filters */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "32px", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginRight: "12px", color: "var(--muted)", fontSize: "0.9rem" }}>
-          <Filter size={16} /> Filter by:
-        </div>
+      {/* Role Filters - Tab Style */}
+      <div style={{ display: "flex", gap: "24px", marginBottom: "24px", alignItems: "center", borderBottom: "1px solid var(--border)" }}>
         {(["All", "student", "facilitator", "admin"] as FilterRole[]).map((f) => {
           const count = f === "All" ? users.length : f === "student" ? studentsCount : f === "facilitator" ? facilitatorCount : adminsCount;
           const label = f === "student" ? "Students" : f === "facilitator" ? "Facilitators" : f === "admin" ? "Admins" : "All";
           return (
             <button
               key={f}
-              className={`btn ${filter === f ? "btn-gold" : "btn-outline"}`}
-              style={{ width: "auto", padding: "8px 18px", fontSize: "0.85rem", height: "38px", borderRadius: "10px" }}
+              style={{ 
+                background: "transparent", 
+                border: "none", 
+                borderBottom: filter === f ? "2px solid var(--gold)" : "2px solid transparent", 
+                color: filter === f ? "var(--white)" : "var(--dimmed)", 
+                padding: "0 4px 12px", 
+                fontSize: "13px", 
+                fontWeight: filter === f ? 500 : 400,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "-1px"
+              }}
               onClick={() => setFilter(f)}
             >
-              {label} <span style={{ opacity: 0.6, marginLeft: "6px" }}>{count}</span>
+              {label} 
+              <span style={{ 
+                fontSize: "11px", 
+                background: filter === f ? "rgba(232,184,75,0.1)" : "var(--surface2)", 
+                color: filter === f ? "var(--gold)" : "var(--dimmed)",
+                padding: "2px 6px", 
+                borderRadius: "10px",
+                transition: "all 0.15s ease"
+              }}>
+                {count}
+              </span>
             </button>
           );
         })}
@@ -142,66 +166,62 @@ export default function AdminUsers() {
                 const dateJoined = new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
                 return (
-                  <tr key={u.id}>
+                  <tr key={u.id} className="user-row">
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                        <div className="avatar" style={{ width: "36px", height: "36px", fontSize: "14px", flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--gold-dim)" }}>
+                        <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", fontWeight: 600, flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--dimmed)" }}>
                           {initials}
                         </div>
-                        <span style={{ fontWeight: 700, color: "var(--white)" }}>{u.full_name}</span>
+                        <span style={{ fontWeight: 500, color: "var(--white)" }}>{u.full_name}</span>
                       </div>
                     </td>
-                    <td style={{ color: "var(--muted)", fontSize: "0.9rem" }}>{u.email}</td>
-                    <td>
-                      <span className="tag" style={{ textTransform: "capitalize", background: "rgba(255,255,255,0.03)", color: "var(--white)" }}>
-                        {u.account_type.charAt(0).toUpperCase() + u.account_type.slice(1)}
-                      </span>
+                    <td style={{ color: "var(--dimmed)", fontSize: "13px" }}>{u.email}</td>
+                    <td style={{ color: "var(--white-shade)", textTransform: "capitalize", fontSize: "13px" }}>
+                      {u.account_type}
                     </td>
                     <td>
-                      <span className={`status-badge ${u.status === 'approved' ? 'present' : u.status === 'pending' ? 'late' : 'absent'}`} style={{ fontSize: "0.75rem", padding: "4px 10px" }}>
+                      <span className={`status-badge ${u.status === 'approved' ? 'present' : u.status === 'pending' ? 'late' : 'absent'}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
                         {u.status.toUpperCase()}
                       </span>
                     </td>
-                    <td style={{ fontSize: "0.85rem", color: "var(--muted)" }}>{dateJoined}</td>
+                    <td style={{ fontSize: "13px", color: "var(--dimmed)" }}>{dateJoined}</td>
                     <td style={{ textAlign: "right", paddingRight: "24px" }}>
-                      <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                      <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                         {u.status === "pending" && (
                           <>
                             <button
-                              className="btn"
-                              style={{ width: "36px", height: "36px", padding: 0, borderRadius: "10px", background: "var(--success)", border: "none", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}
-                              onClick={() => handleUpdateStatus(u.id, "approved")}
+                              className="action-btn-hover approve-btn"
                               title="Approve User"
+                              onClick={() => handleUpdateStatus(u.id, "approved")}
                             >
-                              <CheckCircle size={18} />
+                              <CheckCircle size={14} />
                             </button>
                             <button
-                              className="btn"
-                              style={{ width: "36px", height: "36px", padding: 0, borderRadius: "10px", background: "var(--danger)", border: "none", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}
-                              onClick={() => handleUpdateStatus(u.id, "rejected")}
+                              className="action-btn-hover reject-btn"
                               title="Reject User"
+                              onClick={() => handleUpdateStatus(u.id, "rejected")}
                             >
-                              <XCircle size={18} />
+                              <XCircle size={14} />
                             </button>
                           </>
                         )}
                         {u.status === "approved" && u.account_type !== "admin" && (
                           <button
-                            className="btn btn-outline"
-                            style={{ padding: "6px 12px", width: "auto", fontSize: "0.75rem", color: "var(--danger)", borderColor: "rgba(239, 68, 68, 0.3)", gap: "6px" }}
+                            className="action-btn-hover suspend-btn"
+                            title="Suspend Access"
                             onClick={() => {
                               if (confirm(`Are you sure you want to suspend access for ${u.full_name}?`)) {
                                 handleUpdateStatus(u.id, "rejected");
                               }
                             }}
                           >
-                            <ShieldAlert size={14} /> Suspend
+                            <ShieldAlert size={14} />
                           </button>
                         )}
                         {u.status === "rejected" && (
                           <button
-                            className="btn btn-outline"
-                            style={{ padding: "6px 12px", width: "auto", fontSize: "0.75rem" }}
+                            className="action-btn-hover restore-btn"
+                            title="Restore Access"
                             onClick={() => handleUpdateStatus(u.id, "approved")}
                           >
                             Restore
@@ -215,9 +235,11 @@ export default function AdminUsers() {
             </tbody>
           </table>
           {filtered.length === 0 && (
-            <div style={{ padding: "80px", textAlign: "center", color: "var(--muted)", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
-              <Search size={48} opacity={0.2} />
-              <p>No users found matching your search or filter.</p>
+            <div style={{ padding: "64px 24px", textAlign: "center", color: "var(--dimmed)", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+              <div style={{ width: 48, height: 48, border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Search size={20} color="var(--dimmed)" />
+              </div>
+              <p style={{ fontSize: 13, margin: 0 }}>No users found matching your search or filter.</p>
             </div>
           )}
         </div>
@@ -225,6 +247,61 @@ export default function AdminUsers() {
       <style jsx>{`
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        .search-input:focus {
+          border-color: rgba(255,255,255,0.15) !important;
+        }
+
+        .btn-ghost-amber:hover {
+          border-color: var(--gold) !important;
+          color: var(--gold) !important;
+          background: rgba(232,184,75,0.05) !important;
+        }
+
+        .user-row {
+          transition: background 0.15s ease;
+        }
+        .user-row:hover {
+          background: var(--surface2);
+        }
+
+        .action-btn-hover {
+          background: transparent;
+          border: 1px solid transparent;
+          color: var(--dimmed);
+          cursor: pointer;
+          padding: 6px;
+          border-radius: var(--radius-sm);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: all 0.15s ease;
+          font-size: 11px;
+          font-family: var(--font-sans);
+          font-weight: 500;
+        }
+        .user-row:hover .action-btn-hover {
+          opacity: 1;
+        }
+        
+        /* Always show if it's pending so admin doesn't miss it */
+        .user-row .approve-btn, .user-row .reject-btn {
+           opacity: 1;
+           border: 1px solid var(--border);
+        }
+
+        .suspend-btn:hover, .reject-btn:hover {
+          color: var(--danger);
+          background: rgba(248, 113, 113, 0.1);
+          border-color: rgba(248, 113, 113, 0.2);
+        }
+
+        .approve-btn:hover, .restore-btn:hover {
+          color: var(--success);
+          background: rgba(74, 222, 128, 0.1);
+          border-color: rgba(74, 222, 128, 0.2);
+        }
       `}</style>
     </div>
   );
