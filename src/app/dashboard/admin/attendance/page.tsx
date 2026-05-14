@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { Loader2, Download, Filter, Search, Calendar, CheckCircle, AlertTriangle, XCircle, FileSpreadsheet } from "lucide-react";
+import { Loader2, Download, Search, Calendar, FileSpreadsheet } from "lucide-react";
 
 export default function AdminAttendance() {
   const [records, setRecords] = useState<any[]>([]);
@@ -84,100 +84,123 @@ export default function AdminAttendance() {
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
-        <Loader2 className="animate-spin" size={48} color="var(--gold)" />
+        <Loader2 className="animate-spin" size={24} color="var(--dimmed)" />
       </div>
     );
   }
 
   return (
     <div className="fade-in">
-      <div className="page-header" style={{ marginBottom: "32px" }}>
+      {/* Header and Actions in a single row */}
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "32px" }}>
         <div>
-          <div className="breadcrumb" style={{ fontSize: "0.85rem", color: "var(--muted)", letterSpacing: "0.5px", marginBottom: "4px" }}>
-            <span>Admin Control</span><span style={{ margin: "0 6px" }}>·</span><span>Attendance</span>
+          <div className="breadcrumb" style={{ fontSize: "11px", textTransform: "uppercase", fontWeight: 600, color: "var(--dimmed)", letterSpacing: "0.06em", marginBottom: "8px" }}>
+            <span>Admin Control</span><span style={{ margin: "0 8px" }}>/</span><span>Attendance</span>
           </div>
-          <h2 style={{ fontSize: "2rem", fontWeight: 800, margin: 0, letterSpacing: "-0.5px" }}>Attendance Logs</h2>
-          <p style={{ color: "var(--muted)", marginTop: "4px" }}>Master database of all recorded participation</p>
+          <h2 style={{ fontSize: "28px", fontWeight: 700, margin: 0, letterSpacing: "-0.03em", color: "var(--white)" }}>Attendance Logs</h2>
+          <p style={{ color: "var(--dimmed)", fontSize: "13px", marginTop: "4px", margin: 0 }}>Master database of all recorded participation</p>
         </div>
-        <div className="header-actions">
-           <div style={{ position: "relative", width: "180px" }}>
-              <Calendar size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} />
+        <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+           <div style={{ position: "relative", width: "160px" }}>
+              <Calendar size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--dimmed)" }} />
               <input 
-                className="inp" 
+                className="date-input" 
                 type="date" 
                 value={selectedDate} 
                 onChange={(e) => setSelectedDate(e.target.value)} 
-                style={{ paddingLeft: "36px", height: "44px", borderRadius: "12px", fontSize: "0.85rem" }}
+                style={{ paddingLeft: "36px", paddingRight: "12px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", width: "100%", fontSize: "13px", outline: "none", cursor: "pointer", transition: "border-color 0.15s ease" }}
               />
            </div>
-           <button className="btn btn-gold" style={{ width: "auto", padding: "0 20px", height: "44px", borderRadius: "12px", gap: "8px" }}>
-             <FileSpreadsheet size={18} /> Export CSV
+           <button 
+             className="btn-ghost" 
+             style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
+           >
+             <Download size={14} /> Export
            </button>
         </div>
       </div>
 
-      {/* Summary Chips */}
-      <div style={{ display: "flex", gap: "12px", marginBottom: "32px", overflowX: "auto", paddingBottom: "10px" }}>
+      {/* Summary Strip - Single horizontal block */}
+      <div style={{ display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px 24px", marginBottom: "32px" }}>
         {[
-          { label: "Present", count: present, color: "var(--success)", icon: <CheckCircle size={16} /> },
-          { label: "Late", count: late, color: "var(--gold)", icon: <AlertTriangle size={16} /> },
-          { label: "Absent", count: absent, color: "var(--danger)", icon: <XCircle size={16} /> },
-          { label: "Total Filtered", count: filtered.length, color: "var(--white)", icon: <Filter size={16} /> }
-        ].map(item => (
-          <div key={item.label} style={{ background: "var(--surface)", border: "1px solid rgba(255,255,255,0.05)", padding: "12px 20px", borderRadius: "16px", display: "flex", alignItems: "center", gap: "12px", minWidth: "160px" }}>
-             <div style={{ color: item.color }}>{item.icon}</div>
-             <div>
-               <div style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>{item.label}</div>
-               <div style={{ fontSize: "1.2rem", fontWeight: 800, color: item.color }}>{item.count}</div>
+          { label: "Present", count: present, color: "var(--success)" },
+          { label: "Late", count: late, color: "var(--gold)" },
+          { label: "Absent", count: absent, color: "var(--danger)" },
+          { label: "Total Filtered", count: filtered.length, color: "var(--white)" }
+        ].map((item, i, arr) => (
+          <div key={item.label} style={{ display: "flex", alignItems: "center", flex: 1 }}>
+             <div style={{ flex: 1 }}>
+               <div style={{ fontSize: "11px", color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>{item.label}</div>
+               <div style={{ fontSize: "28px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em" }}>{item.count}</div>
              </div>
+             {i < arr.length - 1 && <div style={{ height: "40px", width: "1px", background: "var(--border)", margin: "0 auto" }} />}
           </div>
         ))}
       </div>
 
-      {/* Filters Bar */}
-      <div className="panel" style={{ padding: "16px 24px", marginBottom: "24px", display: "flex", gap: "20px", alignItems: "center", flexWrap: "wrap", borderRadius: "16px" }}>
+      {/* Cohesive Filters Bar */}
+      <div style={{ display: "flex", gap: "24px", marginBottom: "24px", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: "12px", flexWrap: "wrap" }}>
         
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "250px" }}>
-          <Search size={18} color="var(--muted)" />
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: "250px", position: "relative" }}>
+          <Search size={14} color="var(--dimmed)" style={{ position: "absolute", left: "12px" }} />
           <input 
-            className="inp" 
+            className="search-input" 
             placeholder="Search student name or email..." 
-            style={{ border: "none", background: "transparent", padding: "8px 0" }}
+            style={{ border: "1px solid var(--border)", background: "var(--surface)", padding: "0 12px 0 36px", height: "36px", borderRadius: "var(--radius-sm)", color: "var(--white)", fontSize: "13px", width: "100%", outline: "none", transition: "border-color 0.15s ease" }}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        <div style={{ height: "24px", width: "1px", background: "rgba(255,255,255,0.1)" }}></div>
-
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
           {["All", "Present", "Late", "Absent"].map(f => (
-            <button key={f} className={`btn ${filterStatus === f ? "btn-gold" : "btn-ghost"}`} style={{ height: "34px", padding: "0 12px", fontSize: "0.8rem", width: "auto" }} onClick={() => setFilterStatus(f)}>
+            <button 
+              key={f} 
+              style={{ 
+                background: "transparent", 
+                border: "none", 
+                borderBottom: filterStatus === f ? "2px solid var(--gold)" : "2px solid transparent", 
+                color: filterStatus === f ? "var(--white)" : "var(--dimmed)", 
+                padding: "0 4px 12px", 
+                fontSize: "13px", 
+                fontWeight: filterStatus === f ? 500 : 400,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                marginBottom: "-13px"
+              }} 
+              onClick={() => setFilterStatus(f)}
+            >
               {f}
             </button>
           ))}
         </div>
 
-        <div style={{ height: "24px", width: "1px", background: "rgba(255,255,255,0.1)" }}></div>
+        <div style={{ height: "24px", width: "1px", background: "var(--border)", margin: "0 8px" }}></div>
 
-        <select className="inp" style={{ width: "auto", minWidth: "140px", height: "34px", borderRadius: "8px", fontSize: "0.8rem", padding: "0 10px" }} value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
+        <select 
+          className="search-input select-input" 
+          style={{ width: "auto", minWidth: "140px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", fontSize: "13px", padding: "0 12px", outline: "none", cursor: "pointer" }} 
+          value={filterSection} 
+          onChange={(e) => setFilterSection(e.target.value)}
+        >
           <option value="All">All Sections</option>
           {sections.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
 
+      {/* Table */}
       <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
         <div className="table-wrap">
           <table className="attendance-table" style={{ width: "100%" }}>
             <thead>
               <tr>
-                <th style={{ paddingLeft: "30px" }}>Student Name</th>
+                <th style={{ paddingLeft: "24px" }}>Student Name</th>
                 <th>Subject / Event</th>
                 <th>Section</th>
                 <th>Date</th>
                 <th>Clock In</th>
                 <th>Status</th>
-                <th style={{ textAlign: "right", paddingRight: "30px" }}>Actions</th>
+                <th style={{ textAlign: "right", paddingRight: "24px" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -185,31 +208,31 @@ export default function AdminAttendance() {
                 const initials = r.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "S";
                 
                 return (
-                  <tr key={r.id}>
-                    <td style={{ paddingLeft: "30px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", background: "var(--surface2)", border: "1px solid var(--gold-dim)" }}>
+                  <tr key={r.id} className="user-row">
+                    <td style={{ paddingLeft: "24px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                        <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", fontWeight: 600, flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--dimmed)" }}>
                           {initials}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, color: "var(--white)" }}>{r.name}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{r.email}</div>
+                          <div style={{ fontWeight: 500, color: "var(--white)" }}>{r.name}</div>
+                          <div style={{ fontSize: "13px", color: "var(--dimmed)" }}>{r.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ color: "var(--white)", opacity: 0.9 }}>{r.subject}</td>
+                    <td style={{ color: "var(--white-shade)", fontSize: "13px" }}>{r.subject}</td>
                     <td>
-                      <span className="tag" style={{ background: "rgba(255,255,255,0.03)" }}>{r.section}</span>
+                      <span className="tag" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--dimmed)", fontSize: "11px" }}>{r.section}</span>
                     </td>
-                    <td style={{ color: "var(--muted)", fontSize: "0.85rem" }}>{r.displayDate}</td>
-                    <td style={{ fontFamily: "monospace", fontSize: "0.9rem", color: r.timeIn === "—" ? "var(--muted)" : "var(--white)" }}>{r.timeIn}</td>
+                    <td style={{ color: "var(--dimmed)", fontSize: "13px" }}>{r.displayDate}</td>
+                    <td style={{ fontFamily: "var(--font-sans)", fontSize: "13px", color: r.timeIn === "—" ? "var(--muted)" : "var(--white-shade)" }}>{r.timeIn}</td>
                     <td>
-                      <span className={`status-badge ${r.status}`} style={{ fontSize: "0.7rem", padding: "4px 10px" }}>
+                      <span className={`status-badge ${r.status}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
                         {r.status.toUpperCase()}
                       </span>
                     </td>
-                    <td style={{ textAlign: "right", paddingRight: "30px" }}>
-                      <button className="btn btn-outline" style={{ height: "30px", padding: "0 10px", width: "auto", fontSize: "0.75rem" }}>Review</button>
+                    <td style={{ textAlign: "right", paddingRight: "24px" }}>
+                      <button className="action-btn-hover" style={{ width: "auto", padding: "6px 12px", marginLeft: "auto" }}>Review</button>
                     </td>
                   </tr>
                 );
@@ -217,9 +240,11 @@ export default function AdminAttendance() {
             </tbody>
           </table>
           {filtered.length === 0 && (
-            <div style={{ padding: "80px", textAlign: "center", color: "var(--muted)" }}>
-              <Filter size={48} style={{ opacity: 0.1, marginBottom: "16px" }} />
-              <p>No records found matching your current search or filters.</p>
+            <div style={{ padding: "64px 24px", textAlign: "center", color: "var(--dimmed)", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+              <div style={{ width: 48, height: 48, border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Search size={20} color="var(--dimmed)" />
+              </div>
+              <p style={{ fontSize: 13, margin: 0 }}>No records found matching your current search or filters.</p>
             </div>
           )}
         </div>
@@ -228,6 +253,54 @@ export default function AdminAttendance() {
       <style jsx>{`
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .search-input:focus, .date-input:focus {
+          border-color: rgba(255,255,255,0.15) !important;
+        }
+
+        /* Native date picker icon styling */
+        .date-input::-webkit-calendar-picker-indicator {
+          filter: invert(1);
+          opacity: 0.3;
+          cursor: pointer;
+        }
+        .date-input::-webkit-calendar-picker-indicator:hover {
+          opacity: 0.6;
+        }
+
+        .btn-ghost:hover {
+          background: var(--surface2) !important;
+          border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .user-row {
+          transition: background 0.15s ease;
+        }
+        .user-row:hover {
+          background: var(--surface2);
+        }
+
+        .action-btn-hover {
+          background: transparent;
+          border: 1px solid transparent;
+          color: var(--dimmed);
+          cursor: pointer;
+          border-radius: var(--radius-sm);
+          opacity: 0;
+          transition: all 0.15s ease;
+          font-size: 11px;
+          font-family: var(--font-sans);
+          font-weight: 500;
+        }
+        .user-row:hover .action-btn-hover {
+          opacity: 1;
+          border-color: var(--border);
+          background: var(--surface);
+        }
+        .action-btn-hover:hover {
+          color: var(--white);
+          background: var(--surface2) !important;
+        }
       `}</style>
     </div>
   );
