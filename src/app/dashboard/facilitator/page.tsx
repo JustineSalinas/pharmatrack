@@ -88,22 +88,23 @@ export default function FacilitatorOverview() {
         borderRadius: 12,
         padding: "24px 28px",
         marginBottom: 20,
+        marginTop: 32,
       }}>
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 8 }}>
           Today's Attendance Rate
         </div>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 6, marginBottom: 10 }}>
-          <span style={{ fontSize: 48, fontWeight: 700, lineHeight: 1, color: "var(--gold)" }}>{attendanceRate}</span>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, marginBottom: 10 }}>
+          <span style={{ fontSize: 48, fontWeight: 700, lineHeight: 1, color: "var(--foreground, #fff)" }}>{attendanceRate}</span>
           <span style={{ fontSize: 22, fontWeight: 600, color: "var(--muted)", marginBottom: 6 }}>%</span>
         </div>
         <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>
           Based on students enrolled in your sessions
         </div>
         {/* Progress bar */}
-        <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 99, height: 6, position: "relative" }}>
+        <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 99, height: 4, position: "relative" }}>
           <div style={{
             width: `${attendanceRate}%`,
-            background: "var(--gold)",
+            background: "rgba(255,255,255,0.3)",
             borderRadius: 99,
             height: "100%",
             transition: "width 0.6s ease",
@@ -122,17 +123,17 @@ export default function FacilitatorOverview() {
           paddingTop: 20,
         }}>
           {[
-            { icon: <Users size={18} />, label: "Total Students", value: stats.totalStudents },
-            { icon: <CheckCircle size={18} />, label: "Present Today", value: stats.presentToday, color: "var(--success, #4ade80)" },
-            { icon: <XCircle size={18} />, label: "Absent Today", value: stats.absentToday, color: "var(--danger, #f87171)" },
+            { icon: <Users size={16} />, label: "Total Students", value: stats.totalStudents },
+            { icon: <CheckCircle size={16} />, label: "Present Today", value: stats.presentToday },
+            { icon: <XCircle size={16} />, label: "Absent Today", value: stats.absentToday },
           ].map((s, i) => (
             <div key={s.label} style={{
-              textAlign: "center",
+              textAlign: "left",
               borderRight: i < 2 ? "1px solid var(--border, rgba(255,255,255,0.07))" : "none",
-              padding: "0 16px",
+              padding: "0 28px",
             }}>
-              <div style={{ color: s.color || "var(--gold)", marginBottom: 6 }}>{s.icon}</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: s.color || "var(--foreground, #fff)", lineHeight: 1, marginBottom: 4 }}>
+              <div style={{ color: "var(--muted)", marginBottom: 8 }}>{s.icon}</div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: "var(--foreground, #fff)", lineHeight: 1, marginBottom: 6 }}>
                 {s.value}
               </div>
               <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
