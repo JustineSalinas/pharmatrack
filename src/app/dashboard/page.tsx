@@ -8,7 +8,8 @@ import {
   Clock,
   AlertCircle,
   Download,
-  Maximize2
+  Maximize2,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
