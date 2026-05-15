@@ -37,7 +37,7 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
     {
       section: "Main",
       items: [
-        { href: "/dashboard/facilitator", label: "Overview", icon: <Home size={16} /> },
+        { href: "/dashboard/facilitator", label: "Dashboard", icon: <Home size={16} /> },
         { href: "/dashboard/facilitator/generate", label: "Generate QR", icon: <QrCode size={16} /> },
         { href: "/dashboard/facilitator/students", label: "Students", icon: <Users size={16} /> },
         { href: "/dashboard/facilitator/reports", label: "Reports", icon: <BarChart size={16} /> },
