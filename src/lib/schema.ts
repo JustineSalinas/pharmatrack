@@ -73,3 +73,30 @@ export interface AttendanceRecord {
 export const UpdateProfileSchema = z.object({
   full_name: z.string().min(2, "Full name must be at least 2 characters"),
 });
+
+/** Shape returned by the student_attendance_summary view for the authenticated student. */
+export interface AttendanceSummary {
+  student_id: string;
+  full_name: string;
+  student_id_number: string;
+  section: string;
+  current_year: string;
+  total_records: number;
+  present_count: number;
+  late_count: number;
+  absent_count: number;
+  incomplete_count: number;
+  attendance_rate: number | null;
+}
+
+/** Unified shape used by the Notifications feed, derived from events and attendance_records. */
+export interface NotificationItem {
+  id: string;
+  icon: string;
+  type: "success" | "warning" | "info" | "danger";
+  title: string;
+  body: string;
+  time: string;
+  read: boolean;
+  sortKey: string; // ISO timestamp for sort ordering
+}

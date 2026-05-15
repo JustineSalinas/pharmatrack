@@ -5,7 +5,10 @@ import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { Loader2, QrCode, AlertCircle, Scan, History, Info } from "lucide-react";
+import {
+  Loader2, QrCode, AlertCircle, Scan, History,
+  Info, CheckCircle2, ArrowLeft, Maximize2,
+} from "lucide-react";
 import Scanner from "@/components/Scanner";
 
 export default function CheckInPage() {
@@ -22,24 +25,17 @@ export default function CheckInPage() {
     async function load() {
       try {
         const u = await getCurrentUser();
-        if (!u) {
-          router.push("/login");
-          return;
-        }
+        if (!u) { router.push("/login"); return; }
         setUser(u);
-
-        // If student, try to get their personal QR ID for the "Present" tab
         if (u.account_type === "student") {
           const profile = u.student_profiles?.[0];
           if (profile?.qr_code_id) {
             setQrCodeId(profile.qr_code_id);
           } else {
             const { data } = await supabase
-              .from("student_profiles")
-              .select("qr_code_id")
-              .eq("user_id", u.id)
-              .single();
-            if (data) setQrCodeId(data.qr_code_id);
+              .from("student_profiles").select("qr_code_id")
+              .eq("user_id", u.id).single();
+            if (data) setQrCodeId((data as any).qr_code_id);
           }
         }
       } catch (err) {
@@ -55,42 +51,23 @@ export default function CheckInPage() {
     if (!user) return;
     try {
       setLoading(true);
-      // 1. Look up the QR session by code
       const { data: session, error: sessionErr } = await supabase
-        .from("qr_sessions")
-        .select("*")
-        .eq("code", code)
-        .single();
-
+        .from("qr_sessions").select("*").eq("code", code).single();
       if (sessionErr || !session) throw new Error("Invalid or expired QR code");
-
       const now = new Date();
-      if (new Date(session.expires_at) < now) throw new Error("This QR code has expired");
-
-      // 2. Check for duplicate
+      if (new Date((session as any).expires_at) < now) throw new Error("This QR code has expired");
       const { data: existing } = await supabase
-        .from("attendance_records")
-        .select("id")
-        .eq("student_id", user.id)
-        .eq("session_id", session.id)
-        .single();
-
+        .from("attendance_records").select("id")
+        .eq("student_id", user.id).eq("session_id", (session as any).id).single();
       if (existing) throw new Error("Already checked in for this session");
-
-      // 3. Determine status (Mock logic based on session time)
-      const status = "present"; // In a real app, compare now with session.start_time
-
-      // 4. Record attendance
-      const { error: attErr } = await supabase.from("attendance_records").insert({
+      const { error: attErr } = await (supabase.from("attendance_records") as any).insert({
         student_id: user.id,
-        session_id: session.id,
-        status,
+        session_id: (session as any).id,
+        status: "present",
         time_in: now.toISOString(),
         remarks: "Self check-in via QR Scan",
       });
-
       if (attErr) throw attErr;
-
       setCheckInTime(now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
       setScanSuccess(true);
     } catch (err: any) {
@@ -101,21 +78,18 @@ export default function CheckInPage() {
   };
 
   async function handleRepairQR() {
-    if (!user || user.account_type !== 'student') return;
+    if (!user || user.account_type !== "student") return;
     try {
       setIsRepairing(true);
       const studentId = prompt("Confirm your Student ID Number:");
       if (!studentId) return;
-
       const year = prompt("Year Level (e.g. 1st Year):");
       const section = prompt("Section (e.g. PharmA):");
-
       await ensureStudentProfile(user.id, {
         student_id_number: studentId,
         year: year || "Unknown",
-        section: section || "Unknown"
+        section: section || "Unknown",
       } as any);
-      
       window.location.reload();
     } catch (err: any) {
       alert("Repair failed: " + err.message);
@@ -126,8 +100,8 @@ export default function CheckInPage() {
 
   if (loading && !scanSuccess) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
-        <Loader2 className="animate-spin" size={48} color="var(--gold)" />
+      <div className="sp-center-screen">
+        <Loader2 className="sp-spinner" size={36} />
       </div>
     );
   }
@@ -135,101 +109,113 @@ export default function CheckInPage() {
   const isStudent = user?.account_type === "student";
 
   return (
-    <div className="fade-in" style={{ padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80vh" }}>
-      
-      <div style={{ textAlign: "center", marginBottom: "40px" }}>
-        <h2 style={{ fontSize: "2.2rem", fontWeight: 800, marginBottom: "12px", background: "linear-gradient(to right, #fff, var(--gold))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-          Attendance Portal
-        </h2>
-        <p style={{ color: "var(--muted)", maxWidth: "500px", margin: "0 auto", fontSize: "1.05rem" }}>
-          Mark your attendance by presenting your ID or scanning a class session code.
-        </p>
-      </div>
+    <div className="fade-in sp-checkin-root">
 
+      {/* ── Header ── */}
+      <header className="sd-header">
+        <div>
+          <p className="sd-header-eyebrow">Student Portal</p>
+          <h1 className="sd-header-title">Check-In</h1>
+        </div>
+        <button className="sp-back-btn" onClick={() => router.push("/dashboard")}>
+          <ArrowLeft size={14} /> Back to Dashboard
+        </button>
+      </header>
+
+      {/* ── Mode Toggle ── */}
       {isStudent && (
-        <div style={{ display: "flex", gap: "12px", marginBottom: "40px", background: "rgba(255,255,255,0.05)", padding: "6px", borderRadius: "16px" }}>
-          <button 
-            className={`btn ${mode === "present" ? "btn-gold" : "btn-ghost"}`} 
-            style={{ borderRadius: "12px", width: "auto", padding: "10px 24px", gap: "8px" }}
+        <div className="sp-mode-toggle">
+          <button
+            className={`sp-mode-btn ${mode === "present" ? "active" : ""}`}
             onClick={() => { setMode("present"); setScanSuccess(false); }}
           >
-            <QrCode size={18} /> Present ID
+            <QrCode size={15} /> Present My ID
           </button>
-          <button 
-            className={`btn ${mode === "scan" ? "btn-gold" : "btn-ghost"}`} 
-            style={{ borderRadius: "12px", width: "auto", padding: "10px 24px", gap: "8px" }}
+          <button
+            className={`sp-mode-btn ${mode === "scan" ? "active" : ""}`}
             onClick={() => setMode("scan")}
           >
-            <Scan size={18} /> Scan Class
+            <Scan size={15} /> Scan Class Code
           </button>
         </div>
       )}
 
-      <div className="card" style={{ width: "100%", maxWidth: "460px", background: "var(--surface)", padding: "40px", borderRadius: "28px", border: "1px solid rgba(255,255,255,0.05)", boxShadow: "0 20px 50px rgba(0,0,0,0.3)", position: "relative", overflow: "hidden" }}>
-        
-        {/* Decor */}
-        <div style={{ position: "absolute", top: -50, right: -50, width: 150, height: 150, background: "var(--gold)", filter: "blur(100px)", opacity: 0.1, pointerEvents: "none" }}></div>
+      {/* ── Main Card ── */}
+      <div className="sp-main-card">
+        {/* Glow accent */}
+        <div className="sp-card-glow" />
 
         {mode === "present" ? (
-          <div style={{ textAlign: "center" }}>
+          <div className="sp-present-panel">
             {qrCodeId ? (
               <>
-                <div style={{ background: "white", padding: "24px", borderRadius: "20px", display: "inline-block", marginBottom: "24px", boxShadow: "0 0 40px rgba(212, 175, 55, 0.15)" }}>
-                  <QRCodeSVG value={qrCodeId} size={240} level="H" />
+                <div className="sp-qr-wrapper">
+                  <QRCodeSVG value={qrCodeId} size={220} level="H" includeMargin={false} />
                 </div>
-                <div style={{ fontFamily: "monospace", fontSize: "1.4rem", letterSpacing: "4px", color: "var(--gold)", fontWeight: 700, marginBottom: "8px" }}>
-                  {qrCodeId}
+                <p className="sp-qr-code-label">{qrCodeId}</p>
+                <p className="sp-qr-instruction">
+                  Present this to a Council Admin or Facilitator for scanning
+                </p>
+                <div className="sp-qr-hint-row">
+                  <Info size={12} />
+                  Keep screen brightness high for best scan results
                 </div>
-                <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>Present this to a Council Admin or Facilitator</p>
               </>
             ) : (
-              <div style={{ padding: "40px 0" }}>
-                <AlertCircle size={48} color="var(--danger)" style={{ marginBottom: "20px" }} />
-                <h4 style={{ color: "var(--white)", marginBottom: "12px" }}>QR Code Unavailable</h4>
-                <p style={{ color: "var(--muted)", marginBottom: "24px", fontSize: "0.9rem" }}>We couldn't link a student profile to your account. This is required for attendance.</p>
-                <button className="btn btn-gold" onClick={handleRepairQR} disabled={isRepairing}>
-                  {isRepairing ? "Repairing..." : "Repair Student Profile"}
+              <div className="sp-qr-error-state">
+                <div className="sp-error-icon-wrap">
+                  <AlertCircle size={28} color="var(--danger)" />
+                </div>
+                <h3 className="sp-error-title">QR Code Unavailable</h3>
+                <p className="sp-error-body">
+                  We couldn't link a student profile to your account. This is required for attendance tracking.
+                </p>
+                <button className="sp-repair-cta" onClick={handleRepairQR} disabled={isRepairing}>
+                  {isRepairing ? "Repairing…" : "Repair Student Profile"}
                 </button>
               </div>
             )}
           </div>
         ) : (
-          <div style={{ textAlign: "center" }}>
+          <div className="sp-scan-panel">
             {!scanSuccess ? (
               <>
-                <div style={{ marginBottom: "24px", position: "relative", borderRadius: "20px", overflow: "hidden", border: "2px solid var(--gold-dim)" }}>
-                   <Scanner onSuccess={handleScanSuccess} />
+                <div className="sp-scanner-frame">
+                  <Scanner onSuccess={handleScanSuccess} />
                 </div>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "0.85rem" }}>
-                  <Info size={14} /> Center the class QR code in the viewport
-                </div>
+                <p className="sp-scan-hint">
+                  <Info size={13} /> Center the class QR code in the viewport
+                </p>
               </>
             ) : (
-              <div className="fade-in" style={{ padding: "20px 0" }}>
-                <div style={{ fontSize: "64px", marginBottom: "20px" }}>✅</div>
-                <h3 style={{ fontSize: "1.5rem", marginBottom: "12px" }}>Attendance Recorded!</h3>
-                <p style={{ color: "var(--muted)", marginBottom: "32px", fontSize: "1rem", lineHeight: 1.6 }}>
-                  Your check-in was successful<br />at <span style={{ color: "var(--gold)", fontWeight: 600 }}>{checkInTime}</span>
+              <div className="sp-success-state fade-in">
+                <div className="sp-success-icon">
+                  <CheckCircle2 size={40} color="var(--success)" />
+                </div>
+                <h3 className="sp-success-title">Attendance Recorded!</h3>
+                <p className="sp-success-body">
+                  Your check-in was confirmed at <span className="sp-success-time">{checkInTime}</span>
                 </p>
-                <button className="btn btn-outline" style={{ width: "auto", padding: "10px 24px" }} onClick={() => setScanSuccess(false)}>
-                  Scan Another Section
-                </button>
+                <div className="sp-success-actions">
+                  <button className="sp-rescan-btn" onClick={() => setScanSuccess(false)}>
+                    <Scan size={14} /> Scan Another
+                  </button>
+                  <button className="sp-history-btn" onClick={() => router.push("/dashboard/records")}>
+                    <History size={14} /> View Records
+                  </button>
+                </div>
               </div>
             )}
           </div>
         )}
       </div>
 
-      <div style={{ marginTop: "40px", display: "flex", gap: "24px" }}>
-         <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--muted)", fontSize: "0.9rem" }}>
-           <History size={16} /> <span style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }} onClick={() => router.push("/dashboard/records")}>View History</span>
-         </div>
-      </div>
-
-      <style jsx>{`
-        .animate-spin { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+      {/* ── Footer Link ── */}
+      {!scanSuccess && (
+        <button className="sp-footer-link" onClick={() => router.push("/dashboard/records")}>
+          <History size={14} /> View attendance history
+        </button>
+      )}
     </div>
   );
 }
