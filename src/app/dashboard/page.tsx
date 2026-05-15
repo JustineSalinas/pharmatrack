@@ -3,24 +3,31 @@
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
-  Calendar,
+  Activity,
   CheckCircle,
   Clock,
   AlertCircle,
   Download,
   Maximize2,
-  Activity
+  Calendar,
+  ClipboardList,
+  ChevronRight,
+  MapPin,
+  TrendingUp,
+  Award,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import type { AttendanceSummary, PharmaUser, StudentProfile, Event } from "@/lib/schema";
 
 export default function StudentDashboard() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<(PharmaUser & { student_profiles: StudentProfile | null }) | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<any>(null);
-  const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
+  const [stats, setStats] = useState<AttendanceSummary | null>(null);
+  const [upcomingEvent, setUpcomingEvent] = useState<Event | null>(null);
   const [isRepairing, setIsRepairing] = useState(false);
   const router = useRouter();
 
@@ -32,21 +39,11 @@ export default function StudentDashboard() {
           router.push("/login");
           return;
         }
-
-        if (u.account_type === "admin") {
-          router.push("/dashboard/admin");
-          return;
-        }
-
-        if (u.account_type === "facilitator") {
-          router.push("/dashboard/facilitator");
-          return;
-        }
-
+        if (u.account_type === "admin") { router.push("/dashboard/admin"); return; }
+        if (u.account_type === "facilitator") { router.push("/dashboard/facilitator"); return; }
         setUser(u);
 
         if (u.account_type === "student") {
-          // Load overall stats
           const { data } = await supabase
             .from("student_attendance_summary")
             .select("*")
@@ -54,7 +51,6 @@ export default function StudentDashboard() {
             .single();
           setStats(data);
 
-          // Load the next upcoming event
           const today = new Date().toISOString().split("T")[0];
           const { data: upcoming } = await supabase
             .from("events")
@@ -76,21 +72,18 @@ export default function StudentDashboard() {
   }, [router]);
 
   async function handleRepairQR() {
-    if (!user || user.account_type !== 'student') return;
+    if (!user || user.account_type !== "student") return;
     try {
       setIsRepairing(true);
       const studentId = prompt("Please confirm your Student ID Number (e.g. USA-2026-XXXX):");
       if (!studentId) return;
-
       const year = prompt("Enter your Year Level (e.g. 1st Year):");
       const section = prompt("Enter your Section (e.g. PH 1A):");
-
       await ensureStudentProfile(user.id, {
         student_id_number: studentId,
         year: year || "Unknown",
-        section: section || "Unknown"
+        section: section || "Unknown",
       } as any);
-
       window.location.reload();
     } catch (err: any) {
       alert("Repair failed: " + err.message);
@@ -102,154 +95,267 @@ export default function StudentDashboard() {
   if (loading) return null;
 
   const isStudent = user?.account_type === "student";
-  const studentProfile = user?.student_profiles?.[0];
+  const studentProfile = user?.student_profiles ?? null;
   const qrCodeValue = studentProfile?.qr_code_id || "NOT-FOUND";
+  const attendanceRate = stats?.attendance_rate ?? 0;
+  const firstName = user?.full_name?.split(" ")[0] ?? "Student";
+
+  // Standing logic
+  const getStanding = (rate: number) => {
+    if (rate >= 90) return { label: "Excellent Standing", color: "var(--success)", icon: <Award size={13} /> };
+    if (rate >= 75) return { label: "Good Standing", color: "var(--teal)", icon: <CheckCircle size={13} /> };
+    if (rate >= 60) return { label: "At Risk", color: "var(--gold)", icon: <AlertCircle size={13} /> };
+    return { label: "Poor Standing", color: "var(--danger)", icon: <AlertCircle size={13} /> };
+  };
+  const standing = getStanding(attendanceRate);
+
+  // Donut circle params
+  const radius = 52;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (attendanceRate / 100) * circumference;
+
+  // Compute days until event
+  const daysUntil = upcomingEvent
+    ? Math.ceil((new Date(upcomingEvent.date).getTime() - new Date().setHours(0,0,0,0)) / 86400000)
+    : null;
 
   return (
-    <div className="fade-in">
-      {/* HEADER */}
-      <header className="dash-header">
-        <div className="dash-header-left">
-          <span className="breadcrumb-text">{isStudent ? "Student Portal" : "Facilitator Portal"}</span>
-          <h1>Dashboard</h1>
+    <div className="fade-in sd-root">
+
+      {/* ── PAGE HEADER ─────────────────────────────────────────── */}
+      <header className="sd-header">
+        <div>
+          <p className="sd-header-eyebrow">{isStudent ? "Student Portal" : "Facilitator Portal"}</p>
+          <h1 className="sd-header-title">Good {getGreeting()}, <span className="sd-header-name">{firstName}</span> 👋</h1>
+        </div>
+        <div className="sd-header-date">
+          <Calendar size={13} />
+          {new Date().toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" })}
         </div>
       </header>
 
-      {/* STAT CARDS */}
-      <div className="stat-cards-row">
-        {/* HERO METRIC: Attendance Rate */}
-        <div className="hero-stat-card">
-          <div className="hero-stat-content">
-            <div className="hero-stat-label">
-              <Activity size={20} color="var(--gold)" />
-              Overall Attendance
+      {/* ── TOP ROW: Attendance Overview + Stat Trio ────────────── */}
+      <div className="sd-top-row">
+
+        {/* LEFT: Big Attendance Overview */}
+        <div className="sd-overview-card">
+          <div className="sd-overview-ring-wrap">
+            <svg className="sd-donut" viewBox="0 0 140 140" width="140" height="140">
+              {/* Track */}
+              <circle cx="70" cy="70" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
+              {/* Progress */}
+              <circle
+                cx="70" cy="70" r={radius}
+                fill="none"
+                stroke="var(--gold)"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                transform="rotate(-90 70 70)"
+                style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)" }}
+              />
+            </svg>
+            <div className="sd-donut-center">
+              <span className="sd-donut-rate">{attendanceRate}%</span>
+              <span className="sd-donut-lbl">attendance</span>
             </div>
-            <div className="hero-stat-value">{stats?.attendance_rate ?? 0}%</div>
-            <div className="hero-stat-sub">
-              <CheckCircle size={14} /> Good standing
+          </div>
+
+          <div className="sd-overview-info">
+            <div className="sd-overview-label">
+              <Activity size={14} color="var(--gold)" />
+              Overall Attendance Rate
             </div>
+            <div className="sd-standing-badge" style={{ color: standing.color, borderColor: standing.color, background: `${standing.color}18` }}>
+              {standing.icon}
+              {standing.label}
+            </div>
+            <p className="sd-overview-sub">
+              {stats?.total_records
+                ? `Based on ${stats.total_records} recorded session${stats.total_records > 1 ? "s" : ""}`
+                : "No sessions recorded yet."}
+            </p>
           </div>
         </div>
 
-        {/* SECONDARY METRICS */}
-        <div className="secondary-stat-card">
-          <div className="stat-icon-badge green"><CheckCircle size={20} /></div>
-          <div>
-            <div className="stat-value" style={{ color: "var(--white)" }}>{stats?.present_count ?? 0}</div>
-            <div className="stat-label">Present</div>
+        {/* RIGHT: 3 Stat Tiles */}
+        <div className="sd-stat-tiles">
+          <div className="sd-stat-tile sd-tile-present">
+            <div className="sd-tile-icon-wrap" style={{ background: "rgba(74,222,128,0.12)", color: "var(--success)" }}>
+              <CheckCircle size={18} />
+            </div>
+            <div className="sd-tile-number">{stats?.present_count ?? 0}</div>
+            <div className="sd-tile-label">Present</div>
+            <div className="sd-tile-bar">
+              <div className="sd-tile-bar-fill" style={{ width: `${stats?.total_records ? (stats.present_count / stats.total_records) * 100 : 0}%`, background: "var(--success)" }} />
+            </div>
           </div>
-        </div>
-        <div className="secondary-stat-card">
-          <div className="stat-icon-badge orange"><Clock size={20} /></div>
-          <div>
-            <div className="stat-value" style={{ color: "var(--white)" }}>{stats?.late_count ?? 0}</div>
-            <div className="stat-label">Late</div>
+
+          <div className="sd-stat-tile sd-tile-late">
+            <div className="sd-tile-icon-wrap" style={{ background: "rgba(232,184,75,0.12)", color: "var(--gold)" }}>
+              <Clock size={18} />
+            </div>
+            <div className="sd-tile-number">{stats?.late_count ?? 0}</div>
+            <div className="sd-tile-label">Late</div>
+            <div className="sd-tile-bar">
+              <div className="sd-tile-bar-fill" style={{ width: `${stats?.total_records ? (stats.late_count / stats.total_records) * 100 : 0}%`, background: "var(--gold)" }} />
+            </div>
           </div>
-        </div>
-        <div className="secondary-stat-card">
-          <div className="stat-icon-badge" style={{ background: "rgba(239,68,68,0.2)", color: "#ef4444" }}>
-            <AlertCircle size={20} />
-          </div>
-          <div>
-            <div className="stat-value" style={{ color: "var(--white)" }}>{stats?.absent_count ?? 0}</div>
-            <div className="stat-label">Absent</div>
+
+          <div className="sd-stat-tile sd-tile-absent">
+            <div className="sd-tile-icon-wrap" style={{ background: "rgba(248,113,113,0.12)", color: "var(--danger)" }}>
+              <AlertCircle size={18} />
+            </div>
+            <div className="sd-tile-number">{stats?.absent_count ?? 0}</div>
+            <div className="sd-tile-label">Absent</div>
+            <div className="sd-tile-bar">
+              <div className="sd-tile-bar-fill" style={{ width: `${stats?.total_records ? (stats.absent_count / stats.total_records) * 100 : 0}%`, background: "var(--danger)" }} />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="dash-content-grid" style={{ gridTemplateColumns: "320px 1fr" }}>
+      {/* ── BOTTOM ROW: QR Card + Upcoming Event + Quick Actions ─── */}
+      <div className="sd-bottom-row">
 
-        {/* LEFT COL: QR CODE */}
-        <div className="dash-actions-col">
-          <div className="medical-id-badge">
-            <div className="badge-clip"></div>
-            
-            <div className="badge-header">
-              <h3>Student ID</h3>
-              <p>PharmaTrack Access Pass</p>
+        {/* COL A: QR Access Pass */}
+        <div className="sd-qr-panel">
+          <div className="sd-qr-panel-header">
+            <div>
+              <p className="sd-panel-label">Access Pass</p>
+              <h2 className="sd-panel-title">Student ID</h2>
             </div>
+            <div className="sd-qr-status-dot" title="QR Active" />
+          </div>
 
-            <div className="badge-body">
-              {qrCodeValue === "NOT-FOUND" ? (
-                <div className="qr-error-state">
-                  <AlertCircle color="#ef4444" size={36} />
-                  <p>ID Data Missing</p>
-                  <button
-                    className="btn-repair"
-                    onClick={handleRepairQR}
-                    disabled={isRepairing}
-                  >
-                    {isRepairing ? "Repairing..." : "Repair QR Code"}
-                  </button>
+          <div className="sd-qr-body">
+            {qrCodeValue === "NOT-FOUND" ? (
+              <div className="sd-qr-error">
+                <AlertCircle color="var(--danger)" size={32} />
+                <p className="sd-qr-error-title">ID Data Missing</p>
+                <p className="sd-qr-error-sub">Your QR code could not be generated.</p>
+                <button className="sd-repair-btn" onClick={handleRepairQR} disabled={isRepairing}>
+                  {isRepairing ? "Repairing…" : "Repair QR Code"}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="sd-qr-code-wrap">
+                  <QRCodeSVG value={qrCodeValue} size={160} level="H" includeMargin={false} />
                 </div>
-              ) : (
-                <>
-                  <div className="badge-qr-wrapper">
-                    <QRCodeSVG
-                      value={qrCodeValue}
-                      size={180}
-                      level="H"
-                      includeMargin={false}
-                    />
-                  </div>
-                  <div className="qr-id-text" style={{ color: "inherit", fontWeight: 700, margin: "8px 0" }}>
-                    {qrCodeValue}
-                  </div>
-                  <p className="qr-help" style={{ color: "#64748b", margin: 0, fontSize: "0.8rem", textAlign: "center", maxWidth: "200px" }}>
-                    Present this to any Council Member for scanning.
-                  </p>
-                </>
-              )}
-            </div>
+                <p className="sd-qr-id">{qrCodeValue}</p>
+                <p className="sd-qr-hint">Present to any Council Member for scanning</p>
+              </>
+            )}
+          </div>
 
-            <div className="badge-footer" style={{ background: "#f8fafc", padding: "16px 24px", borderTop: "1px solid #e2e8f0" }}>
-              <Link href="/check-in" className="btn" style={{ width: "100%", background: "var(--teal)", color: "white", borderRadius: "12px" }}>
-                <Maximize2 size={16} /> Open Presenter
-              </Link>
-            </div>
+          <div className="sd-qr-footer">
+            <Link href="/check-in" className="sd-present-btn">
+              <Maximize2 size={14} />
+              Open Full-Screen
+            </Link>
           </div>
         </div>
 
-        {/* RIGHT COL: RECENT RECORDS OR UPCOMING EVENTS */}
-        <div className="trend-panel">
-          <div className="trend-header">
-            <h3>Upcoming Activity</h3>
-          </div>
-          <div className="trend-subtitle">Next required attendance</div>
+        {/* COL B: Upcoming Event + Quick Links */}
+        <div className="sd-right-col">
 
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", borderRadius: "12px", padding: "20px", marginTop: "16px" }}>
+          {/* Upcoming Event */}
+          <div className="sd-event-panel">
+            <div className="sd-event-panel-header">
+              <div>
+                <p className="sd-panel-label">Up Next</p>
+                <h2 className="sd-panel-title">Upcoming Activity</h2>
+              </div>
+              <Link href="/dashboard/schedule" className="sd-see-all">
+                See all <ChevronRight size={13} />
+              </Link>
+            </div>
+
             {upcomingEvent ? (
-              <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-                <div style={{ background: "var(--surface2)", padding: "12px", borderRadius: "12px", textAlign: "center", minWidth: "60px" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--gold)", fontWeight: 700, textTransform: "uppercase" }}>
+              <div className="sd-event-card">
+                <div className="sd-event-date-block">
+                  <span className="sd-event-month">
                     {new Date(upcomingEvent.date).toLocaleDateString("en-US", { month: "short" })}
-                  </div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--white)" }}>
+                  </span>
+                  <span className="sd-event-day">
                     {new Date(upcomingEvent.date).toLocaleDateString("en-US", { day: "numeric" })}
-                  </div>
+                  </span>
+                  {daysUntil !== null && (
+                    <span className="sd-event-days-pill">
+                      {daysUntil === 0 ? "Today" : daysUntil === 1 ? "Tomorrow" : `In ${daysUntil}d`}
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <h4 style={{ fontSize: "1.1rem", color: "var(--white)", fontWeight: 700, marginBottom: "4px" }}>{upcomingEvent.name}</h4>
-                  <div style={{ fontSize: "0.85rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                    <Clock size={12} /> {new Date(upcomingEvent.check_in_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(upcomingEvent.check_in_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                  <div style={{ fontSize: "0.85rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span style={{ fontSize: "12px" }}>📍</span> {upcomingEvent.location}
+                <div className="sd-event-detail">
+                  <h3 className="sd-event-name">{upcomingEvent.name}</h3>
+                  <div className="sd-event-meta">
+                    <span className="sd-event-meta-item">
+                      <Clock size={12} />
+                      {new Date(upcomingEvent.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {" – "}
+                      {new Date(upcomingEvent.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className="sd-event-meta-item">
+                      <MapPin size={12} />
+                      {upcomingEvent.location}
+                    </span>
                   </div>
                 </div>
               </div>
             ) : (
-              <div style={{ textAlign: "center", padding: "30px 0", color: "var(--muted)", fontSize: "0.9rem" }}>
-                No upcoming events scheduled. Enjoy your free time!
+              <div className="sd-event-empty">
+                <Calendar size={28} color="var(--dimmed)" />
+                <p>No upcoming events right now.</p>
+                <span>Check back later or enjoy your free time!</span>
               </div>
             )}
           </div>
 
-          <Link href="/dashboard/records" style={{ display: "inline-block", marginTop: "20px", color: "var(--gold)", fontSize: "0.85rem", fontWeight: 600 }}>
-            View my attendance records →
-          </Link>
+          {/* Quick Actions */}
+          <div className="sd-quick-links">
+            <p className="sd-panel-label" style={{ marginBottom: 10 }}>Quick Actions</p>
+            <div className="sd-quick-grid">
+              <Link href="/check-in" className="sd-quick-card">
+                <div className="sd-quick-icon" style={{ background: "rgba(45,212,191,0.12)", color: "var(--teal)" }}>
+                  <Zap size={16} />
+                </div>
+                <span className="sd-quick-label">Check In</span>
+                <ChevronRight size={14} className="sd-quick-arrow" />
+              </Link>
+              <Link href="/dashboard/records" className="sd-quick-card">
+                <div className="sd-quick-icon" style={{ background: "rgba(232,184,75,0.12)", color: "var(--gold)" }}>
+                  <ClipboardList size={16} />
+                </div>
+                <span className="sd-quick-label">My Records</span>
+                <ChevronRight size={14} className="sd-quick-arrow" />
+              </Link>
+              <Link href="/dashboard/schedule" className="sd-quick-card">
+                <div className="sd-quick-icon" style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa" }}>
+                  <Calendar size={16} />
+                </div>
+                <span className="sd-quick-label">Schedule</span>
+                <ChevronRight size={14} className="sd-quick-arrow" />
+              </Link>
+              <Link href="/dashboard/records" className="sd-quick-card">
+                <div className="sd-quick-icon" style={{ background: "rgba(74,222,128,0.12)", color: "var(--success)" }}>
+                  <TrendingUp size={16} />
+                </div>
+                <span className="sd-quick-label">Progress</span>
+                <ChevronRight size={14} className="sd-quick-arrow" />
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "morning";
+  if (hour < 17) return "afternoon";
+  return "evening";
 }

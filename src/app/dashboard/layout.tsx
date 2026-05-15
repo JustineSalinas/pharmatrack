@@ -4,11 +4,17 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { logoutUser, getCurrentUser, getAuthUser } from "@/lib/auth-client";
 import Sidebar from "@/components/Sidebar";
+import type { PharmaUser, StudentProfile, FacilitatorProfile } from "@/lib/schema";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<
+    | (PharmaUser & { student_profiles: StudentProfile | null })
+    | (PharmaUser & { facilitator_profiles: FacilitatorProfile | null })
+    | PharmaUser
+    | null
+  >(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

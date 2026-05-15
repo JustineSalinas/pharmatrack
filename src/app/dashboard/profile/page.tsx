@@ -3,31 +3,22 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
-import { Loader2, User, Lock, Camera, Save, Mail, Hash, BookOpen, Layers } from "lucide-react";
+import {
+  Loader2, User, Lock, Mail, Hash, BookOpen,
+  Layers, Save, CheckCircle2, ShieldCheck, AlertCircle,
+  TrendingUp, ChevronRight,
+} from "lucide-react";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-  const [form, setForm] = useState({
-    full_name: "",
-    email: "",
-    student_id_number: "",
-    section: "",
-    current_year: "",
-  });
-
-  const [passForm, setPassForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: ""
-  });
-
+  const [form, setForm] = useState({ full_name: "", email: "", student_id_number: "", section: "", current_year: "" });
+  const [passForm, setPassForm] = useState({ newPassword: "", confirmPassword: "" });
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"profile" | "password">("profile");
+  const [tab, setTab] = useState<"profile" | "security">("profile");
 
   useEffect(() => {
     async function load() {
@@ -43,274 +34,222 @@ export default function ProfilePage() {
             section: sp.section || "",
             current_year: sp.current_year || "",
           });
-
           if (u.account_type === "student") {
             const { data } = await supabase
-              .from("student_attendance_summary")
-              .select("*")
-              .eq("student_id", u.id)
-              .single();
+              .from("student_attendance_summary").select("*").eq("student_id", u.id).single();
             setStats(data);
           }
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error(err); }
+      finally { setLoading(false); }
     }
     load();
   }, []);
 
   const setF = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }));
-
+    setForm((f) => ({ ...f, [k]: e.target.value }));
   const setP = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setPassForm(f => ({ ...f, [k]: e.target.value }));
+    setPassForm((f) => ({ ...f, [k]: e.target.value }));
 
   const handleSaveProfile = async () => {
-    setSaving(true);
-    setError("");
+    setSaving(true); setError("");
     try {
       if (!user) return;
-      
-      const { error: err1 } = await supabase
-        .from("users")
-        .update({ full_name: form.full_name })
-        .eq("id", user.id);
-      if (err1) throw err1;
-
+      const { error: e1 } = await supabase.from("users").update({ full_name: form.full_name }).eq("id", user.id);
+      if (e1) throw e1;
       if (user.account_type === "student" && user.student_profiles?.[0]) {
-        const pId = user.student_profiles[0].id;
-        const { error: err2 } = await supabase
-          .from("student_profiles")
+        const { error: e2 } = await supabase.from("student_profiles")
           .update({ section: form.section, current_year: form.current_year })
-          .eq("id", pId);
-        if (err2) throw err2;
+          .eq("id", user.student_profiles[0].id);
+        if (e2) throw e2;
       }
-
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch (err: any) {
-      setError(err.message || "Failed to save changes");
-    } finally {
-      setSaving(false);
-    }
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } catch (err: any) { setError(err.message || "Failed to save changes"); }
+    finally { setSaving(false); }
   };
 
   const handleSavePassword = async () => {
     setError("");
-    if (passForm.newPassword !== passForm.confirmPassword) {
-      setError("New passwords do not match");
-      return;
-    }
-    if (passForm.newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-
+    if (passForm.newPassword !== passForm.confirmPassword) { setError("Passwords do not match"); return; }
+    if (passForm.newPassword.length < 8) { setError("Password must be at least 8 characters"); return; }
     setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: passForm.newPassword
-      });
+      const { error } = await supabase.auth.updateUser({ password: passForm.newPassword });
       if (error) throw error;
-      
       setSaved(true);
-      setPassForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      setTimeout(() => setSaved(false), 2000);
-    } catch (err: any) {
-      setError(err.message || "Failed to update password");
-    } finally {
-      setSaving(false);
-    }
+      setPassForm({ newPassword: "", confirmPassword: "" });
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err: any) { setError(err.message || "Failed to update password"); }
+    finally { setSaving(false); }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
-        <Loader2 className="animate-spin" size={48} color="var(--gold)" />
-      </div>
-    );
-  }
+  if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
 
-  const initials = form.full_name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() || "U";
+  const initials = form.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase() || "U";
   const isStudent = user?.account_type === "student";
 
   return (
-    <div className="fade-in">
-      <div className="page-header" style={{ marginBottom: "24px" }}>
+    <div className="fade-in sd-root">
+      {/* ── Header ── */}
+      <header className="sd-header">
         <div>
-          <div className="breadcrumb" style={{ fontSize: "0.85rem", color: "var(--muted)", letterSpacing: "0.5px", marginBottom: "4px" }}>
-            <span>Account</span><span style={{ margin: "0 6px" }}>·</span><span>Settings</span>
-          </div>
-          <h2 style={{ fontSize: "2rem", fontWeight: 800, margin: 0, letterSpacing: "-0.5px" }}>My Profile</h2>
+          <p className="sd-header-eyebrow">Account · Settings</p>
+          <h1 className="sd-header-title">My Profile</h1>
         </div>
-      </div>
+      </header>
 
-      <div style={{ display: "flex", gap: "12px", marginBottom: "32px" }}>
-        <button 
-          className={`btn ${tab === "profile" ? "btn-gold" : "btn-outline"}`} 
-          style={{ width: "auto", padding: "8px 20px", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: "8px" }}
-          onClick={() => setTab("profile")}
-        >
-          <User size={16} /> Account Details
+      {/* ── Tab Bar ── */}
+      <div className="sp-tab-bar">
+        <button className={`sp-tab-btn ${tab === "profile" ? "active" : ""}`} onClick={() => setTab("profile")}>
+          <User size={14} /> Account Details
         </button>
-        <button 
-          className={`btn ${tab === "password" ? "btn-gold" : "btn-outline"}`} 
-          style={{ width: "auto", padding: "8px 20px", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: "8px" }}
-          onClick={() => setTab("password")}
-        >
-          <Lock size={16} /> Security
+        <button className={`sp-tab-btn ${tab === "security" ? "active" : ""}`} onClick={() => setTab("security")}>
+          <ShieldCheck size={14} /> Security
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "24px" }}>
-        {/* Avatar Panel */}
-        <div className="panel" style={{ textAlign: "center", padding: "32px 24px" }}>
-          <div className="avatar" style={{ width: "100px", height: "100px", fontSize: "40px", margin: "0 auto 20px", background: "var(--surface2)", border: "2px solid var(--gold-dim)" }}>
-            {initials}
-          </div>
-          <h3 style={{ fontSize: "1.25rem", color: "var(--white)", marginBottom: "4px" }}>{form.full_name}</h3>
-          <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "20px" }}>{form.email}</p>
-          
-          <div style={{ display: "flex", justifyContent: "center", gap: "8px", flexWrap: "wrap", marginBottom: "24px" }}>
-            <span className="tag" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--gold-dim)", color: "var(--gold)" }}>
+      {/* ── Profile Layout ── */}
+      <div className="sp-profile-grid">
+        {/* Avatar / Stats Sidebar */}
+        <div className="sp-avatar-panel">
+          <div className="sp-avatar-circle">{initials}</div>
+          <h2 className="sp-avatar-name">{form.full_name || "—"}</h2>
+          <p className="sp-avatar-email">{form.email}</p>
+
+          <div className="sp-avatar-tags">
+            <span className="sp-avatar-tag sp-tag-gold">
               {user?.account_type ? user.account_type.charAt(0).toUpperCase() + user.account_type.slice(1) : ""}
             </span>
-            {isStudent && <span className="tag" style={{ background: "rgba(255,255,255,0.05)" }}>{form.section}</span>}
-            {isStudent && <span className="tag" style={{ background: "rgba(255,255,255,0.05)" }}>{form.current_year}</span>}
+            {isStudent && form.section && <span className="sp-avatar-tag">{form.section}</span>}
+            {isStudent && form.current_year && <span className="sp-avatar-tag">{form.current_year}</span>}
           </div>
 
-          <button className="btn btn-outline" style={{ fontSize: "0.85rem", padding: "6px 12px", width: "auto", gap: "6px" }}>
-            <Camera size={14} /> Update Photo
-          </button>
-
-          {/* Student Stats */}
           {isStudent && stats && (
-            <div style={{ marginTop: "32px", borderTop: "1px solid var(--border)", paddingTop: "24px", textAlign: "left" }}>
-              <div style={{ fontSize: "0.7rem", color: "var(--muted)", fontWeight: 800, letterSpacing: "2px", marginBottom: "16px", textAlign: "center" }}>STUDENT STATS</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Total Events</span>
-                  <span style={{ fontWeight: 600 }}>{stats.total_events || 0}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Present</span>
-                  <span style={{ fontWeight: 600, color: "var(--success)" }}>{stats.present_count || 0}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Attendance Rate</span>
-                  <span style={{ fontWeight: 600, color: "var(--gold)" }}>{stats.attendance_rate || 0}%</span>
-                </div>
+            <div className="sp-avatar-stats">
+              <div className="sp-avatar-stats-title">
+                <TrendingUp size={12} /> Attendance Summary
               </div>
+              {[
+                { label: "Total Events", value: stats.total_records || 0, color: "var(--white-shade)" },
+                { label: "Present", value: stats.present_count || 0, color: "var(--success)" },
+                { label: "Late", value: stats.late_count || 0, color: "var(--gold)" },
+                { label: "Absent", value: stats.absent_count || 0, color: "var(--danger)" },
+                { label: "Rate", value: `${stats.attendance_rate || 0}%`, color: stats.attendance_rate >= 75 ? "var(--success)" : "var(--gold)" },
+              ].map((s) => (
+                <div key={s.label} className="sp-stat-row">
+                  <span className="sp-stat-row-label">{s.label}</span>
+                  <span className="sp-stat-row-val" style={{ color: s.color }}>{s.value}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
         {/* Form Panel */}
-        <div className="panel" style={{ padding: "32px" }}>
+        <div className="sp-form-panel">
           {error && (
-            <div style={{ color: "var(--danger)", padding: "12px 16px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "12px", marginBottom: "24px", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: "10px" }}>
-              <Lock size={16} /> {error}
+            <div className="sp-form-error">
+              <AlertCircle size={15} /> {error}
+            </div>
+          )}
+          {saved && (
+            <div className="sp-form-success">
+              <CheckCircle2 size={15} /> {tab === "profile" ? "Profile saved successfully!" : "Password updated!"}
             </div>
           )}
 
           {tab === "profile" ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              <h3 style={{ fontSize: "1.1rem", marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}><User size={18} color="var(--gold)" /> Account Details</h3>
-              
-              <div className="input-group">
-                <label>Full Display Name</label>
-                <div className="input-wrap">
-                  <span className="icon"><User size={18} /></span>
-                  <input className="inp" value={form.full_name} onChange={setF("full_name")} placeholder="Enter your full name" />
+            <div className="sp-form-body">
+              <div className="sp-form-section-title">
+                <User size={15} color="var(--gold)" /> Account Details
+              </div>
+
+              <div className="sp-input-group">
+                <label className="sp-input-label">Full Display Name</label>
+                <div className="sp-input-wrap">
+                  <User size={15} className="sp-input-icon" />
+                  <input className="sp-input" value={form.full_name} onChange={setF("full_name")} placeholder="Enter your full name" />
                 </div>
               </div>
 
-              <div className="input-group">
-                <label>Institutional Email</label>
-                <div className="input-wrap">
-                  <span className="icon"><Mail size={18} /></span>
-                  <input className="inp" type="email" value={form.email} disabled style={{ opacity: 0.6 }} />
+              <div className="sp-input-group">
+                <label className="sp-input-label">Institutional Email</label>
+                <div className="sp-input-wrap">
+                  <Mail size={15} className="sp-input-icon" />
+                  <input className="sp-input" type="email" value={form.email} disabled style={{ opacity: 0.5 }} />
                 </div>
-                <p style={{ fontSize: "0.75rem", color: "var(--muted)", fontStyle: "italic", marginTop: "4px" }}>Email is managed by the institution and cannot be changed.</p>
+                <p className="sp-input-hint">Email is managed by the institution and cannot be changed.</p>
               </div>
 
               {isStudent && (
                 <>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                    <div className="input-group">
-                      <label>Student ID</label>
-                      <div className="input-wrap">
-                        <span className="icon"><Hash size={18} /></span>
-                        <input className="inp" value={form.student_id_number} disabled style={{ opacity: 0.6 }} />
+                  <div className="sp-two-col">
+                    <div className="sp-input-group">
+                      <label className="sp-input-label">Student ID</label>
+                      <div className="sp-input-wrap">
+                        <Hash size={15} className="sp-input-icon" />
+                        <input className="sp-input" value={form.student_id_number} disabled style={{ opacity: 0.5 }} />
                       </div>
                     </div>
-                    <div className="input-group">
-                      <label>Year Level</label>
-                      <div className="input-wrap select-wrap">
-                        <span className="icon"><Layers size={18} /></span>
-                        <select className="inp" value={form.current_year} onChange={setF("current_year")}>
-                          <option value="1st Year">1st Year</option>
-                          <option value="2nd Year">2nd Year</option>
-                          <option value="3rd Year">3rd Year</option>
-                          <option value="4th Year">4th Year</option>
+                    <div className="sp-input-group">
+                      <label className="sp-input-label">Year Level</label>
+                      <div className="sp-input-wrap">
+                        <Layers size={15} className="sp-input-icon" />
+                        <select className="sp-input sp-select" value={form.current_year} onChange={setF("current_year")}>
+                          {["1st Year", "2nd Year", "3rd Year", "4th Year"].map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
                         </select>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="input-group">
-                    <label>Block / Section</label>
-                    <div className="input-wrap">
-                      <span className="icon"><BookOpen size={18} /></span>
-                      <input className="inp" value={form.section} onChange={setF("section")} placeholder="e.g. PharmA" />
+                  <div className="sp-input-group">
+                    <label className="sp-input-label">Block / Section</label>
+                    <div className="sp-input-wrap">
+                      <BookOpen size={15} className="sp-input-icon" />
+                      <input className="sp-input" value={form.section} onChange={setF("section")} placeholder="e.g. PharmA" />
                     </div>
                   </div>
                 </>
               )}
 
-              <button className={`btn btn-gold ${saving ? "opacity-50" : ""}`} style={{ marginTop: "12px", width: "100%", height: "48px", borderRadius: "14px", gap: "10px" }} onClick={handleSaveProfile} disabled={saving}>
-                {saving ? "Saving Changes..." : saved ? <><Save size={18} /> Profile Saved!</> : <><Save size={18} /> Save Changes</>}
+              <button className="sp-save-btn" onClick={handleSaveProfile} disabled={saving}>
+                {saving ? <><Loader2 size={15} className="sp-spinner-sm" /> Saving…</> : saved ? <><CheckCircle2 size={15} /> Saved!</> : <><Save size={15} /> Save Changes</>}
               </button>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              <h3 style={{ fontSize: "1.1rem", marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}><Lock size={18} color="var(--gold)" /> Security Settings</h3>
-              
-              <div className="input-group">
-                <label>New Password</label>
-                <div className="input-wrap">
-                  <span className="icon"><Lock size={18} /></span>
-                  <input className="inp" type="password" placeholder="••••••••" value={passForm.newPassword} onChange={setP("newPassword")} />
+            <div className="sp-form-body">
+              <div className="sp-form-section-title">
+                <Lock size={15} color="var(--gold)" /> Change Password
+              </div>
+
+              <div className="sp-input-group">
+                <label className="sp-input-label">New Password</label>
+                <div className="sp-input-wrap">
+                  <Lock size={15} className="sp-input-icon" />
+                  <input className="sp-input" type="password" placeholder="Min. 8 characters" value={passForm.newPassword} onChange={setP("newPassword")} />
+                </div>
+              </div>
+              <div className="sp-input-group">
+                <label className="sp-input-label">Confirm New Password</label>
+                <div className="sp-input-wrap">
+                  <Lock size={15} className="sp-input-icon" />
+                  <input className="sp-input" type="password" placeholder="Repeat new password" value={passForm.confirmPassword} onChange={setP("confirmPassword")} />
                 </div>
               </div>
 
-              <div className="input-group">
-                <label>Confirm New Password</label>
-                <div className="input-wrap">
-                  <span className="icon"><Lock size={18} /></span>
-                  <input className="inp" type="password" placeholder="••••••••" value={passForm.confirmPassword} onChange={setP("confirmPassword")} />
-                </div>
+              <div className="sp-security-hint">
+                <ShieldCheck size={14} color="var(--teal)" />
+                <p>Use at least 8 characters. Changing your password will sign you out of other devices.</p>
               </div>
 
-              <div style={{ padding: "16px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "12px", fontSize: "0.85rem", color: "var(--muted)", lineHeight: 1.6 }}>
-                💡 <strong>Security Hint:</strong> Use at least 8 characters. Changing your password will invalidate existing sessions on other devices for security.
-              </div>
-
-              <button className={`btn btn-gold ${saving ? "opacity-50" : ""}`} style={{ marginTop: "12px", width: "100%", height: "48px", borderRadius: "14px" }} onClick={handleSavePassword} disabled={saving}>
-                {saving ? "Updating Password..." : saved ? "✅ Password Updated!" : "Update Password"}
+              <button className="sp-save-btn" onClick={handleSavePassword} disabled={saving}>
+                {saving ? <><Loader2 size={15} className="sp-spinner-sm" /> Updating…</> : saved ? <><CheckCircle2 size={15} /> Updated!</> : <><Lock size={15} /> Update Password</>}
               </button>
             </div>
           )}
         </div>
       </div>
-      
-      <style jsx>{`
-        .animate-spin { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }
