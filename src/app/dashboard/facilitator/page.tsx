@@ -74,22 +74,11 @@ export default function FacilitatorOverview() {
   return (
     <>
       {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <div className="breadcrumb">
-            <span>Facilitator</span><span>›</span><span>Dashboard</span>
-          </div>
-          <h2>Dashboard</h2>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
+          Facilitator
         </div>
-        <div className="header-actions">
-          <Link
-            href="/dashboard/facilitator/generate"
-            className="btn btn-gold"
-            style={{ width: "auto", padding: "9px 18px", fontSize: 13 }}
-          >
-            📲 New QR Session
-          </Link>
-        </div>
+        <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Dashboard</h2>
       </div>
 
       {/* Top Banner Card — Attendance Rate */}
