@@ -9,6 +9,18 @@ export async function loginUser({ email, password }: LoginInput) {
   return data;
 }
 
+export async function signInWithGoogle() {
+  const redirectTo = `${window.location.origin}/auth/callback`;
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo,
+    },
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /**
  * Returns auth user info including email_confirmed_at for verification checks.
  */
@@ -130,6 +142,40 @@ export async function registerFacilitator(input: FacilitatorRegisterInput) {
   if (profileErr) throw new Error(profileErr.message);
 
   return authData;
+}
+
+export async function completeOnboarding(
+  userId: string, 
+  email: string, 
+  fullName: string, 
+  role: "student" | "facilitator",
+  studentData?: { studentId: string, section: string, year: string }
+) {
+  // 1. Create User Record
+  const status = role === "student" ? "approved" : "pending";
+  const { error: userErr } = await supabase.from("users").insert({
+    id: userId,
+    email: email,
+    full_name: fullName,
+    account_type: role as AccountType,
+    status: status,
+  });
+  if (userErr) throw new Error("Failed to create user record: " + userErr.message);
+
+  // 2. Create Role Profile
+  if (role === "student" && studentData) {
+    await ensureStudentProfile(userId, {
+      student_id_number: studentData.studentId,
+      section: studentData.section,
+      current_year: studentData.year
+    });
+  } else if (role === "facilitator") {
+    const { error: profileErr } = await supabase.from("facilitator_profiles").insert({
+      user_id: userId,
+      department: "Pharmacy"
+    });
+    if (profileErr) throw new Error("Failed to create facilitator profile: " + profileErr.message);
+  }
 }
 
 export async function logoutUser() {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { logoutUser, getCurrentUser } from "@/lib/auth-client";
+import { logoutUser, getCurrentUser, getAuthUser } from "@/lib/auth-client";
 import Sidebar from "@/components/Sidebar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -14,10 +14,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     async function loadUser() {
       try {
+        const authUser = await getAuthUser();
+        if (!authUser) {
+          router.push("/login");
+          return;
+        }
+
         const u = await getCurrentUser();
         if (!u) {
-          console.log("Dashboard layout: No user profile found, redirecting to login.");
-          router.push("/login");
+          console.log("Dashboard layout: User authenticated but no profile, redirecting to onboarding.");
+          router.push("/onboarding");
           return;
         }
         console.log("Dashboard layout: User loaded successfully:", u.email);
