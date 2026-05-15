@@ -121,6 +121,7 @@ end $$;
 
 create policy "Facilitators can read their own profile" on public.facilitator_profiles for select using (auth.uid() = user_id);
 create policy "Admins can manage facilitator profiles" on public.facilitator_profiles for all using (public.is_admin());
+create policy "Facilitators can insert their own profile" on public.facilitator_profiles for insert with check (auth.uid() = user_id);
 
 -- ============================================================
 -- EVENTS (School-wide activities)
