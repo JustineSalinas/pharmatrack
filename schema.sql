@@ -97,8 +97,10 @@ CREATE TABLE IF NOT EXISTS public.facilitator_profiles (
 ALTER TABLE public.facilitator_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Facilitator reads own profile" ON public.facilitator_profiles;
 DROP POLICY IF EXISTS "Admin manages facilitators" ON public.facilitator_profiles;
+DROP POLICY IF EXISTS "Facilitator inserts own profile" ON public.facilitator_profiles;
 CREATE POLICY "Facilitator reads own profile" ON public.facilitator_profiles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admin manages facilitators" ON public.facilitator_profiles FOR ALL USING (public.is_admin());
+CREATE POLICY "Facilitator inserts own profile" ON public.facilitator_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- ============================================================
 -- EVENTS
