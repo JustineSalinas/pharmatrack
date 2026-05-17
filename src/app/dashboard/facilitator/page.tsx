@@ -71,8 +71,26 @@ export default function FacilitatorOverview() {
     },
   ];
 
+  const scanLineKeyframes = `
+    @keyframes scanLine {
+      0%   { top: 8px; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { top: calc(100% - 8px); opacity: 0; }
+    }
+    .scan-line-anim {
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      height: 1.5px;
+      background: rgba(200, 146, 42, 0.55);
+      animation: scanLine 2s ease-in-out infinite;
+    }
+  `;
+
   return (
     <>
+      <style>{scanLineKeyframes}</style>
       {/* Page Header */}
       <div>
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
@@ -159,10 +177,7 @@ export default function FacilitatorOverview() {
             padding: "16px 20px",
             borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Activity size={15} color="var(--gold)" />
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Today's Attendance</span>
-            </div>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Live Activity Feed</span>
             <a style={{ color: "var(--gold)", fontSize: 12, cursor: "pointer" }}>View all →</a>
           </div>
 
@@ -187,12 +202,73 @@ export default function FacilitatorOverview() {
               </tbody>
             </table>
           ) : (
-            <div style={{ padding: "60px 20px", textAlign: "center", color: "var(--muted)" }}>
-              <Activity size={32} style={{ marginBottom: 12, opacity: 0.3 }} />
-              <div style={{ fontSize: 13 }}>No attendance recorded for today yet.</div>
-              <div style={{ fontSize: 12, marginTop: 4, opacity: 0.6 }}>Start a QR session to begin tracking.</div>
-              <Link href="/dashboard/facilitator/generate" className="btn btn-gold" style={{ display: "inline-block", marginTop: 16, padding: "8px 18px", fontSize: 12, width: "auto" }}>
-                📲 Start Session
+            /* ── Scanner Empty State ── */
+            <div style={{ padding: "52px 20px", textAlign: "center" }}>
+              {/* Scanner frame */}
+              <div style={{
+                width: 52,
+                height: 52,
+                border: "1.5px dashed rgba(255,255,255,0.18)",
+                borderRadius: 10,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
+                position: "relative",
+                overflow: "hidden",
+              }}>
+                {/* Corner brackets */}
+                {[
+                  { top: 5, left: 5, borderWidth: "1.5px 0 0 1.5px" },
+                  { top: 5, right: 5, borderWidth: "1.5px 1.5px 0 0" },
+                  { bottom: 5, left: 5, borderWidth: "0 0 1.5px 1.5px" },
+                  { bottom: 5, right: 5, borderWidth: "0 1.5px 1.5px 0" },
+                ].map((style, i) => (
+                  <span key={i} style={{
+                    position: "absolute",
+                    width: 9,
+                    height: 9,
+                    borderColor: "rgba(255,255,255,0.35)",
+                    borderStyle: "solid",
+                    ...style,
+                  }} />
+                ))}
+                {/* Animated scan line */}
+                <div className="scan-line-anim" />
+              </div>
+
+              <div style={{ fontSize: 13.5, color: "rgba(255,255,255,0.52)", marginBottom: 4 }}>
+                No scans recorded yet.
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", marginBottom: 18 }}>
+                Start an event to begin tracking.
+              </div>
+              <Link
+                href="/dashboard/facilitator/generate"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  padding: "8px 20px",
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  borderRadius: 8,
+                  color: "rgba(255,255,255,0.72)",
+                  fontSize: 13.5,
+                  textDecoration: "none",
+                  transition: "background 0.15s, border-color 0.15s",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.28)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)";
+                }}
+              >
+                <QrCode size={15} style={{ opacity: 0.6 }} />
+                Open Scanner
               </Link>
             </div>
           )}
