@@ -4,17 +4,16 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
-  Loader2, Users, CheckCircle, XCircle, BookOpen,
-  QrCode, BarChart2, UserCog, Activity
+  Loader2, Users, LogIn, LogOut, CalendarCheck, QrCode, BarChart2, UserCog,
 } from "lucide-react";
 
 export default function FacilitatorOverview() {
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState({
-    totalStudents: 0,
-    presentToday: 0,
-    absentToday: 0,
-    activeSessions: 0
+    activeEventsToday: 0,
+    totalExpectedStudents: 0,
+    studentsCheckedIn: 0,
+    studentsCheckedOut: 0,
   });
   const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +25,12 @@ export default function FacilitatorOverview() {
         setUser(u);
 
         setTodayAttendance([]);
-        setStats({ totalStudents: 0, presentToday: 0, absentToday: 0, activeSessions: 0 });
+        setStats({
+          activeEventsToday: 0,
+          totalExpectedStudents: 0,
+          studentsCheckedIn: 0,
+          studentsCheckedOut: 0,
+        });
 
       } catch (err) {
         console.error("Facilitator dash error", err);
@@ -45,10 +49,7 @@ export default function FacilitatorOverview() {
     );
   }
 
-  const attendanceRate =
-    stats.totalStudents > 0
-      ? Math.round((stats.presentToday / stats.totalStudents) * 100)
-      : 0;
+
 
   const quickActions = [
     {
@@ -68,6 +69,33 @@ export default function FacilitatorOverview() {
       label: "Manage Students",
       sub: "Review & manage",
       href: "/dashboard/facilitator/students",
+    },
+  ];
+
+  const bannerStats = [
+    {
+      icon: <CalendarCheck size={18} />,
+      label: "Active Events Today",
+      value: stats.activeEventsToday,
+      accent: "var(--gold, #f0c040)",
+    },
+    {
+      icon: <Users size={18} />,
+      label: "Total Expected Students",
+      value: stats.totalExpectedStudents,
+      accent: "rgba(255,255,255,0.55)",
+    },
+    {
+      icon: <LogIn size={18} />,
+      label: "Students Checked In",
+      value: stats.studentsCheckedIn,
+      accent: "#4ade80",
+    },
+    {
+      icon: <LogOut size={18} />,
+      label: "Students Checked Out",
+      value: stats.studentsCheckedOut,
+      accent: "#f87171",
     },
   ];
 
@@ -99,7 +127,7 @@ export default function FacilitatorOverview() {
         <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Dashboard</h2>
       </div>
 
-      {/* Top Banner Card — Attendance Rate */}
+      {/* Top Banner Card — 4 Stats */}
       <div style={{
         background: "var(--card, #13152a)",
         border: "1px solid var(--border, rgba(255,255,255,0.07))",
@@ -108,53 +136,54 @@ export default function FacilitatorOverview() {
         marginBottom: 20,
         marginTop: 32,
       }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 8 }}>
-          Today's Attendance Rate
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, marginBottom: 10 }}>
-          <span style={{ fontSize: 48, fontWeight: 700, lineHeight: 1, color: "var(--foreground, #fff)" }}>{attendanceRate}</span>
-          <span style={{ fontSize: 22, fontWeight: 600, color: "var(--muted)", marginBottom: 6 }}>%</span>
-        </div>
-        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>
-          Based on students enrolled in your sessions
-        </div>
-        {/* Progress bar */}
-        <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 99, height: 4, position: "relative" }}>
-          <div style={{
-            width: `${attendanceRate}%`,
-            background: "rgba(255,255,255,0.3)",
-            borderRadius: 99,
-            height: "100%",
-            transition: "width 0.6s ease",
-          }} />
-          <span style={{ position: "absolute", right: 0, top: -18, fontSize: 11, color: "var(--muted)" }}>100%</span>
-          <span style={{ position: "absolute", left: 0, top: -18, fontSize: 11, color: "var(--muted)" }}>0%</span>
+        <div style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: "0.08em",
+          color: "var(--muted)",
+          textTransform: "uppercase",
+          marginBottom: 24,
+        }}>
+          Today's Overview
         </div>
 
-        {/* 3-col stats row */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
+          gridTemplateColumns: "repeat(4, 1fr)",
           gap: 0,
-          marginTop: 28,
-          borderTop: "1px solid var(--border, rgba(255,255,255,0.07))",
-          paddingTop: 20,
         }}>
-          {[
-            { icon: <Users size={16} />, label: "Total Students", value: stats.totalStudents },
-            { icon: <CheckCircle size={16} />, label: "Present Today", value: stats.presentToday },
-            { icon: <XCircle size={16} />, label: "Absent Today", value: stats.absentToday },
-          ].map((s, i) => (
-            <div key={s.label} style={{
-              textAlign: "left",
-              borderRight: i < 2 ? "1px solid var(--border, rgba(255,255,255,0.07))" : "none",
-              padding: "0 28px",
-            }}>
-              <div style={{ color: "var(--muted)", marginBottom: 8 }}>{s.icon}</div>
-              <div style={{ fontSize: 32, fontWeight: 700, color: "var(--foreground, #fff)", lineHeight: 1, marginBottom: 6 }}>
+          {bannerStats.map((s, i) => (
+            <div
+              key={s.label}
+              style={{
+                padding: "0 28px",
+                borderRight: i < bannerStats.length - 1
+                  ? "1px solid var(--border, rgba(255,255,255,0.07))"
+                  : "none",
+              }}
+            >
+              {/* Icon */}
+              <div style={{ color: s.accent, marginBottom: 12, opacity: 0.85 }}>
+                {s.icon}
+              </div>
+              {/* Value */}
+              <div style={{
+                fontSize: 36,
+                fontWeight: 700,
+                color: "var(--foreground, #fff)",
+                lineHeight: 1,
+                marginBottom: 8,
+              }}>
                 {s.value}
               </div>
-              <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              {/* Label */}
+              <div style={{
+                fontSize: 11,
+                color: "var(--muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                lineHeight: 1.4,
+              }}>
                 {s.label}
               </div>
             </div>
@@ -204,7 +233,6 @@ export default function FacilitatorOverview() {
           ) : (
             /* ── Scanner Empty State ── */
             <div style={{ padding: "52px 20px", textAlign: "center" }}>
-              {/* Scanner frame */}
               <div style={{
                 width: 52,
                 height: 52,
@@ -217,7 +245,6 @@ export default function FacilitatorOverview() {
                 position: "relative",
                 overflow: "hidden",
               }}>
-                {/* Corner brackets */}
                 {[
                   { top: 5, left: 5, borderWidth: "1.5px 0 0 1.5px" },
                   { top: 5, right: 5, borderWidth: "1.5px 1.5px 0 0" },
@@ -233,7 +260,6 @@ export default function FacilitatorOverview() {
                     ...style,
                   }} />
                 ))}
-                {/* Animated scan line */}
                 <div className="scan-line-anim" />
               </div>
 
