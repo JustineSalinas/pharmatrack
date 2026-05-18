@@ -50,7 +50,7 @@ const LEFT_GROUPS = [
         title: "Minimum Attendance Rate",
         desc: "At-risk threshold — students below this are flagged",
         type: "select",
-        options: ["70%", "75%", "80%", "85%"],
+        options: ["50%", "55%", "60%", "65%", "70%", "75%", "80%", "85%"],
       },
       {
         id: "lateThreshold" as ConfigKey,
@@ -724,6 +724,7 @@ function SettingGroup({
                   <input
                     className="settings-input"
                     style={{ minWidth: "180px" }}
+                    placeholder="e.g. 2025-2026"
                     value={val}
                     onChange={(e) => onUpdate(s.id, e.target.value)}
                   />

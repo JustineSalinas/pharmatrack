@@ -268,7 +268,7 @@ function LoginForm() {
                   style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem", border: "none" }}
                   disabled={loading}
                 >
-                  {loading ? "Authenticating..." : "Secure log in"}
+                  {loading ? "Logging in..." : "Secure log in"}
                 </button>
               </form>
 
