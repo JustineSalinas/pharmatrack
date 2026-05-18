@@ -375,12 +375,12 @@ html { scrollbar-width: thin; scrollbar-color: #2a2a35 var(--bg); }
 .btn-gold {
   background: linear-gradient(135deg, #FFD700, #FFE44D);
   color: #000000;
-  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(232, 184, 75, 0.15);
   font-weight: 800;
 }
 
 .btn-gold:hover {
-  box-shadow: 0 12px 40px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 6px 20px rgba(232, 184, 75, 0.25);
   filter: brightness(1.1);
 }
 

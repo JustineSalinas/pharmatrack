@@ -5,24 +5,29 @@ import Link from "next/link";
 import { 
   Search, 
   Bell, 
-  Plus, 
   Users, 
-  Calendar, 
-  ScanLine, 
-  CalendarDays, 
-  Loader2,
   Activity,
   ArrowRight,
-  Clock
+  Clock,
+  Settings,
+  UserCheck,
+  Loader2,
+  ScanLine,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<any>({ totalStudents: 0, activeEvents: 0, scansToday: 0, attendanceRate: 0 });
+  const [stats, setStats] = useState<any>({
+    totalStudents: 0,
+    totalFacilitators: 0,
+    pendingApprovals: 0,
+    attendanceRate: 0,
+  });
   const [recentScans, setRecentScans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showNotifs, setShowNotifs] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -34,39 +39,48 @@ export default function AdminDashboard() {
           return;
         }
 
+        // Total Students
         const { count: studentCount } = await supabase
           .from("users")
           .select("*", { count: "exact", head: true })
           .eq("account_type", "student");
 
-        const today = new Date().toISOString().split("T")[0];
-        const { data: eventsData } = await supabase
-          .from("events")
-          .select("id, date, name")
-          .gte("date", today);
-        
-        const activeEventsCount = eventsData?.length || 0;
+        // Total Facilitators (all, approved or not)
+        const { count: facilitatorCount } = await supabase
+          .from("users")
+          .select("*", { count: "exact", head: true })
+          .eq("account_type", "facilitator");
 
+        // Pending Approvals (facilitators not yet approved)
+        const { count: pendingCount } = await supabase
+          .from("users")
+          .select("*", { count: "exact", head: true })
+          .eq("account_type", "facilitator")
+          .eq("is_approved", false);
+
+        // Attendance Rate
         const { data: allAtt } = await supabase
           .from("attendance_records")
           .select("id, created_at, status");
 
-        let scansToday = 0;
         let presentLateCount = 0;
         let totalLogs = 0;
-
         if (allAtt && allAtt.length > 0) {
           totalLogs = allAtt.length;
-          const todayStr = new Date().toDateString();
           allAtt.forEach(att => {
-            if (new Date(att.created_at).toDateString() === todayStr) scansToday++;
             if (att.status === "present" || att.status === "late") presentLateCount++;
           });
         }
-
         const rate = totalLogs > 0 ? parseFloat(((presentLateCount / totalLogs) * 100).toFixed(1)) : 0;
-        setStats({ totalStudents: studentCount || 0, activeEvents: activeEventsCount, scansToday, attendanceRate: rate });
 
+        setStats({
+          totalStudents: studentCount || 0,
+          totalFacilitators: facilitatorCount || 0,
+          pendingApprovals: pendingCount || 0,
+          attendanceRate: rate,
+        });
+
+        // Live Activity Feed
         const { data: recentAtt } = await supabase
           .from("attendance_records")
           .select(`id, time_in, status, events ( name ), users ( full_name )`)
@@ -100,9 +114,9 @@ export default function AdminDashboard() {
           <h1>Overview</h1>
         </div>
         <div className="dash-header-right">
-          <button className="dash-search">
-            <Search size={14} /> Search
-          </button>
+          <Link href="/dashboard/admin/users" className="dash-search" style={{ textDecoration: "none", color: "var(--dimmed)" }}>
+            <Search size={14} /> Search Users
+          </Link>
           <Link
             href="/dashboard/admin/reports"
             className="dash-search"
@@ -110,15 +124,50 @@ export default function AdminDashboard() {
           >
             <Activity size={14} /> Reports
           </Link>
-          <button className="dash-notif-btn">
-            <Bell size={14} />
-          </button>
+          <div style={{ position: "relative" }}>
+            <button className="dash-notif-btn" onClick={() => setShowNotifs(!showNotifs)}>
+              <Bell size={14} />
+              {stats.pendingApprovals > 0 && (
+                <span style={{ position: "absolute", top: "-2px", right: "-2px", background: "var(--gold)", width: "8px", height: "8px", borderRadius: "50%" }} />
+              )}
+            </button>
+            {showNotifs && (
+              <div style={{
+                position: "absolute", top: "100%", right: 0, marginTop: "8px", width: "280px",
+                background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                boxShadow: "0 10px 40px rgba(0,0,0,0.5)", zIndex: 100, overflow: "hidden"
+              }}>
+                <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", fontSize: "13px", fontWeight: 600, color: "var(--white)" }}>
+                  Notifications
+                </div>
+                <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                  {stats.pendingApprovals > 0 && (
+                    <Link href="/dashboard/admin/users" style={{ display: "block", padding: "16px", borderBottom: "1px solid var(--border)", textDecoration: "none", transition: "background 0.2s" }} className="notif-item">
+                      <div style={{ fontSize: "13px", color: "var(--gold)", fontWeight: 500, marginBottom: "4px" }}>Pending Approvals</div>
+                      <div style={{ fontSize: "12px", color: "var(--dimmed)" }}>You have {stats.pendingApprovals} facilitator{stats.pendingApprovals > 1 ? 's' : ''} waiting for approval.</div>
+                    </Link>
+                  )}
+                  {stats.attendanceRate < 75 && stats.attendanceRate > 0 && (
+                    <Link href="/dashboard/admin/reports" style={{ display: "block", padding: "16px", borderBottom: "1px solid var(--border)", textDecoration: "none", transition: "background 0.2s" }} className="notif-item">
+                      <div style={{ fontSize: "13px", color: "var(--danger)", fontWeight: 500, marginBottom: "4px" }}>Low Attendance Alert</div>
+                      <div style={{ fontSize: "12px", color: "var(--dimmed)" }}>System-wide attendance has dropped to {stats.attendanceRate}%.</div>
+                    </Link>
+                  )}
+                  {stats.pendingApprovals === 0 && (stats.attendanceRate >= 75 || stats.attendanceRate === 0) && (
+                    <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--dimmed)", fontSize: "12px" }}>
+                      You're all caught up!
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       {/* STAT STRIP */}
       <div className="stat-cards-row">
-        {/* HERO: Attendance Rate — spans full width */}
+        {/* HERO: System Attendance Rate */}
         <div
           className="admin-stat-card"
           style={{ gridColumn: "1 / -1", borderBottom: "1px solid var(--border)" }}
@@ -156,21 +205,37 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Secondary metrics */}
+        {/* Total Students */}
         <div className="admin-stat-card">
           <div className="stat-icon-badge"><Users size={16} /></div>
           <div className="stat-value">{stats.totalStudents}</div>
           <div className="stat-label">Total Students</div>
         </div>
+
+        {/* Total Facilitators */}
         <div className="admin-stat-card">
-          <div className="stat-icon-badge"><Calendar size={16} /></div>
-          <div className="stat-value">{stats.activeEvents}</div>
-          <div className="stat-label">Upcoming Events</div>
+          <div className="stat-icon-badge" style={{ color: "var(--teal)", background: "rgba(45,212,191,0.08)" }}>
+            <UserCheck size={16} />
+          </div>
+          <div className="stat-value">{stats.totalFacilitators}</div>
+          <div className="stat-label">Total Facilitators</div>
         </div>
+
+        {/* Pending Approvals */}
         <div className="admin-stat-card">
-          <div className="stat-icon-badge"><ScanLine size={16} /></div>
-          <div className="stat-value">{stats.scansToday}</div>
-          <div className="stat-label">Scans Today</div>
+          <div
+            className="stat-icon-badge"
+            style={{
+              color: stats.pendingApprovals > 0 ? "var(--gold)" : "var(--dimmed)",
+              background: stats.pendingApprovals > 0 ? "rgba(232,184,75,0.08)" : "rgba(255,255,255,0.04)",
+            }}
+          >
+            <Bell size={16} />
+          </div>
+          <div className="stat-value" style={{ color: stats.pendingApprovals > 0 ? "var(--gold)" : "var(--white)" }}>
+            {stats.pendingApprovals}
+          </div>
+          <div className="stat-label">Pending Approvals</div>
         </div>
       </div>
 
@@ -206,7 +271,6 @@ export default function AdminDashboard() {
               );
             })
           ) : (
-            /* Proper empty state */
             <div style={{ padding: "52px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
               <div
                 style={{
@@ -219,21 +283,8 @@ export default function AdminDashboard() {
                 <ScanLine size={20} color="var(--dimmed)" />
               </div>
               <p style={{ fontSize: 13, color: "var(--dimmed)", textAlign: "center", margin: 0, lineHeight: 1.6 }}>
-                No scans recorded yet.<br />Start an event to begin tracking.
+                No scans recorded yet.<br />Attendance will appear here once events begin.
               </p>
-              <Link
-                href="/check-in"
-                style={{
-                  fontSize: 12, color: "var(--gold)", textDecoration: "none",
-                  display: "flex", alignItems: "center", gap: 6, marginTop: 4,
-                  padding: "6px 14px",
-                  border: "1px solid rgba(232,184,75,0.25)",
-                  borderRadius: 6,
-                  transition: "background 0.15s ease",
-                }}
-              >
-                <ScanLine size={12} /> Open Scanner
-              </Link>
             </div>
           )}
         </div>
@@ -243,38 +294,25 @@ export default function AdminDashboard() {
           <div style={{ fontSize: 11, fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
             Quick Actions
           </div>
-          <Link href="/check-in" className="action-card">
-            <div className="action-card-icon"><ScanLine size={16} /></div>
-            <div className="action-card-text">
-              <h4>Open Scanner</h4>
-              <p>Record attendance</p>
-            </div>
-          </Link>
           <Link href="/dashboard/admin/users" className="action-card">
-            <div className="action-card-icon"><Plus size={16} /></div>
+            <div className="action-card-icon"><Users size={16} /></div>
             <div className="action-card-text">
               <h4>Manage Users</h4>
               <p>Review &amp; approve</p>
             </div>
           </Link>
-          <Link href="/dashboard/admin/events" className="action-card">
-            <div className="action-card-icon"><CalendarDays size={16} /></div>
+          <Link href="/dashboard/admin/settings" className="action-card">
+            <div className="action-card-icon"><Settings size={16} /></div>
             <div className="action-card-text">
-              <h4>Events</h4>
-              <p>Schedule &amp; manage</p>
-            </div>
-          </Link>
-          <Link href="/dashboard/admin/attendance" className="action-card">
-            <div className="action-card-icon"><Activity size={16} /></div>
-            <div className="action-card-text">
-              <h4>Attendance Logs</h4>
-              <p>All records</p>
+              <h4>Settings</h4>
+              <p>System configuration</p>
             </div>
           </Link>
         </div>
       </div>
 
       <style jsx>{`
+        .notif-item:hover { background: var(--surface2) !important; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>

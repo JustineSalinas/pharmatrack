@@ -11,7 +11,8 @@ import {
   Trash2, 
   CheckCircle2,
   X,
-  Loader2
+  Loader2,
+  Pencil
 } from "lucide-react";
 
 export default function EventsManagement() {
@@ -20,6 +21,7 @@ export default function EventsManagement() {
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [admin, setAdmin] = useState<any>(null);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
 
   // Form State
   const [name, setName] = useState("");
@@ -59,17 +61,33 @@ export default function EventsManagement() {
       const lateTS = `${date}T${lateTime}:00Z`;
       const endTS = `${date}T${endTime}:00Z`;
 
-      const { error } = await supabase.from("events").insert({
-        name,
-        location,
-        date,
-        check_in_start: startTS,
-        check_in_late: lateTS,
-        check_in_end: endTS,
-        created_by: admin.id
-      });
+      if (editingEvent) {
+        const { error } = await supabase
+          .from("events")
+          .update({
+            name,
+            location,
+            date,
+            check_in_start: startTS,
+            check_in_late: lateTS,
+            check_in_end: endTS,
+          })
+          .eq("id", editingEvent.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("events").insert({
+          name,
+          location,
+          date,
+          check_in_start: startTS,
+          check_in_late: lateTS,
+          check_in_end: endTS,
+          created_by: admin.id
+        });
+
+        if (error) throw error;
+      }
 
       setShowModal(false);
       resetForm();
@@ -94,16 +112,36 @@ export default function EventsManagement() {
     setStartTime("");
     setLateTime("");
     setEndTime("");
+    setEditingEvent(null);
+  }
+
+  function startEdit(event: any) {
+    setEditingEvent(event);
+    setName(event.name);
+    setLocation(event.location);
+    setDate(event.date);
+    
+    const parseTime = (isoStr: string) => {
+      const d = new Date(isoStr);
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    
+    setStartTime(parseTime(event.check_in_start));
+    setLateTime(parseTime(event.check_in_late));
+    setEndTime(parseTime(event.check_in_end));
+    setShowModal(true);
   }
 
   return (
-    <div className="fade-in">
+    <>
+      <div className="fade-in">
       <header style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: "2rem", fontWeight: "700" }}>Manage Events</h1>
           <p style={{ color: "var(--muted)" }}>Create and schedule pharmacy council activities.</p>
         </div>
-        <button className="btn btn-gold" onClick={() => setShowModal(true)}>
+        <button className="btn btn-gold" onClick={() => { resetForm(); setShowModal(true); }}>
           <PlusCircle size={20} style={{ marginRight: "8px" }} /> Create Event
         </button>
       </header>
@@ -113,44 +151,74 @@ export default function EventsManagement() {
            <Loader2 className="animate-spin" size={48} color="var(--gold)" />
         </div>
       ) : (
-        <div className="events-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "24px" }}>
+        <div className="events-list" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {events.length > 0 ? (
             events.map(event => (
-              <div key={event.id} className="card" style={{ padding: "24px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "15px" }}>
-                   <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "rgba(232, 200, 74, 0.1)", color: "var(--gold)" }}>
-                      <Calendar size={20} />
+              <div key={event.id} className="event-row" style={{ 
+                display: "flex", alignItems: "center", 
+                background: "var(--surface)", border: "1px solid var(--border)", 
+                borderRadius: "var(--radius-sm)", padding: "14px 20px", transition: "all 0.15s ease",
+                gap: "24px"
+              }}>
+                {/* 1. Main Info Column */}
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: "1", minWidth: 0 }}>
+                   <div style={{ width: "36px", height: "36px", borderRadius: "var(--radius-sm)", backgroundColor: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", color: "var(--white-shade)", flexShrink: 0 }}>
+                      <Calendar size={16} />
                    </div>
-                   <button onClick={() => handleDelete(event.id)} style={{ background: "none", border: "none", color: "rgba(239, 68, 68, 0.4)", cursor: "pointer" }}>
-                      <Trash2 size={18} />
-                   </button>
-                </div>
-                <h3 style={{ fontSize: "1.2rem", fontWeight: "700", marginBottom: "10px" }}>{event.name}</h3>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--muted)", fontSize: "0.9rem", marginBottom: "20px" }}>
-                   <MapPin size={14} /> {event.location}
+                   <div style={{ minWidth: 0, overflow: "hidden" }}>
+                     <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--white)", marginBottom: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{event.name}</h3>
+                     <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "var(--dimmed)", fontSize: "12px" }}>
+                       <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={12} /> {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                       <span style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}><MapPin size={12} /> {event.location}</span>
+                     </div>
+                   </div>
                 </div>
                 
-                <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "15px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
-                   <div>
-                      <label style={{ fontSize: "0.7rem", color: "var(--muted)", textTransform: "uppercase" }}>Check-in Starts</label>
-                      <div style={{ fontSize: "0.9rem", color: "var(--white)" }}>{new Date(event.check_in_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                {/* 2. Check-in Starts Column */}
+                <div style={{ width: "130px", flexShrink: 0 }}>
+                   <div style={{ fontSize: "10px", color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "2px", fontWeight: 600 }}>Starts At</div>
+                   <div style={{ fontSize: "13px", color: "var(--white-shade)", fontWeight: 500 }}>
+                     {new Date(event.check_in_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                    </div>
-                   <div>
-                      <label style={{ fontSize: "0.7rem", color: "var(--muted)", textTransform: "uppercase" }}>Mark as Late</label>
-                      <div style={{ fontSize: "0.9rem", color: "var(--gold)" }}>{new Date(event.check_in_late).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+
+                {/* 3. Mark Late Column */}
+                <div style={{ width: "130px", flexShrink: 0 }}>
+                   <div style={{ fontSize: "10px", color: "var(--gold)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "2px", fontWeight: 600 }}>Mark Late At</div>
+                   <div style={{ fontSize: "13px", color: "var(--gold)", fontWeight: 500 }}>
+                     {new Date(event.check_in_late).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                    </div>
+                </div>
+
+                {/* 4. Ends Column */}
+                <div style={{ width: "130px", flexShrink: 0 }}>
+                   <div style={{ fontSize: "10px", color: "var(--danger)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "2px", fontWeight: 600 }}>Ends At</div>
+                   <div style={{ fontSize: "13px", color: "var(--danger)", fontWeight: 500 }}>
+                     {new Date(event.check_in_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                   </div>
+                </div>
+
+                {/* 5. Delete Action Column */}
+                <div style={{ width: "80px", display: "flex", justifyContent: "flex-end", gap: "8px", flexShrink: 0 }}>
+                   <button className="action-btn-hover edit-btn-hover" onClick={() => startEdit(event)} title="Edit Event">
+                      <Pencil size={13} />
+                   </button>
+                   <button className="action-btn-hover delete-btn-hover" onClick={() => handleDelete(event.id)} title="Delete Event">
+                      <Trash2 size={14} />
+                   </button>
                 </div>
               </div>
             ))
           ) : (
-            <div className="card" style={{ gridColumn: "1 / -1", textAlign: "center", padding: "80px 0" }}>
-              <Calendar size={48} color="var(--border)" style={{ marginBottom: "20px", margin: "0 auto 20px" }} />
-              <h3 style={{ color: "var(--muted)" }}>No events scheduled yet</h3>
-              <p style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.3)" }}>Click the button above to create your first event.</p>
+            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "100px 0", border: "1px dashed var(--border)", borderRadius: "var(--radius)", background: "rgba(255,255,255,0.01)" }}>
+              <Calendar size={40} color="var(--dimmed)" style={{ margin: "0 auto 16px" }} />
+              <h3 style={{ fontSize: "15px", fontWeight: 500, color: "var(--white)" }}>No events scheduled yet</h3>
+              <p style={{ fontSize: "13px", color: "var(--dimmed)", marginTop: "6px" }}>Click the 'Create Event' button above to get started.</p>
             </div>
           )}
         </div>
       )}
+      </div>
 
       {/* CREATE EVENT MODAL */}
       {showModal && (
@@ -158,14 +226,13 @@ export default function EventsManagement() {
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
           backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
           display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000,
-          padding: "40px 20px", overflowY: "auto"
+          padding: "20px", paddingTop: "12vh"
         }}>
           <div className="modal-card" style={{ 
-            width: "100%", maxWidth: "500px", 
+            width: "100%", maxWidth: "760px", 
             background: "var(--surface)", border: "1px solid var(--border)", 
             borderRadius: "12px", padding: "32px", position: "relative",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
-            margin: "auto"
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
           }}>
             <button 
               onClick={() => setShowModal(false)}
@@ -175,30 +242,35 @@ export default function EventsManagement() {
               <X size={16} />
             </button>
             
-            <div style={{ marginBottom: "28px" }}>
-              <h2 style={{ fontSize: "20px", fontWeight: 600, color: "var(--white)", marginBottom: "4px" }}>Create Event</h2>
-              <p style={{ color: "var(--dimmed)", fontSize: "13px" }}>Schedule a new council activity and define attendance rules.</p>
+            <div style={{ marginBottom: "24px" }}>
+              <h2 style={{ fontSize: "20px", fontWeight: 600, color: "var(--white)", marginBottom: "4px" }}>
+                {editingEvent ? "Edit Event" : "Create Event"}
+              </h2>
+              <p style={{ color: "var(--dimmed)", fontSize: "13px" }}>
+                {editingEvent ? "Modify this event's properties and rules." : "Schedule a new council activity and define attendance rules."}
+              </p>
             </div>
             
             <form onSubmit={handleCreateEvent} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Event Name</label>
-                <input 
-                  type="text" className="settings-input" placeholder="e.g., General Assembly" 
-                  value={name} onChange={e => setName(e.target.value)} required 
-                />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Event Name</label>
+                  <input 
+                    type="text" className="settings-input" placeholder="e.g., General Assembly" 
+                    value={name} onChange={e => setName(e.target.value)} required 
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Location</label>
+                  <input 
+                    type="text" className="settings-input" placeholder="e.g., USA Alumni Hall" 
+                    value={location} onChange={e => setLocation(e.target.value)} required 
+                  />
+                </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Location</label>
-                <input 
-                  type="text" className="settings-input" placeholder="e.g., USA Alumni Hall" 
-                  value={location} onChange={e => setLocation(e.target.value)} required 
-                />
-              </div>
-              
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1fr", gap: "16px" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Event Date</label>
                   <input 
@@ -215,11 +287,8 @@ export default function EventsManagement() {
                     style={{ colorScheme: "dark" }}
                   />
                 </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--gold)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Mark as Late At</label>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--gold)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Mark Late At</label>
                   <input 
                     type="time" className="settings-input" 
                     value={lateTime} onChange={e => setLateTime(e.target.value)} required 
@@ -236,7 +305,7 @@ export default function EventsManagement() {
                 </div>
               </div>
 
-              <div style={{ marginTop: "12px", display: "flex", gap: "12px", justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: "24px" }}>
+              <div style={{ marginTop: "4px", display: "flex", gap: "12px", justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: "20px" }}>
                 <button 
                   type="button" 
                   onClick={() => setShowModal(false)}
@@ -252,7 +321,7 @@ export default function EventsManagement() {
                 >
                   {isSubmitting ? (
                     <><Loader2 size={14} className="animate-spin" /> Saving...</>
-                  ) : "Save Event"}
+                  ) : (editingEvent ? "Update Event" : "Save Event")}
                 </button>
               </div>
             </form>
@@ -298,7 +367,35 @@ export default function EventsManagement() {
           background: rgba(255, 255, 255, 0.1) !important;
           color: var(--white) !important;
         }
+        .event-row:hover {
+          background: var(--surface2) !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        .action-btn-hover {
+          background: transparent;
+          border: none;
+          color: var(--dimmed);
+          cursor: pointer;
+          opacity: 0.5;
+          transition: all 0.15s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 8px;
+          border-radius: 8px;
+        }
+        .event-row:hover .action-btn-hover {
+          opacity: 1;
+        }
+        .delete-btn-hover:hover {
+          background: rgba(248, 113, 113, 0.1);
+          color: var(--danger);
+        }
+        .edit-btn-hover:hover {
+          background: rgba(232, 184, 75, 0.1);
+          color: var(--gold);
+        }
       `}</style>
-    </div>
+    </>
   );
 }
