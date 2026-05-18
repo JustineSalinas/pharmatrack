@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
-import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, Filter } from "lucide-react";
+import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type FilterRole = "All" | "student" | "facilitator" | "admin";
@@ -53,6 +53,26 @@ export default function AdminUsers() {
       setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
     } catch (err: any) {
       alert("Error updating status: " + err.message);
+    }
+  }
+
+  async function handleResetPassword(email: string, name: string) {
+    if (!confirm(`Send a password reset link for ${name} (${email})?`)) return;
+    try {
+      const res = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      if (json.link) {
+        prompt(`Reset link for ${name} (copy and share):`, json.link);
+      } else {
+        alert(`Reset email sent to ${email} via Supabase SMTP.`);
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
     }
   }
 
@@ -227,6 +247,15 @@ export default function AdminUsers() {
                             Restore
                           </button>
                         )}
+                        {u.account_type !== "student" && (
+                          <button
+                            className="action-btn-hover reset-btn"
+                            title="Reset Password"
+                            onClick={() => handleResetPassword(u.email, u.full_name)}
+                          >
+                            <KeyRound size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -301,6 +330,12 @@ export default function AdminUsers() {
           color: var(--success);
           background: rgba(74, 222, 128, 0.1);
           border-color: rgba(74, 222, 128, 0.2);
+        }
+
+        .reset-btn:hover {
+          color: #60a5fa;
+          background: rgba(96, 165, 250, 0.1);
+          border-color: rgba(96, 165, 250, 0.2);
         }
       `}</style>
     </div>

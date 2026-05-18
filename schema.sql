@@ -209,3 +209,29 @@ GROUP BY u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year;
 -- STEP 2: Copy the UUID, then run:
 -- INSERT INTO public.users (id, email, full_name, account_type, status)
 -- VALUES ('<PASTE-UUID-HERE>', '>admin@[REDACTED]', 'System Administrator', 'admin', 'approved');
+
+-- ============================================================
+-- SYSTEM CONFIGURATION
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.system_config (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admin manages config" ON public.system_config;
+CREATE POLICY "Admin manages config" ON public.system_config FOR ALL USING (public.is_admin());
+
+-- Seed default values (safe to re-run — ON CONFLICT DO NOTHING)
+INSERT INTO public.system_config (key, value) VALUES
+  ('absenceNotifications', 'true'),
+  ('weeklyReports',        'true'),
+  ('lateThreshold',        '7:35 AM'),
+  ('academicPeriod',       '2025–2026 · 2nd Semester'),
+  ('qrExpiry',             '10 min'),
+  ('minAttendance',        '75%'),
+  ('twoFactorAuth',        'false'),
+  ('registrationMode',     'approval')
+ON CONFLICT (key) DO NOTHING;
