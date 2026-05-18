@@ -50,11 +50,17 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
   ],
   admin: [
     {
-      section: "Admin",
+      section: "Main",
       items: [
         { href: "/dashboard/admin", label: "Dashboard", icon: <Home size={16} /> },
-        { href: "/dashboard/admin/users", label: "User Management", icon: <Users size={16} /> },
+        { href: "/dashboard/admin/events", label: "Manage Events", icon: <Calendar size={16} /> },
         { href: "/dashboard/admin/attendance", label: "Attendance Logs", icon: <ClipboardList size={16} /> },
+      ],
+    },
+    {
+      section: "Management",
+      items: [
+        { href: "/dashboard/admin/users", label: "User Management", icon: <Users size={16} /> },
         { href: "/dashboard/admin/reports", label: "Analytics", icon: <BarChart size={16} /> },
         { href: "/dashboard/admin/settings", label: "Settings", icon: <Settings size={16} /> },
       ],

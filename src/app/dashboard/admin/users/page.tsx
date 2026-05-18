@@ -116,12 +116,6 @@ export default function AdminUsers() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <button 
-            className="btn-ghost-amber"
-            style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
-          >
-            <UserPlus size={14} /> Add User
-          </button>
         </div>
       </div>
 
@@ -200,9 +194,13 @@ export default function AdminUsers() {
                       {u.account_type}
                     </td>
                     <td>
-                      <span className={`status-badge ${u.status === 'approved' ? 'present' : u.status === 'pending' ? 'late' : 'absent'}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
-                        {u.status.toUpperCase()}
-                      </span>
+                      {u.account_type === "facilitator" || u.status !== "approved" ? (
+                        <span className={`status-badge ${u.status === 'approved' ? 'present' : u.status === 'pending' ? 'late' : 'absent'}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
+                          {u.status.toUpperCase()}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: "12px", color: "var(--dimmed)", fontWeight: 500 }}>Active</span>
+                      )}
                     </td>
                     <td style={{ fontSize: "13px", color: "var(--dimmed)" }}>{dateJoined}</td>
                     <td style={{ textAlign: "right", paddingRight: "24px" }}>
