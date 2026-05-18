@@ -13,6 +13,7 @@ export default function AdminAttendance() {
 
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterSection, setFilterSection] = useState("All");
+  const [availableSections, setAvailableSections] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -57,6 +58,10 @@ export default function AdminAttendance() {
           };
         });
 
+        const { data: sectionData } = await supabase.from("student_profiles").select("section");
+        const allSections = Array.from(new Set((sectionData || []).map(s => s.section).filter(Boolean))).sort() as string[];
+        setAvailableSections(allSections);
+
         setRecords(formatted);
       } catch (err) {
         console.error("Error fetching admin attendance", err);
@@ -67,7 +72,9 @@ export default function AdminAttendance() {
     fetchAttendance();
   }, [router]);
 
-  const sections = Array.from(new Set(records.map(r => r.section).filter(s => s !== "N/A"))).sort();
+  const sections = availableSections.length > 0 
+    ? availableSections 
+    : Array.from(new Set(records.map(r => r.section).filter(s => s !== "N/A"))).sort();
 
   const filtered = records.filter(r => {
     const sMatch = filterStatus === "All" || r.status.toLowerCase() === filterStatus.toLowerCase();
