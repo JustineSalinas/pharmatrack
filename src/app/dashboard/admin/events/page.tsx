@@ -157,76 +157,104 @@ export default function EventsManagement() {
         <div className="modal-overlay" style={{ 
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
           backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
-          padding: "20px",
+          display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000,
+          padding: "40px 20px", overflowY: "auto"
         }}>
-          <div className="card" style={{ width: "100%", maxWidth: "600px", padding: "40px", position: "relative", maxHeight: "90vh", overflowY: "auto" }}>
+          <div className="modal-card" style={{ 
+            width: "100%", maxWidth: "500px", 
+            background: "var(--surface)", border: "1px solid var(--border)", 
+            borderRadius: "12px", padding: "32px", position: "relative",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+            margin: "auto"
+          }}>
             <button 
               onClick={() => setShowModal(false)}
-              style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}
+              className="close-btn"
+              style={{ position: "absolute", top: 24, right: 24, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--dimmed)", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
             >
-              <X size={24} />
+              <X size={16} />
             </button>
-            <h2 style={{ fontSize: "1.8rem", color: "var(--gold)", marginBottom: "30px" }}>New Council Event</h2>
+            
+            <div style={{ marginBottom: "28px" }}>
+              <h2 style={{ fontSize: "20px", fontWeight: 600, color: "var(--white)", marginBottom: "4px" }}>Create Event</h2>
+              <p style={{ color: "var(--dimmed)", fontSize: "13px" }}>Schedule a new council activity and define attendance rules.</p>
+            </div>
             
             <form onSubmit={handleCreateEvent} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              <div className="input-group">
-                <label>Event Name</label>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Event Name</label>
                 <input 
-                  type="text" className="input-field" placeholder="e.g., General Assembly" 
+                  type="text" className="settings-input" placeholder="e.g., General Assembly" 
                   value={name} onChange={e => setName(e.target.value)} required 
                 />
               </div>
-              <div className="input-group">
-                <label>Location</label>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Location</label>
                 <input 
-                  type="text" className="input-field" placeholder="e.g., USA Alumni Hall" 
+                  type="text" className="settings-input" placeholder="e.g., USA Alumni Hall" 
                   value={location} onChange={e => setLocation(e.target.value)} required 
                 />
               </div>
               
-              <div className="two-col-grid">
-                <div className="input-group">
-                  <label>Event Date</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Event Date</label>
                   <input 
-                    type="date" className="input-field" 
+                    type="date" className="settings-input" 
                     value={date} onChange={e => setDate(e.target.value)} required 
+                    style={{ colorScheme: "dark" }}
                   />
                 </div>
-                <div className="input-group">
-                  <label>Check-in Starts</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Check-in Starts</label>
                   <input 
-                    type="time" className="input-field" 
+                    type="time" className="settings-input" 
                     value={startTime} onChange={e => setStartTime(e.target.value)} required 
+                    style={{ colorScheme: "dark" }}
                   />
                 </div>
               </div>
 
-              <div className="two-col-grid">
-                <div className="input-group">
-                  <label>Mark as Late At</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--gold)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Mark as Late At</label>
                   <input 
-                    type="time" className="input-field" 
+                    type="time" className="settings-input" 
                     value={lateTime} onChange={e => setLateTime(e.target.value)} required 
+                    style={{ colorScheme: "dark", borderColor: "rgba(232, 184, 75, 0.3)", background: "rgba(232, 184, 75, 0.05)" }}
                   />
                 </div>
-                <div className="input-group">
-                  <label>Check-in Ends At</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--danger)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Check-in Ends</label>
                   <input 
-                    type="time" className="input-field" 
+                    type="time" className="settings-input" 
                     value={endTime} onChange={e => setEndTime(e.target.value)} required 
+                    style={{ colorScheme: "dark", borderColor: "rgba(248, 113, 113, 0.3)", background: "rgba(248, 113, 113, 0.05)" }}
                   />
                 </div>
               </div>
 
-              <button 
-                type="submit" 
-                className="btn btn-gold" 
-                style={{ marginTop: "20px", padding: "16px" }}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Creating..." : "Save Event"}
-              </button>
+              <div style={{ marginTop: "12px", display: "flex", gap: "12px", justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: "24px" }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowModal(false)}
+                  className="btn-ghost"
+                  style={{ padding: "0 16px", height: "36px", fontSize: "13px", fontWeight: 500, borderRadius: "var(--radius-sm)", color: "var(--white-shade)", border: "1px solid var(--border)", background: "var(--surface2)", cursor: "pointer", transition: "all 0.15s ease" }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#000", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: isSubmitting ? 0.7 : 1, transition: "all 0.15s ease" }}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <><Loader2 size={14} className="animate-spin" /> Saving...</>
+                  ) : "Save Event"}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -239,6 +267,36 @@ export default function EventsManagement() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        .settings-input {
+          height: 36px;
+          padding: 0 12px;
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--border);
+          background: var(--surface2);
+          color: var(--white);
+          font-size: 13px;
+          outline: none;
+          transition: all 0.15s ease;
+          font-family: var(--font-sans);
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .settings-input:focus {
+          border-color: var(--gold) !important;
+          box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.12);
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+          filter: invert(0.6);
+          cursor: pointer;
+        }
+        .btn-ghost:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+        .close-btn:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+          color: var(--white) !important;
         }
       `}</style>
     </div>
