@@ -79,6 +79,32 @@ export default function AdminReports() {
   const [monthlyData, setMonthlyData] = useState<{month: string, rate: number}[]>([]);
   const [sectionData, setSectionData] = useState<{name: string, rate: number, count: number}[]>([]);
   const [riskList, setRiskList] = useState<any[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleExportCSV = () => {
+    let csv = "Student ID,Name,Section,Attendance Rate\n";
+    riskList.forEach(s => {
+      csv += `"${s.id}","${s.name}","${s.section}","${s.rate}%"\n`;
+    });
+    
+    csv += "\nSection,Attendance Rate,Student Count\n";
+    sectionData.forEach(s => {
+      csv += `"${s.name}","${s.rate}%","${s.count}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "PharmaTrack_Analytics.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleNotifyStudent = (name: string) => {
+    setToastMessage(`Notification sent to ${name}`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -215,10 +241,10 @@ export default function AdminReports() {
           <p style={{ color: "var(--dimmed)", fontSize: "13px", marginTop: "4px", margin: 0 }}>Department-wide participation and performance insights</p>
         </div>
         <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-           <button className="btn-ghost" style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}>
+           <button onClick={handleExportCSV} className="btn-ghost" style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}>
              <Download size={14} /> Export CSV
            </button>
-           <button className="btn-ghost" style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}>
+           <button onClick={() => window.print()} className="btn-ghost" style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}>
              <FileText size={14} /> Export PDF
            </button>
         </div>
@@ -339,7 +365,7 @@ export default function AdminReports() {
                       <td><span className="tag" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--dimmed)", fontSize: "11px" }}>{s.section}</span></td>
                       <td><span style={{ color: "var(--danger)", fontWeight: 600, fontSize: "13px" }}>{s.rate}%</span></td>
                       <td style={{ textAlign: "right", paddingRight: "24px" }}>
-                        <button className="action-btn-hover" style={{ width: "auto", padding: "6px 12px", marginLeft: "auto", color: "var(--danger)", background: "rgba(248, 113, 113, 0.1)", border: "1px solid rgba(248, 113, 113, 0.3)", opacity: 1 }}>Notify Student</button>
+                        <button onClick={() => handleNotifyStudent(s.name)} className="action-btn-hover" style={{ width: "auto", padding: "6px 12px", marginLeft: "auto", color: "var(--danger)", background: "rgba(248, 113, 113, 0.1)", border: "1px solid rgba(248, 113, 113, 0.3)", opacity: 1, cursor: "pointer" }}>Notify Student</button>
                       </td>
                     </tr>
                   ))
@@ -349,7 +375,42 @@ export default function AdminReports() {
           </div>
         </div>
       </div>
+      {toastMessage && (
+        <div className="toast-notification">
+          {toastMessage}
+        </div>
+      )}
       <style jsx>{`
+        @media print {
+          .btn-ghost, .sidebar, .dash-header, .header-actions { display: none !important; }
+          body { background: white !important; color: black !important; }
+          .panel, .stat-card { background: transparent !important; box-shadow: none !important; border: 1px solid #ccc !important; }
+          h2, h3, div, span, text { color: black !important; }
+          .page-header h2 { color: black !important; }
+          .tag { border-color: #ccc !important; color: #555 !important; }
+        }
+
+        .toast-notification {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          background: var(--surface);
+          border: 1px solid var(--success);
+          color: var(--success);
+          padding: 12px 20px;
+          border-radius: var(--radius-sm);
+          font-size: 13px;
+          font-weight: 500;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+          z-index: 9999;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+
         .btn-ghost:hover {
           background: var(--surface2) !important;
           border-color: rgba(255,255,255,0.1) !important;
