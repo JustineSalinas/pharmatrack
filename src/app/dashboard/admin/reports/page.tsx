@@ -109,20 +109,21 @@ export default function AdminReports() {
         const sectionsMap: Record<string, { total: number, attended: number, count: number }> = {};
 
         validStats.forEach(s => {
-          totalRecs += s.total_records;
-          totalAttended += (s.present_count + s.late_count);
+          const hasRealRecords = (s.present_count + s.late_count + s.absent_count + s.incomplete_count) > 0;
+          if (hasRealRecords) {
+            totalRecs += s.total_records;
+            totalAttended += (s.present_count + s.late_count);
 
-          if (s.total_records > 0) {
-             if (s.attendance_rate === 100) perfect++;
-             if (s.attendance_rate < 75) {
-                flagged++;
-                risks.push({
-                   id: s.student_id_number || s.student_id.substring(0,8),
-                   name: s.full_name,
-                   section: s.section,
-                   rate: s.attendance_rate
-                });
-             }
+            if (s.attendance_rate === 100) perfect++;
+            if (s.attendance_rate < 75) {
+              flagged++;
+              risks.push({
+                id: s.student_id_number || s.student_id.substring(0,8),
+                name: s.full_name,
+                section: s.section,
+                rate: s.attendance_rate
+              });
+            }
           }
 
           // Section mapping
@@ -338,7 +339,7 @@ export default function AdminReports() {
                       <td><span className="tag" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--dimmed)", fontSize: "11px" }}>{s.section}</span></td>
                       <td><span style={{ color: "var(--danger)", fontWeight: 600, fontSize: "13px" }}>{s.rate}%</span></td>
                       <td style={{ textAlign: "right", paddingRight: "24px" }}>
-                        <button className="action-btn-hover" style={{ width: "auto", padding: "6px 12px", marginLeft: "auto", color: "var(--white-shade)", border: "1px solid var(--border)", opacity: 1 }}>Notify Agent</button>
+                        <button className="action-btn-hover" style={{ width: "auto", padding: "6px 12px", marginLeft: "auto", color: "var(--danger)", background: "rgba(248, 113, 113, 0.1)", border: "1px solid rgba(248, 113, 113, 0.3)", opacity: 1 }}>Notify Student</button>
                       </td>
                     </tr>
                   ))
