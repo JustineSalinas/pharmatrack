@@ -3,19 +3,19 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   ScanLine, CheckCircle, XCircle, Calendar, BookOpen, Wifi, WifiOff,
-  LogIn, LogOut, Clock, AlertTriangle,
+  LogIn, LogOut, Clock, AlertTriangle, ChevronDown,
 } from "lucide-react";
 
 const SUBJECTS = ["Pharmacology 301", "Pharmacognosy", "Clinical Pharmacy", "Pharmaceutical Chemistry", "Pharmacy Law & Ethics"];
-const DURATIONS = [30, 60, 90, 120, 180]; // session duration in minutes
+const DURATIONS = [30, 60, 90, 120, 180];
 
 type ScanMode = "check-in" | "check-out";
 type ScanEntry = {
   student: string;
-  checkInTime: string;       // "HH:MM AM/PM"
-  checkInTimestamp: number;  // Date.now()
+  checkInTime: string;
+  checkInTimestamp: number;
   checkOutTime: string | null;
-  duration: string | null;   // e.g. "1h 23m"
+  duration: string | null;
   late: boolean;
   status: "checked-in" | "checked-out";
 };
@@ -26,17 +26,160 @@ function elapsed(ms: number) {
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
+/* ── Custom Dropdown ── */
+function CustomSelect({
+  icon,
+  value,
+  options,
+  onChange,
+  disabled,
+  renderLabel,
+}: {
+  icon: React.ReactNode;
+  value: string | number;
+  options: (string | number)[];
+  onChange: (v: any) => void;
+  disabled?: boolean;
+  renderLabel?: (v: any) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState<string | number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const label = renderLabel ? renderLabel(value) : String(value);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      {/* Trigger */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen(o => !o)}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 14px",
+          background: open ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)",
+          border: `1px solid ${open ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.1)"}`,
+          borderRadius: 8,
+          color: disabled ? "rgba(255,255,255,0.35)" : "var(--foreground, #fff)",
+          fontSize: 13,
+          cursor: disabled ? "not-allowed" : "pointer",
+          textAlign: "left",
+          transition: "background 0.15s, border-color 0.15s",
+          outline: "none",
+        }}
+        onMouseEnter={e => {
+          if (!disabled && !open) {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.18)";
+          }
+        }}
+        onMouseLeave={e => {
+          if (!open) {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.1)";
+          }
+        }}
+      >
+        {/* Left icon */}
+        <span style={{ color: "var(--muted)", flexShrink: 0, display: "flex" }}>{icon}</span>
+        {/* Label */}
+        <span style={{ flex: 1 }}>{label}</span>
+        {/* Chevron */}
+        <ChevronDown
+          size={14}
+          style={{
+            color: "var(--muted)",
+            flexShrink: 0,
+            transition: "transform 0.2s",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          }}
+        />
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            right: 0,
+            background: "var(--card, #1a1d35)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            borderRadius: 10,
+            overflow: "hidden",
+            zIndex: 50,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
+            animation: "dropIn 0.15s ease",
+          }}
+        >
+          {options.map((opt, i) => {
+            const optLabel = renderLabel ? renderLabel(opt) : String(opt);
+            const isSelected = opt === value;
+            const isHovered = hovered === opt;
+            return (
+              <button
+                key={opt}
+                type="button"
+                onMouseEnter={() => setHovered(opt)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => { onChange(opt); setOpen(false); }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "10px 14px",
+                  background: isHovered
+                    ? "rgba(255,255,255,0.07)"
+                    : isSelected
+                    ? "rgba(240,192,64,0.08)"
+                    : "transparent",
+                  border: "none",
+                  borderBottom: i < options.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                  color: isSelected ? "var(--gold, #f0c040)" : "var(--foreground, #fff)",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background 0.12s",
+                }}
+              >
+                {isSelected && (
+                  <CheckCircle size={13} style={{ color: "var(--gold, #f0c040)", flexShrink: 0 }} />
+                )}
+                {!isSelected && <span style={{ width: 13, flexShrink: 0 }} />}
+                {optLabel}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ScannerPage() {
   const [form, setForm] = useState({
     subject: SUBJECTS[0],
     date: new Date().toISOString().slice(0, 10),
-    sessionDuration: 60, // minutes — used to detect late check-out
+    sessionDuration: 60,
   });
   const [scanning, setScanning] = useState(false);
   const [mode, setMode] = useState<ScanMode>("check-in");
   const [scanResult, setScanResult] = useState<{ success: boolean; message: string; student?: string; late?: boolean } | null>(null);
   const [entries, setEntries] = useState<ScanEntry[]>([]);
-  const [tick, setTick] = useState(0); // forces re-render every minute for live duration
+  const [tick, setTick] = useState(0);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -65,44 +208,21 @@ export default function ScannerPage() {
     if (mode === "check-in") {
       const student = mockStudents[Math.floor(Math.random() * mockStudents.length)];
       const alreadyIn = entries.find(e => e.student === student && e.status === "checked-in");
-      if (alreadyIn) {
-        showResult({ success: false, message: "Already checked in.", student });
-        return;
-      }
-      setEntries(prev => [{
-        student,
-        checkInTime: timeStr,
-        checkInTimestamp: Date.now(),
-        checkOutTime: null,
-        duration: null,
-        late: false,
-        status: "checked-in",
-      }, ...prev]);
+      if (alreadyIn) { showResult({ success: false, message: "Already checked in.", student }); return; }
+      setEntries(prev => [{ student, checkInTime: timeStr, checkInTimestamp: Date.now(), checkOutTime: null, duration: null, late: false, status: "checked-in" }, ...prev]);
       showResult({ success: true, message: "Successfully checked in.", student });
-
     } else {
-      // check-out
       const checkedIn = entries.filter(e => e.status === "checked-in");
-      if (checkedIn.length === 0) {
-        showResult({ success: false, message: "No checked-in students found.", student: undefined });
-        return;
-      }
+      if (checkedIn.length === 0) { showResult({ success: false, message: "No checked-in students found." }); return; }
       const target = checkedIn[Math.floor(Math.random() * checkedIn.length)];
       const durationMs = Date.now() - target.checkInTimestamp;
-      const sessionMs = form.sessionDuration * 60 * 1000;
-      const isLate = durationMs > sessionMs;
+      const isLate = durationMs > form.sessionDuration * 60 * 1000;
       const durationStr = elapsed(durationMs);
-
-      setEntries(prev => prev.map(e =>
-        e.student === target.student && e.status === "checked-in"
-          ? { ...e, checkOutTime: timeStr, duration: durationStr, late: isLate, status: "checked-out" }
-          : e
-      ));
+      setEntries(prev => prev.map(e => e.student === target.student && e.status === "checked-in" ? { ...e, checkOutTime: timeStr, duration: durationStr, late: isLate, status: "checked-out" } : e));
       showResult({ success: true, message: `Checked out after ${durationStr}.${isLate ? " Late checkout." : ""}`, student: target.student, late: isLate });
     }
   };
 
-  /* ── Shared styles ── */
   const cardStyle: React.CSSProperties = {
     background: "var(--card, #13152a)",
     border: "1px solid var(--border, rgba(255,255,255,0.07))",
@@ -128,8 +248,6 @@ export default function ScannerPage() {
     color: "var(--foreground, #fff)",
     fontSize: 13,
     outline: "none",
-    appearance: "none" as const,
-    WebkitAppearance: "none" as const,
   };
 
   const css = `
@@ -142,6 +260,10 @@ export default function ScannerPage() {
     @keyframes pulseGreen {
       0%, 100% { opacity: 0.6; transform: scale(0.95); }
       50%       { opacity: 1;   transform: scale(1.05); }
+    }
+    @keyframes dropIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .qr-scan-line {
       position: absolute; left: 12%; right: 12%; height: 2px;
@@ -178,35 +300,44 @@ export default function ScannerPage() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
-            {/* Subject */}
+            {/* Subject — custom dropdown */}
             <div>
               <div style={labelStyle}>Subject</div>
-              <div style={{ position: "relative" }}>
-                <BookOpen size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-                <select style={{ ...inputStyle, paddingLeft: 34 }} value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} disabled={scanning}>
-                  {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
+              <CustomSelect
+                icon={<BookOpen size={14} />}
+                value={form.subject}
+                options={SUBJECTS}
+                onChange={v => setForm({ ...form, subject: v })}
+                disabled={scanning}
+              />
             </div>
 
-            {/* Date */}
+            {/* Date — standard input (no dropdown needed) */}
             <div>
               <div style={labelStyle}>Date</div>
               <div style={{ position: "relative" }}>
                 <Calendar size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-                <input type="date" style={{ ...inputStyle, paddingLeft: 34 }} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} disabled={scanning} />
+                <input
+                  type="date"
+                  style={{ ...inputStyle, paddingLeft: 34 }}
+                  value={form.date}
+                  onChange={e => setForm({ ...form, date: e.target.value })}
+                  disabled={scanning}
+                />
               </div>
             </div>
 
-            {/* Session Duration (for late detection) */}
+            {/* Session Duration — custom dropdown */}
             <div>
               <div style={labelStyle}>Session Duration</div>
-              <div style={{ position: "relative" }}>
-                <Clock size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-                <select style={{ ...inputStyle, paddingLeft: 34 }} value={form.sessionDuration} onChange={e => setForm({ ...form, sessionDuration: Number(e.target.value) })} disabled={scanning}>
-                  {DURATIONS.map(d => <option key={d} value={d}>{d} min</option>)}
-                </select>
-              </div>
+              <CustomSelect
+                icon={<Clock size={14} />}
+                value={form.sessionDuration}
+                options={DURATIONS}
+                onChange={v => setForm({ ...form, sessionDuration: Number(v) })}
+                disabled={scanning}
+                renderLabel={v => `${v} min`}
+              />
               <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 5 }}>
                 Students checking out after this window are flagged as late.
               </div>
@@ -247,7 +378,6 @@ export default function ScannerPage() {
             Scanner Preview
           </div>
 
-          {/* Check In / Check Out toggle — only shown when scanning */}
           {scanning && (
             <div style={{ display: "flex", gap: 0, marginBottom: 20, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, overflow: "hidden", width: "100%" }}>
               {(["check-in", "check-out"] as ScanMode[]).map(m => (
@@ -258,14 +388,10 @@ export default function ScannerPage() {
                     flex: 1,
                     display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
                     padding: "10px 0",
-                    background: mode === m
-                      ? m === "check-in" ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.15)"
-                      : "transparent",
+                    background: mode === m ? (m === "check-in" ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.15)") : "transparent",
                     border: "none",
                     borderRight: m === "check-in" ? "1px solid rgba(255,255,255,0.1)" : "none",
-                    color: mode === m
-                      ? m === "check-in" ? "#4ade80" : "#f87171"
-                      : "rgba(255,255,255,0.35)",
+                    color: mode === m ? (m === "check-in" ? "#4ade80" : "#f87171") : "rgba(255,255,255,0.35)",
                     fontSize: 12, fontWeight: 600, cursor: "pointer",
                     transition: "background 0.2s, color 0.2s",
                   }}
@@ -277,46 +403,29 @@ export default function ScannerPage() {
             </div>
           )}
 
-          {/* Scan viewport */}
           <div style={{
-            width: 200, height: 200,
-            margin: "0 auto 20px",
-            borderRadius: 14,
-            position: "relative",
+            width: 200, height: 200, margin: "0 auto 20px", borderRadius: 14, position: "relative",
             background: scanning ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.02)",
-            border: scanning
-              ? mode === "check-in" ? "1.5px solid rgba(74,222,128,0.45)" : "1.5px solid rgba(248,113,113,0.45)"
-              : "1.5px dashed rgba(255,255,255,0.12)",
+            border: scanning ? (mode === "check-in" ? "1.5px solid rgba(74,222,128,0.45)" : "1.5px solid rgba(248,113,113,0.45)") : "1.5px dashed rgba(255,255,255,0.12)",
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden", transition: "border-color 0.3s",
           }}>
-            {/* Corner brackets */}
             {[
               { top: 8, left: 8, borderWidth: "2px 0 0 2px" },
               { top: 8, right: 8, borderWidth: "2px 2px 0 0" },
               { bottom: 8, left: 8, borderWidth: "0 0 2px 2px" },
               { bottom: 8, right: 8, borderWidth: "0 2px 2px 0" },
             ].map((s, i) => (
-              <span key={i} style={{
-                position: "absolute", width: 18, height: 18,
-                borderColor: scanning
-                  ? mode === "check-in" ? "rgba(74,222,128,0.7)" : "rgba(248,113,113,0.7)"
-                  : "rgba(255,255,255,0.25)",
-                borderStyle: "solid", transition: "border-color 0.3s", ...s,
-              }} />
+              <span key={i} style={{ position: "absolute", width: 18, height: 18, borderColor: scanning ? (mode === "check-in" ? "rgba(74,222,128,0.7)" : "rgba(248,113,113,0.7)") : "rgba(255,255,255,0.25)", borderStyle: "solid", transition: "border-color 0.3s", ...s }} />
             ))}
             {scanning && <div className="qr-scan-line" style={{ background: `linear-gradient(90deg, transparent, ${mode === "check-in" ? "rgba(74,222,128,0.8)" : "rgba(248,113,113,0.8)"}, transparent)` }} />}
 
             {!scanning ? (
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", lineHeight: 1.5, textAlign: "center" }}>
-                Configure and<br />open scanner
-              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", lineHeight: 1.5, textAlign: "center" }}>Configure and<br />open scanner</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                 {mode === "check-in" ? <LogIn size={26} style={{ color: "rgba(74,222,128,0.6)" }} /> : <LogOut size={26} style={{ color: "rgba(248,113,113,0.6)" }} />}
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>
-                  Waiting for QR…
-                </span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>Waiting for QR…</span>
               </div>
             )}
           </div>
@@ -336,30 +445,21 @@ export default function ScannerPage() {
             )}
           </div>
 
-          {/* Scan result feedback */}
           {scanResult && (
             <div style={{
-              width: "100%", marginBottom: 16,
-              padding: "12px 16px",
+              width: "100%", marginBottom: 16, padding: "12px 16px",
               background: scanResult.success ? (scanResult.late ? "rgba(251,191,36,0.08)" : "rgba(74,222,128,0.08)") : "rgba(248,113,113,0.08)",
               border: `1px solid ${scanResult.success ? (scanResult.late ? "rgba(251,191,36,0.3)" : "rgba(74,222,128,0.25)") : "rgba(248,113,113,0.25)"}`,
-              borderRadius: 10, display: "flex", alignItems: "center", gap: 10, textAlign: "left",
+              borderRadius: 10, display: "flex", alignItems: "center", gap: 10,
             }}>
-              {scanResult.success
-                ? scanResult.late
-                  ? <AlertTriangle size={16} style={{ color: "#fbbf24", flexShrink: 0 }} />
-                  : <CheckCircle size={16} style={{ color: "#4ade80", flexShrink: 0 }} />
-                : <XCircle size={16} style={{ color: "#f87171", flexShrink: 0 }} />}
+              {scanResult.success ? (scanResult.late ? <AlertTriangle size={16} style={{ color: "#fbbf24", flexShrink: 0 }} /> : <CheckCircle size={16} style={{ color: "#4ade80", flexShrink: 0 }} />) : <XCircle size={16} style={{ color: "#f87171", flexShrink: 0 }} />}
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: scanResult.success ? (scanResult.late ? "#fbbf24" : "#4ade80") : "#f87171" }}>
-                  {scanResult.student ?? "Error"}
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: scanResult.success ? (scanResult.late ? "#fbbf24" : "#4ade80") : "#f87171" }}>{scanResult.student ?? "Error"}</div>
                 <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{scanResult.message}</div>
               </div>
             </div>
           )}
 
-          {/* Simulate scan */}
           {scanning && (
             <button
               onClick={handleSimulateScan}
@@ -395,7 +495,6 @@ export default function ScannerPage() {
           <span style={{ fontSize: 13, fontWeight: 600 }}>Recent Scans</span>
           <a style={{ color: "var(--gold, #f0c040)", fontSize: 12, cursor: "pointer" }}>View all →</a>
         </div>
-
         {entries.length > 0 ? (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
@@ -408,8 +507,7 @@ export default function ScannerPage() {
             <tbody>
               {entries.map((e, idx) => {
                 const liveDuration = e.status === "checked-in" ? elapsed(Date.now() - e.checkInTimestamp) : e.duration;
-                const sessionMs = form.sessionDuration * 60 * 1000;
-                const isCurrentlyLate = e.status === "checked-in" && (Date.now() - e.checkInTimestamp) > sessionMs;
+                const isCurrentlyLate = e.status === "checked-in" && (Date.now() - e.checkInTimestamp) > form.sessionDuration * 60 * 1000;
                 return (
                   <tr key={idx} style={{ borderBottom: "1px solid var(--border, rgba(255,255,255,0.04))" }}>
                     <td style={{ padding: "12px 20px", fontWeight: 500 }}>{e.student}</td>
