@@ -42,7 +42,6 @@ export default function StudentsPage() {
 
   const selectedStudent = allStudents.find(s => s.id === selected) ?? null;
 
-  /* ── Shared card style (mirrors dashboard) ── */
   const card: React.CSSProperties = {
     background: "var(--card, #13152a)",
     border: "1px solid var(--border, rgba(255,255,255,0.07))",
@@ -73,7 +72,7 @@ export default function StudentsPage() {
       {/* ── Page Header ── */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
-          Faculty › Students
+          Facilitator › Students
         </div>
         <h2 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px" }}>Student Management</h2>
         <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>{allStudents.length} students enrolled this semester</p>
@@ -98,7 +97,6 @@ export default function StudentsPage() {
 
       {/* ── Search + Section filters ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        {/* Search */}
         <div style={{ position: "relative", flex: "0 0 240px" }}>
           <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
           <input
@@ -118,7 +116,6 @@ export default function StudentsPage() {
           />
         </div>
 
-        {/* Section tabs */}
         <div style={{ display: "flex", gap: 6 }}>
           {SECTIONS.map(s => (
             <button
@@ -182,7 +179,6 @@ export default function StudentsPage() {
                   onMouseEnter={e => { if (selected !== s.id) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = selected === s.id ? "rgba(240,192,64,0.05)" : "transparent"; }}
                 >
-                  {/* Name + avatar */}
                   <td style={{ padding: "12px 20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{
@@ -246,7 +242,6 @@ export default function StudentsPage() {
         {selectedStudent && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
-            {/* Identity card */}
             <div style={{ ...card, padding: "24px 20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
                 <div style={{
@@ -269,7 +264,6 @@ export default function StudentsPage() {
                 <StatusBadge status={selectedStudent.status} />
               </div>
 
-              {/* Mini stats */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 18 }}>
                 {[
                   { label: "Present", value: "43", color: "#4ade80", bg: "rgba(74,222,128,0.08)",  border: "rgba(74,222,128,0.18)"  },
@@ -283,7 +277,6 @@ export default function StudentsPage() {
                 ))}
               </div>
 
-              {/* Attendance rate bar */}
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TrendingUp size={12} /> Attendance Rate</span>
@@ -304,7 +297,6 @@ export default function StudentsPage() {
               </div>
             </div>
 
-            {/* Recent records card */}
             <div style={card}>
               <div style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
