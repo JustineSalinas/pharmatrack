@@ -18,7 +18,6 @@ const atRisk = [
   { name: "Mark Bautista", id: "2026-018", section: "PharmB", rate: 71 },
 ];
 
-/* ── Design tokens ── */
 const T = {
   bg:        "#0d0e14",
   surface:   "#111318",
@@ -71,7 +70,7 @@ export default function FacultyReports() {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
         <div>
           <div style={{ fontSize: 11, color: T.muted, letterSpacing: "0.06em", marginBottom: 6 }}>
-            Faculty <span style={{ margin: "0 4px", opacity: 0.4 }}>›</span> Reports
+            Facilitator <span style={{ margin: "0 4px", opacity: 0.4 }}>›</span> Reports
           </div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.01em" }}>
             Reports & Analytics
