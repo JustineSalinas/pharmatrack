@@ -10,10 +10,10 @@ import {
 export default function FacilitatorOverview() {
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState({
+    totalStudents: 0,
     activeEventsToday: 0,
-    totalExpectedStudents: 0,
-    studentsCheckedIn: 0,
-    studentsCheckedOut: 0,
+    scansToday: 0,
+    studentsAbsent: 0,
   });
   const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,10 +26,10 @@ export default function FacilitatorOverview() {
 
         setTodayAttendance([]);
         setStats({
+          totalStudents: 0,
           activeEventsToday: 0,
-          totalExpectedStudents: 0,
-          studentsCheckedIn: 0,
-          studentsCheckedOut: 0,
+          scansToday: 0,
+          studentsAbsent: 0,
         });
 
       } catch (err) {
@@ -54,9 +54,15 @@ export default function FacilitatorOverview() {
   const quickActions = [
     {
       icon: <QrCode size={16} />,
-      label: "Generate QR",
-      sub: "Start a new session",
+      label: "Open Scanner",
+      sub: "Scan QR codes",
       href: "/dashboard/facilitator/generate",
+    },
+    {
+      icon: <CalendarCheck size={16} />,
+      label: "Create Event",
+      sub: "Schedule new activities",
+      href: "/dashboard/facilitator/events",
     },
     {
       icon: <BarChart2 size={16} />,
@@ -64,15 +70,15 @@ export default function FacilitatorOverview() {
       sub: "Attendance records",
       href: "/dashboard/facilitator/reports",
     },
-    {
-      icon: <UserCog size={16} />,
-      label: "Manage Students",
-      sub: "Review & manage",
-      href: "/dashboard/facilitator/students",
-    },
   ];
 
   const bannerStats = [
+    {
+      icon: <Users size={18} />,
+      label: "Total Students",
+      value: stats.totalStudents,
+      accent: "rgba(255,255,255,0.55)",
+    },
     {
       icon: <CalendarCheck size={18} />,
       label: "Active Events Today",
@@ -80,21 +86,15 @@ export default function FacilitatorOverview() {
       accent: "var(--gold, #f0c040)",
     },
     {
-      icon: <Users size={18} />,
-      label: "Total Expected Students",
-      value: stats.totalExpectedStudents,
-      accent: "rgba(255,255,255,0.55)",
-    },
-    {
       icon: <LogIn size={18} />,
-      label: "Students Checked In",
-      value: stats.studentsCheckedIn,
+      label: "Scans Today",
+      value: stats.scansToday,
       accent: "#4ade80",
     },
     {
       icon: <LogOut size={18} />,
-      label: "Students Checked Out",
-      value: stats.studentsCheckedOut,
+      label: "Students Absent",
+      value: stats.studentsAbsent,
       accent: "#f87171",
     },
   ];

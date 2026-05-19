@@ -20,7 +20,7 @@ export default function EventsManagement() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [admin, setAdmin] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
   const [editingEvent, setEditingEvent] = useState<any>(null);
 
   // Form State
@@ -34,7 +34,7 @@ export default function EventsManagement() {
   useEffect(() => {
     async function init() {
       const u = await getCurrentUser();
-      setAdmin(u);
+      setUser(u);
       fetchEvents();
     }
     init();
@@ -52,7 +52,7 @@ export default function EventsManagement() {
 
   async function handleCreateEvent(e: React.FormEvent) {
     e.preventDefault();
-    if (!admin) return;
+    if (!user) return;
     setIsSubmitting(true);
 
     try {
@@ -83,7 +83,7 @@ export default function EventsManagement() {
           check_in_start: startTS,
           check_in_late: lateTS,
           check_in_end: endTS,
-          created_by: admin.id
+          created_by: user.id
         });
 
         if (error) throw error;
@@ -138,8 +138,11 @@ export default function EventsManagement() {
       <div className="fade-in">
       <header style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h1 style={{ fontSize: "2rem", fontWeight: "700" }}>Manage Events</h1>
-          <p style={{ color: "var(--muted)" }}>Create and schedule pharmacy council activities.</p>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
+            Facilitator
+          </div>
+          <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Manage Events</h2>
+          <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>Create and schedule pharmacy council activities.</p>
         </div>
         <button className="btn btn-gold" onClick={() => { resetForm(); setShowModal(true); }}>
           <PlusCircle size={20} style={{ marginRight: "8px" }} /> Create Event

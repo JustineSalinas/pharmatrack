@@ -153,7 +153,7 @@ begin
     end loop;
 end $$;
 create policy "Everyone can view events" on public.events for select using (true);
-create policy "Admins can manage events" on public.events for all using (public.is_admin());
+create policy "Council can manage events" on public.events for all using (public.is_council());
 
 -- ============================================================
 -- QR SESSIONS (Class or specific activity scanning)
