@@ -3,11 +3,10 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   ScanLine, CheckCircle, XCircle, Calendar, BookOpen, Wifi, WifiOff,
-  LogIn, LogOut, Clock, AlertTriangle, ChevronDown,
+  LogIn, LogOut, AlertTriangle, ChevronDown,
 } from "lucide-react";
 
 const SUBJECTS = ["Pharmacology 301", "Pharmacognosy", "Clinical Pharmacy", "Pharmaceutical Chemistry", "Pharmacy Law & Ethics"];
-const DURATIONS = [30, 60, 90, 120, 180];
 
 type ScanMode = "check-in" | "check-out";
 type ScanEntry = {
@@ -16,7 +15,6 @@ type ScanEntry = {
   checkInTimestamp: number;
   checkOutTime: string | null;
   duration: string | null;
-  late: boolean;
   status: "checked-in" | "checked-out";
 };
 
@@ -26,7 +24,6 @@ function elapsed(ms: number) {
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
-/* ── Custom Dropdown ── */
 function CustomSelect({
   icon,
   value,
@@ -57,7 +54,6 @@ function CustomSelect({
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      {/* Trigger */}
       <button
         type="button"
         disabled={disabled}
@@ -91,11 +87,8 @@ function CustomSelect({
           }
         }}
       >
-        {/* Left icon */}
         <span style={{ color: "var(--muted)", flexShrink: 0, display: "flex" }}>{icon}</span>
-        {/* Label */}
         <span style={{ flex: 1 }}>{label}</span>
-        {/* Chevron */}
         <ChevronDown
           size={14}
           style={{
@@ -107,7 +100,6 @@ function CustomSelect({
         />
       </button>
 
-      {/* Dropdown panel */}
       {open && (
         <div
           style={{
@@ -173,11 +165,10 @@ export default function ScannerPage() {
   const [form, setForm] = useState({
     subject: SUBJECTS[0],
     date: new Date().toISOString().slice(0, 10),
-    sessionDuration: 60,
   });
   const [scanning, setScanning] = useState(false);
   const [mode, setMode] = useState<ScanMode>("check-in");
-  const [scanResult, setScanResult] = useState<{ success: boolean; message: string; student?: string; late?: boolean } | null>(null);
+  const [scanResult, setScanResult] = useState<{ success: boolean; message: string; student?: string } | null>(null);
   const [entries, setEntries] = useState<ScanEntry[]>([]);
   const [tick, setTick] = useState(0);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -209,17 +200,20 @@ export default function ScannerPage() {
       const student = mockStudents[Math.floor(Math.random() * mockStudents.length)];
       const alreadyIn = entries.find(e => e.student === student && e.status === "checked-in");
       if (alreadyIn) { showResult({ success: false, message: "Already checked in.", student }); return; }
-      setEntries(prev => [{ student, checkInTime: timeStr, checkInTimestamp: Date.now(), checkOutTime: null, duration: null, late: false, status: "checked-in" }, ...prev]);
+      setEntries(prev => [{ student, checkInTime: timeStr, checkInTimestamp: Date.now(), checkOutTime: null, duration: null, status: "checked-in" }, ...prev]);
       showResult({ success: true, message: "Successfully checked in.", student });
     } else {
       const checkedIn = entries.filter(e => e.status === "checked-in");
       if (checkedIn.length === 0) { showResult({ success: false, message: "No checked-in students found." }); return; }
       const target = checkedIn[Math.floor(Math.random() * checkedIn.length)];
       const durationMs = Date.now() - target.checkInTimestamp;
-      const isLate = durationMs > form.sessionDuration * 60 * 1000;
       const durationStr = elapsed(durationMs);
-      setEntries(prev => prev.map(e => e.student === target.student && e.status === "checked-in" ? { ...e, checkOutTime: timeStr, duration: durationStr, late: isLate, status: "checked-out" } : e));
-      showResult({ success: true, message: `Checked out after ${durationStr}.${isLate ? " Late checkout." : ""}`, student: target.student, late: isLate });
+      setEntries(prev => prev.map(e =>
+        e.student === target.student && e.status === "checked-in"
+          ? { ...e, checkOutTime: timeStr, duration: durationStr, status: "checked-out" }
+          : e
+      ));
+      showResult({ success: true, message: `Checked out after ${durationStr}.`, student: target.student });
     }
   };
 
@@ -275,7 +269,6 @@ export default function ScannerPage() {
 
   const checkedInCount = entries.filter(e => e.status === "checked-in").length;
   const checkedOutCount = entries.filter(e => e.status === "checked-out").length;
-  const lateCount = entries.filter(e => e.late).length;
 
   return (
     <>
@@ -300,7 +293,7 @@ export default function ScannerPage() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
-            {/* Subject — custom dropdown */}
+            {/* Subject */}
             <div>
               <div style={labelStyle}>Subject</div>
               <CustomSelect
@@ -312,7 +305,7 @@ export default function ScannerPage() {
               />
             </div>
 
-            {/* Date — standard input (no dropdown needed) */}
+            {/* Date */}
             <div>
               <div style={labelStyle}>Date</div>
               <div style={{ position: "relative" }}>
@@ -324,22 +317,6 @@ export default function ScannerPage() {
                   onChange={e => setForm({ ...form, date: e.target.value })}
                   disabled={scanning}
                 />
-              </div>
-            </div>
-
-            {/* Session Duration — custom dropdown */}
-            <div>
-              <div style={labelStyle}>Session Duration</div>
-              <CustomSelect
-                icon={<Clock size={14} />}
-                value={form.sessionDuration}
-                options={DURATIONS}
-                onChange={v => setForm({ ...form, sessionDuration: Number(v) })}
-                disabled={scanning}
-                renderLabel={v => `${v} min`}
-              />
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 5 }}>
-                Students checking out after this window are flagged as late.
               </div>
             </div>
 
@@ -361,7 +338,6 @@ export default function ScannerPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
               <div><span style={{ color: "var(--muted)" }}>Subject: </span>{form.subject}</div>
               <div><span style={{ color: "var(--muted)" }}>Date: </span>{form.date}</div>
-              <div><span style={{ color: "var(--muted)" }}>Duration: </span>{form.sessionDuration} min</div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ color: "var(--muted)" }}>Status: </span>
                 {scanning
@@ -448,13 +424,15 @@ export default function ScannerPage() {
           {scanResult && (
             <div style={{
               width: "100%", marginBottom: 16, padding: "12px 16px",
-              background: scanResult.success ? (scanResult.late ? "rgba(251,191,36,0.08)" : "rgba(74,222,128,0.08)") : "rgba(248,113,113,0.08)",
-              border: `1px solid ${scanResult.success ? (scanResult.late ? "rgba(251,191,36,0.3)" : "rgba(74,222,128,0.25)") : "rgba(248,113,113,0.25)"}`,
+              background: scanResult.success ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
+              border: `1px solid ${scanResult.success ? "rgba(74,222,128,0.25)" : "rgba(248,113,113,0.25)"}`,
               borderRadius: 10, display: "flex", alignItems: "center", gap: 10,
             }}>
-              {scanResult.success ? (scanResult.late ? <AlertTriangle size={16} style={{ color: "#fbbf24", flexShrink: 0 }} /> : <CheckCircle size={16} style={{ color: "#4ade80", flexShrink: 0 }} />) : <XCircle size={16} style={{ color: "#f87171", flexShrink: 0 }} />}
+              {scanResult.success
+                ? <CheckCircle size={16} style={{ color: "#4ade80", flexShrink: 0 }} />
+                : <XCircle size={16} style={{ color: "#f87171", flexShrink: 0 }} />}
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: scanResult.success ? (scanResult.late ? "#fbbf24" : "#4ade80") : "#f87171" }}>{scanResult.student ?? "Error"}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: scanResult.success ? "#4ade80" : "#f87171" }}>{scanResult.student ?? "Error"}</div>
                 <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{scanResult.message}</div>
               </div>
             </div>
@@ -475,11 +453,10 @@ export default function ScannerPage() {
 
       {/* ── Live Summary strip ── */}
       {entries.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginTop: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12, marginTop: 16 }}>
           {[
             { label: "Checked In", value: checkedInCount, color: "#4ade80", bg: "rgba(74,222,128,0.08)", border: "rgba(74,222,128,0.2)" },
             { label: "Checked Out", value: checkedOutCount, color: "rgba(255,255,255,0.7)", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.1)" },
-            { label: "Late Checkouts", value: lateCount, color: "#fbbf24", bg: "rgba(251,191,36,0.08)", border: "rgba(251,191,36,0.2)" },
           ].map(s => (
             <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: "14px 20px" }}>
               <div style={{ fontSize: 28, fontWeight: 700, color: s.color, lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
@@ -507,25 +484,17 @@ export default function ScannerPage() {
             <tbody>
               {entries.map((e, idx) => {
                 const liveDuration = e.status === "checked-in" ? elapsed(Date.now() - e.checkInTimestamp) : e.duration;
-                const isCurrentlyLate = e.status === "checked-in" && (Date.now() - e.checkInTimestamp) > form.sessionDuration * 60 * 1000;
                 return (
                   <tr key={idx} style={{ borderBottom: "1px solid var(--border, rgba(255,255,255,0.04))" }}>
                     <td style={{ padding: "12px 20px", fontWeight: 500 }}>{e.student}</td>
                     <td style={{ padding: "12px 20px", color: "var(--muted)", fontSize: 12 }}>{e.checkInTime}</td>
                     <td style={{ padding: "12px 20px", color: "var(--muted)", fontSize: 12 }}>{e.checkOutTime ?? "—"}</td>
-                    <td style={{ padding: "12px 20px" }}>
-                      <span style={{ fontSize: 12, color: isCurrentlyLate || e.late ? "#fbbf24" : "var(--muted)", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        {(isCurrentlyLate || e.late) && <AlertTriangle size={12} style={{ color: "#fbbf24" }} />}
-                        {liveDuration ?? "—"}
-                      </span>
-                    </td>
+                    <td style={{ padding: "12px 20px", color: "var(--muted)", fontSize: 12 }}>{liveDuration ?? "—"}</td>
                     <td style={{ padding: "12px 20px" }}>
                       {e.status === "checked-in" ? (
                         <span style={{ padding: "3px 10px", background: "rgba(74,222,128,0.1)", color: "#4ade80", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>Checked In</span>
                       ) : (
-                        <span style={{ padding: "3px 10px", background: e.late ? "rgba(251,191,36,0.1)" : "rgba(255,255,255,0.06)", color: e.late ? "#fbbf24" : "rgba(255,255,255,0.6)", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
-                          {e.late ? "Late Out" : "Checked Out"}
-                        </span>
+                        <span style={{ padding: "3px 10px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>Checked Out</span>
                       )}
                     </td>
                   </tr>

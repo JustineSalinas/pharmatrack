@@ -4,7 +4,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
-  Loader2, Users, LogIn, LogOut, CalendarCheck, QrCode, BarChart2, UserCog,
+  Loader2, Users, Check, X, CalendarCheck, QrCode, BarChart2, UserCog,
 } from "lucide-react";
 
 export default function FacilitatorOverview() {
@@ -86,13 +86,13 @@ export default function FacilitatorOverview() {
       accent: "var(--gold, #f0c040)",
     },
     {
-      icon: <LogIn size={18} />,
+      icon: <Check size={18} />,
       label: "Scans Today",
       value: stats.scansToday,
       accent: "#4ade80",
     },
     {
-      icon: <LogOut size={18} />,
+      icon: <X size={18} />,
       label: "Students Absent",
       value: stats.studentsAbsent,
       accent: "#f87171",
