@@ -1,4 +1,7 @@
 "use client";
+import {
+  TrendingUp, CalendarCheck, Star, AlertTriangle, Download, FileDown,
+} from "lucide-react";
 
 const weeklyData = [
   { week: "W1", rate: 82 }, { week: "W2", rate: 88 }, { week: "W3", rate: 85 },
@@ -18,9 +21,8 @@ const atRisk = [
   { name: "Mark Bautista", id: "2026-018", section: "PharmB", rate: 71 },
 ];
 
+/* ── Tokens kept only for charts/tables ── */
 const T = {
-  bg:        "#0d0e14",
-  surface:   "#111318",
   surface2:  "#1a1d2a",
   border:    "rgba(255,255,255,0.07)",
   border2:   "rgba(255,255,255,0.12)",
@@ -37,16 +39,13 @@ const T = {
   text:      "#e2e4ec",
   textSub:   "#9096b0",
   mono:      "'JetBrains Mono', 'Fira Mono', monospace",
-  sans:      "'Space Grotesk', system-ui, sans-serif",
-  radius:    12,
-  radiusSm:  8,
   radiusXs:  6,
 };
 
 const card: React.CSSProperties = {
-  background: T.surface,
-  border: `1px solid ${T.border}`,
-  borderRadius: T.radius,
+  background: "var(--card, #13152a)",
+  border: "1px solid var(--border, rgba(255,255,255,0.07))",
+  borderRadius: 12,
   overflow: "hidden",
 };
 
@@ -55,71 +54,63 @@ const sectionLabel: React.CSSProperties = {
   fontWeight: 600,
   letterSpacing: "0.1em",
   textTransform: "uppercase" as const,
-  color: T.muted,
+  color: "var(--muted)",
   marginBottom: 16,
-  fontFamily: T.sans,
 };
 
 export default function FacultyReports() {
   const maxRate = Math.max(...weeklyData.map(d => d.rate));
 
   return (
-    <div style={{ fontFamily: T.sans, color: T.text, minHeight: "100vh", padding: "28px 32px", background: T.bg }}>
-
+    <>
       {/* ── Page Header ── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
         <div>
-          <div style={{ fontSize: 11, color: T.muted, letterSpacing: "0.06em", marginBottom: 6 }}>
-            Facilitator <span style={{ margin: "0 4px", opacity: 0.4 }}>›</span> Reports
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
+            Facilitator › Reports
           </div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.01em" }}>
-            Reports & Analytics
-          </h2>
-          <p style={{ fontSize: 12, color: T.mutedMid, margin: 0 }}>
-            Semester overview · 2025–2026 2nd Sem
-          </p>
+          <h2 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px" }}>Reports & Analytics</h2>
+          <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>Semester overview · 2025–2026 2nd Sem</p>
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-          <button style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "8px 16px", borderRadius: T.radiusSm,
-            background: "transparent", border: `1px solid ${T.border2}`,
-            color: T.textSub, fontSize: 12, fontWeight: 500, cursor: "pointer",
-            fontFamily: T.sans,
-          }}>
-            <span style={{ fontSize: 13 }}>⬇</span> Export CSV
+        <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+          <button
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "8px 16px", borderRadius: 8,
+              background: "transparent", border: "1px solid rgba(255,255,255,0.12)",
+              color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 500, cursor: "pointer",
+              transition: "background 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+          >
+            <Download size={13} /> Export CSV
           </button>
           <button style={{
             display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "8px 16px", borderRadius: T.radiusSm,
-            background: T.gold, border: `1px solid ${T.gold}`,
-            color: "#0d0e14", fontSize: 12, fontWeight: 600, cursor: "pointer",
-            fontFamily: T.sans,
+            padding: "8px 16px", borderRadius: 8,
+            background: "var(--gold, #f0c040)", border: "1px solid var(--gold, #f0c040)",
+            color: "#000", fontSize: 12, fontWeight: 600, cursor: "pointer",
           }}>
-            <span style={{ fontSize: 13 }}>⬇</span> Export PDF
+            <FileDown size={13} /> Export PDF
           </button>
         </div>
       </div>
 
-      {/* ── Stat Cards ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
+      {/* ── Stat Cards — students-page style ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "Avg Attendance Rate", value: "87.3%", color: T.green, bg: T.greenDim, border: "rgba(90,216,138,0.2)" },
-          { label: "Total Sessions",       value: "48",    color: "#fff",   bg: T.surface,  border: T.border },
-          { label: "Perfect Attendance",   value: "18",    color: T.gold,   bg: T.goldDim,  border: "rgba(226,200,74,0.2)", sub: "students" },
-          { label: "At-Risk Students",     value: `${atRisk.length}`, color: T.red, bg: T.redDim, border: "rgba(226,86,74,0.2)", sub: "below 75%" },
+          { icon: <TrendingUp size={16} />, label: "Avg Attendance Rate", value: "87.3%", color: "#4ade80", bg: "rgba(74,222,128,0.08)", border: "rgba(74,222,128,0.18)" },
+          { icon: <CalendarCheck size={16} />, label: "Total Sessions", value: "48", color: "rgba(255,255,255,0.85)", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.1)" },
+          { icon: <Star size={16} />, label: "Perfect Attendance", value: "18", color: "var(--gold, #f0c040)", bg: "rgba(240,192,64,0.08)", border: "rgba(240,192,64,0.18)" },
+          { icon: <AlertTriangle size={16} />, label: "At-Risk Students", value: `${atRisk.length}`, color: "#f87171", bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.18)" },
         ].map(s => (
-          <div key={s.label} style={{
-            background: s.bg, border: `1px solid ${s.border}`,
-            borderRadius: T.radius, padding: "18px 20px",
-          }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, marginBottom: 8, fontFamily: T.sans }}>
-              {s.label}
+          <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ color: s.color, opacity: 0.85, flexShrink: 0 }}>{s.icon}</div>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>{s.label}</div>
             </div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: s.color, lineHeight: 1, fontFamily: T.mono, marginBottom: s.sub ? 4 : 0 }}>
-              {s.value}
-            </div>
-            {s.sub && <div style={{ fontSize: 11, color: T.mutedMid }}>{s.sub}</div>}
           </div>
         ))}
       </div>
@@ -192,7 +183,7 @@ export default function FacultyReports() {
                   padding: "10px 20px", textAlign: "left",
                   fontSize: 10, color: T.muted,
                   textTransform: "uppercase", letterSpacing: "0.08em",
-                  fontWeight: 600, fontFamily: T.sans,
+                  fontWeight: 600,
                 }}>{h}</th>
               ))}
             </tr>
@@ -236,7 +227,7 @@ export default function FacultyReports() {
           padding: "16px 20px", borderBottom: `1px solid ${T.border}`,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 14, color: T.amber }}>⚠</span>
+            <AlertTriangle size={14} style={{ color: T.amber }} />
             <div style={sectionLabel}>At-Risk Students</div>
           </div>
           <span style={{
@@ -254,7 +245,7 @@ export default function FacultyReports() {
                   padding: "10px 20px", textAlign: "left",
                   fontSize: 10, color: T.muted,
                   textTransform: "uppercase", letterSpacing: "0.08em",
-                  fontWeight: 600, fontFamily: T.sans,
+                  fontWeight: 600,
                 }}>{h}</th>
               ))}
             </tr>
@@ -281,17 +272,17 @@ export default function FacultyReports() {
                   }}>{s.rate}%</span>
                 </td>
                 <td style={{ padding: "12px 20px" }}>
-                  <button style={{
-                    display: "inline-flex", alignItems: "center", gap: 5,
-                    padding: "5px 12px", borderRadius: T.radiusXs,
-                    background: "transparent", border: `1px solid ${T.border2}`,
-                    color: T.textSub, fontSize: 11, fontWeight: 500,
-                    cursor: "pointer", fontFamily: T.sans,
-                    transition: "all 0.15s",
-                  }}
+                  <button
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      padding: "5px 12px", borderRadius: T.radiusXs,
+                      background: "transparent", border: `1px solid ${T.border2}`,
+                      color: T.textSub, fontSize: 11, fontWeight: 500,
+                      cursor: "pointer", transition: "all 0.15s",
+                    }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = T.gold;
-                      e.currentTarget.style.color = T.gold;
+                      e.currentTarget.style.borderColor = "var(--gold, #f0c040)";
+                      e.currentTarget.style.color = "var(--gold, #f0c040)";
                       e.currentTarget.style.background = T.goldDim;
                     }}
                     onMouseLeave={e => {
@@ -308,7 +299,6 @@ export default function FacultyReports() {
           </tbody>
         </table>
       </div>
-
-    </div>
+    </>
   );
 }
