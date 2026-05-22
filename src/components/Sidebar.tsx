@@ -1,12 +1,14 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutUser } from "@/lib/auth-client";
+import { Home, Camera, ClipboardList, Calendar, User, Bell, QrCode, Users, BarChart, Settings, LogOut } from "lucide-react";
 
-interface NavItem { href: string; label: string; icon: string; }
+interface NavItem { href: string; label: string; icon: React.ReactNode; }
 
 interface SidebarProps {
-  role: "student" | "faculty" | "admin";
+  role: "student" | "facilitator" | "admin";
   userName: string;
   userSub: string;
   avatarInitials: string;
@@ -17,44 +19,44 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
     {
       section: "Main",
       items: [
-        { href: "/dashboard", label: "Overview", icon: "🏠" },
-        { href: "/check-in", label: "Check-In", icon: "📷" },
-        { href: "/dashboard/records", label: "My Records", icon: "📋" },
-        { href: "/dashboard/schedule", label: "Schedule", icon: "🗓️" },
+        { href: "/dashboard", label: "Overview", icon: <Home size={16} /> },
+        { href: "/check-in", label: "Check-In", icon: <Camera size={16} /> },
+        { href: "/dashboard/records", label: "My Records", icon: <ClipboardList size={16} /> },
+        { href: "/dashboard/schedule", label: "Schedule", icon: <Calendar size={16} /> },
       ],
     },
     {
       section: "Account",
       items: [
-        { href: "/dashboard/profile", label: "Profile", icon: "👤" },
-        { href: "/dashboard/notifications", label: "Notifications", icon: "🔔" },
+        { href: "/dashboard/profile", label: "Profile", icon: <User size={16} /> },
+        { href: "/dashboard/notifications", label: "Notifications", icon: <Bell size={16} /> },
       ],
     },
   ],
-  faculty: [
+  facilitator: [
     {
       section: "Main",
       items: [
-        { href: "/dashboard/faculty", label: "Overview", icon: "🏠" },
-        { href: "/dashboard/faculty/generate", label: "Generate QR", icon: "📲" },
-        { href: "/dashboard/faculty/students", label: "Students", icon: "👥" },
-        { href: "/dashboard/faculty/reports", label: "Reports", icon: "📊" },
+        { href: "/dashboard/facilitator", label: "Dashboard", icon: <Home size={16} /> },
+        { href: "/dashboard/facilitator/events", label: "Manage Events", icon: <Calendar size={16} /> },
+        { href: "/dashboard/facilitator/generate", label: "QR Scanner", icon: <QrCode size={16} /> },
+        { href: "/dashboard/facilitator/attendance", label: "Attendance Logs", icon: <ClipboardList size={16} /> },
+        { href: "/dashboard/facilitator/reports", label: "Reports", icon: <BarChart size={16} /> },
       ],
     },
     {
       section: "Account",
-      items: [{ href: "/dashboard/profile", label: "Profile", icon: "👤" }],
+      items: [{ href: "/dashboard/profile", label: "Profile", icon: <User size={16} /> }],
     },
   ],
   admin: [
     {
-      section: "Admin",
+      section: "Main",
       items: [
-        { href: "/dashboard/admin", label: "Dashboard", icon: "🏠" },
-        { href: "/dashboard/admin/users", label: "User Management", icon: "👥" },
-        { href: "/dashboard/admin/attendance", label: "Attendance Logs", icon: "📋" },
-        { href: "/dashboard/admin/reports", label: "Analytics", icon: "📊" },
-        { href: "/dashboard/admin/settings", label: "Settings", icon: "⚙️" },
+        { href: "/dashboard/admin", label: "Dashboard", icon: <Home size={16} /> },
+        { href: "/dashboard/admin/users", label: "User Management", icon: <Users size={16} /> },
+        { href: "/dashboard/admin/reports", label: "Analytics", icon: <BarChart size={16} /> },
+        { href: "/dashboard/admin/settings", label: "Settings", icon: <Settings size={16} /> },
       ],
     },
   ],
@@ -64,17 +66,25 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
   const pathname = usePathname();
 
   const handleLogout = async () => {
-    await logoutUser();
-    window.location.href = "/login";
+    if (window.confirm("Are you sure you want to log out?")) {
+      await logoutUser();
+      window.location.href = "/login";
+    }
   };
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">
-        <Link href="/" className="logo-row" style={{ margin: 0, justifyContent: "flex-start" }}>
-          <div className="logo-mark" style={{ width: 34, height: 34, fontSize: 14 }}>⚗️</div>
-          <span style={{ fontSize: 13 }}>PHARMATRACK</span>
-        </Link>
+      <div className="sidebar-logo" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <img src="/pham-logo.png" alt="PharmaTrack Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        </div>
+        <div
+          onClick={() => window.location.reload()}
+          style={{ cursor: "pointer", display: "flex", flexDirection: "column", gap: 1 }}
+          role="button"
+        >
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", color: "var(--white)", textTransform: "uppercase" }}>PharmaTrack</span>
+        </div>
       </div>
 
       {(navByRole[role] ?? navByRole.student).map((group) => (
@@ -86,7 +96,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
               href={item.href}
               className={`nav-item ${pathname === item.href ? "active" : ""}`}
             >
-              <span className="ni-icon">{item.icon}</span>
+              <span className="ni-icon" style={{ display: "flex", alignItems: "center" }}>{item.icon}</span>
               {item.label}
             </Link>
           ))}
@@ -95,17 +105,16 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
 
       <div className="sidebar-footer">
         <div className="user-chip" onClick={handleLogout} role="button" style={{ cursor: "pointer" }}>
-          <div
-            className="avatar"
-            style={role === "admin" ? { background: "linear-gradient(135deg, #FF6B6B, var(--bg3))" } : undefined}
-          >
-            {avatarInitials}
+          <div className="avatar">
+            {role === "admin" ? "SA" : avatarInitials}
           </div>
           <div className="user-info">
-            <strong>{userName}</strong>
-            <span>{userSub}</span>
+            <strong>{role === "admin" ? "System Admin" : userName}</strong>
+            {role !== "admin" && <span>{userSub}</span>}
           </div>
-          <span style={{ color: "var(--muted)" }}>⏻</span>
+          <span style={{ color: "var(--dimmed)", marginLeft: "auto", display: "flex" }}>
+            <LogOut size={14} />
+          </span>
         </div>
       </div>
     </aside>

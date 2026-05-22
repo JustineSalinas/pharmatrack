@@ -1,94 +1,314 @@
 "use client";
-import { useState } from "react";
 
-const names = ["Juan D.", "Ana S.", "Ben C.", "Clara T.", "Diego L.", "Eva R.", "Felix G.", "Grace Y.", "Henry P.", "Iris M.", "Jake T.", "Karla V.", "Leo B.", "Mia T.", "Nathan V.", "Olivia C."];
-const subjects = ["Pharmacology 301", "Pharmacognosy", "Clinical Pharmacy", "Pharma Chem"];
-const sections = ["PharmA", "PharmB", "PharmC"];
-const statuses: ("present" | "absent" | "late")[] = ["present", "present", "present", "late", "absent", "present"];
-const times = ["7:28", "7:31", "7:29", "7:45", "—", "7:30", "7:27", "7:33", "7:35", "—", "7:29", "7:31", "7:34", "—", "7:28", "7:40"];
-
-const records = Array.from({ length: 16 }, (_, i) => ({
-  id: i + 1,
-  name: names[i],
-  subject: subjects[i % 4],
-  section: sections[i % 3],
-  date: "Mar 22, 2026",
-  timeIn: times[i],
-  status: statuses[i % statuses.length],
-}));
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { getCurrentUser } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { Loader2, Download, Search, Calendar, FileSpreadsheet } from "lucide-react";
 
 export default function AdminAttendance() {
+  const [records, setRecords] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterSection, setFilterSection] = useState("All");
-  const [selectedDate, setSelectedDate] = useState("2026-03-22");
+  const [availableSections, setAvailableSections] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    async function fetchAttendance() {
+      try {
+        const u = await getCurrentUser();
+        if (!u || u.account_type === "student") {
+          router.push("/dashboard");
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("attendance_records")
+          .select(`
+            id,
+            time_in,
+            status,
+            session_id,
+            qr_sessions ( subject, date, section ),
+            users ( full_name, email )
+          `)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        const formatted = (data || []).map(r => {
+          const uData = r.users as any;
+          const session = r.qr_sessions as any;
+          
+          return {
+            id: r.id,
+            name: uData?.full_name || "Unknown Student",
+            email: uData?.email || "",
+            subject: session?.subject || "General Event",
+            section: session?.section || "N/A",
+            date: session?.date || "",
+            displayDate: session?.date ? new Date(session.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+            timeIn: r.time_in ? new Date(r.time_in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—",
+            status: r.status,
+            rawDate: session?.date
+          };
+        });
+
+        const { data: sectionData } = await supabase.from("student_profiles").select("section");
+        const allSections = Array.from(new Set((sectionData || []).map(s => s.section).filter(Boolean))).sort() as string[];
+        setAvailableSections(allSections);
+
+        setRecords(formatted);
+      } catch (err) {
+        console.error("Error fetching admin attendance", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAttendance();
+  }, [router]);
+
+  const sections = availableSections.length > 0 
+    ? availableSections 
+    : Array.from(new Set(records.map(r => r.section).filter(s => s !== "N/A"))).sort();
 
   const filtered = records.filter(r => {
-    const s = filterStatus === "All" || r.status === filterStatus.toLowerCase();
-    const sec = filterSection === "All" || r.section === filterSection;
-    return s && sec;
+    const sMatch = filterStatus === "All" || r.status.toLowerCase() === filterStatus.toLowerCase();
+    const secMatch = filterSection === "All" || r.section === filterSection;
+    const dateMatch = !selectedDate || r.rawDate === selectedDate;
+    const searchMatch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.email.toLowerCase().includes(searchQuery.toLowerCase());
+    return sMatch && secMatch && dateMatch && searchMatch;
   });
 
+  const present = filtered.filter(r => r.status === "present").length;
+  const late = filtered.filter(r => r.status === "late").length;
+  const absent = filtered.filter(r => r.status === "absent").length;
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+        <Loader2 className="animate-spin" size={24} color="var(--dimmed)" />
+      </div>
+    );
+  }
+
   return (
-    <>
-      <div className="page-header">
+    <div className="fade-in">
+      {/* Header and Actions in a single row */}
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "32px" }}>
         <div>
-          <div className="breadcrumb"><span>Admin</span><span>›</span><span>Attendance Logs</span></div>
-          <h2>Attendance Logs</h2>
-          <p>Complete attendance record database</p>
+          <div className="breadcrumb" style={{ fontSize: "11px", textTransform: "uppercase", fontWeight: 600, color: "var(--dimmed)", letterSpacing: "0.06em", marginBottom: "8px" }}>
+            <span>Admin Control</span><span style={{ margin: "0 8px" }}>/</span><span>Attendance</span>
+          </div>
+          <h2 style={{ fontSize: "28px", fontWeight: 700, margin: 0, letterSpacing: "-0.03em", color: "var(--white)" }}>Attendance Logs</h2>
+          <p style={{ color: "var(--dimmed)", fontSize: "13px", marginTop: "4px", margin: 0 }}>Master database of all recorded participation</p>
         </div>
-        <div className="header-actions">
-          <input className="inp" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ width: 170, padding: "9px 14px", fontSize: 13 }} />
-          <button className="btn btn-gold" style={{ width: "auto", padding: "9px 18px", fontSize: 13 }}>⬇️ Export CSV</button>
+        <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+           <div style={{ position: "relative", width: "160px" }}>
+              <Calendar size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--dimmed)" }} />
+              <input 
+                className="date-input" 
+                type="date" 
+                value={selectedDate} 
+                onChange={(e) => setSelectedDate(e.target.value)} 
+                style={{ paddingLeft: "36px", paddingRight: "12px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", width: "100%", fontSize: "13px", outline: "none", cursor: "pointer", transition: "border-color 0.15s ease" }}
+              />
+           </div>
+           <button 
+             className="btn-ghost" 
+             style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
+           >
+             <Download size={14} /> Export
+           </button>
         </div>
       </div>
 
-      {/* Summary chips */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        {[["✅ Present", records.filter(r => r.status === "present").length, "var(--success)"],
-          ["⏰ Late", records.filter(r => r.status === "late").length, "var(--gold)"],
-          ["❌ Absent", records.filter(r => r.status === "absent").length, "var(--danger)"],
-          ["📋 Total", records.length, "var(--muted)"]].map(([l, v, c]) => (
-          <div key={l as string} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "10px 18px", display: "flex", gap: 10, alignItems: "center" }}>
-            <span style={{ color: c as string, fontFamily: "Syne, sans-serif", fontSize: 22, fontWeight: 800 }}>{v}</span>
-            <span style={{ fontSize: 13, color: "var(--muted)" }}>{l}</span>
+      {/* Summary Strip - Single horizontal block */}
+      <div style={{ display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px 24px", marginBottom: "32px" }}>
+        {[
+          { label: "Present", count: present, color: "var(--success)" },
+          { label: "Late", count: late, color: "var(--gold)" },
+          { label: "Absent", count: absent, color: "var(--danger)" },
+          { label: "Total Filtered", count: filtered.length, color: "var(--white)" }
+        ].map((item, i, arr) => (
+          <div key={item.label} style={{ display: "flex", alignItems: "center", flex: 1 }}>
+             <div style={{ flex: 1 }}>
+               <div style={{ fontSize: "11px", color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>{item.label}</div>
+               <div style={{ fontSize: "28px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em" }}>{item.count}</div>
+             </div>
+             {i < arr.length - 1 && <div style={{ height: "40px", width: "1px", background: "var(--border)", margin: "0 auto" }} />}
           </div>
         ))}
       </div>
 
-      {/* Filters */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {["All", "Present", "Late", "Absent"].map((f) => (
-          <button key={f} className={`btn ${filterStatus === f ? "btn-gold" : "btn-outline"}`} style={{ width: "auto", padding: "6px 16px", fontSize: 12 }} onClick={() => setFilterStatus(f)}>{f}</button>
-        ))}
-        <div style={{ width: 1, background: "var(--border)", margin: "0 4px" }} />
-        {["All", ...sections].map((s) => (
-          <button key={s} className={`btn ${filterSection === s ? "btn-ghost" : "btn-outline"}`} style={{ width: "auto", padding: "6px 14px", fontSize: 12 }} onClick={() => setFilterSection(s)}>{s}</button>
-        ))}
+      {/* Cohesive Filters Bar */}
+      <div style={{ display: "flex", gap: "24px", marginBottom: "24px", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: "12px", flexWrap: "wrap" }}>
+        
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: "250px", position: "relative" }}>
+          <Search size={14} color="var(--dimmed)" style={{ position: "absolute", left: "12px" }} />
+          <input 
+            className="search-input" 
+            placeholder="Search student name or email..." 
+            style={{ border: "1px solid var(--border)", background: "var(--surface)", padding: "0 12px 0 36px", height: "36px", borderRadius: "var(--radius-sm)", color: "var(--white)", fontSize: "13px", width: "100%", outline: "none", transition: "border-color 0.15s ease" }}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+          {["All", "Present", "Late", "Absent"].map(f => (
+            <button 
+              key={f} 
+              style={{ 
+                background: "transparent", 
+                border: "none", 
+                borderBottom: filterStatus === f ? "2px solid var(--gold)" : "2px solid transparent", 
+                color: filterStatus === f ? "var(--white)" : "var(--dimmed)", 
+                padding: "0 4px 12px", 
+                fontSize: "13px", 
+                fontWeight: filterStatus === f ? 500 : 400,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                marginBottom: "-13px"
+              }} 
+              onClick={() => setFilterStatus(f)}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ height: "24px", width: "1px", background: "var(--border)", margin: "0 8px" }}></div>
+
+        <select 
+          className="search-input select-input" 
+          style={{ width: "auto", minWidth: "140px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", fontSize: "13px", padding: "0 12px", outline: "none", cursor: "pointer" }} 
+          value={filterSection} 
+          onChange={(e) => setFilterSection(e.target.value)}
+        >
+          <option value="All">All Sections</option>
+          {sections.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
       </div>
 
-      <div className="panel">
+      {/* Table */}
+      <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
         <div className="table-wrap">
-          <table>
-            <thead><tr><th>#</th><th>Student</th><th>Subject</th><th>Section</th><th>Date</th><th>Time In</th><th>Status</th><th>Action</th></tr></thead>
+          <table className="attendance-table" style={{ width: "100%" }}>
+            <thead>
+              <tr>
+                <th style={{ paddingLeft: "24px" }}>Student Name</th>
+                <th>Subject / Event</th>
+                <th>Section</th>
+                <th>Date</th>
+                <th>Clock In</th>
+                <th>Status</th>
+                <th style={{ textAlign: "right", paddingRight: "24px" }}>Actions</th>
+              </tr>
+            </thead>
             <tbody>
-              {filtered.map((r) => (
-                <tr key={r.id}>
-                  <td style={{ color: "var(--muted)", fontSize: 12 }}>{r.id}</td>
-                  <td>{r.name}</td>
-                  <td style={{ fontSize: 13 }}>{r.subject}</td>
-                  <td><span className="tag">{r.section}</span></td>
-                  <td style={{ fontSize: 12, color: "var(--muted)" }}>{r.date}</td>
-                  <td style={{ fontFamily: "monospace", fontSize: 13 }}>{r.timeIn}</td>
-                  <td><span className={`badge badge-${r.status}`}>{r.status.toUpperCase()}</span></td>
-                  <td>
-                    <button className="btn btn-ghost" style={{ width: "auto", padding: "4px 10px", fontSize: 11 }}>Edit</button>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((r) => {
+                const initials = r.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "S";
+                
+                return (
+                  <tr key={r.id} className="user-row">
+                    <td style={{ paddingLeft: "24px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                        <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", fontWeight: 600, flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--dimmed)" }}>
+                          {initials}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 500, color: "var(--white)" }}>{r.name}</div>
+                          <div style={{ fontSize: "13px", color: "var(--dimmed)" }}>{r.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ color: "var(--white-shade)", fontSize: "13px" }}>{r.subject}</td>
+                    <td>
+                      <span className="tag" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--dimmed)", fontSize: "11px" }}>{r.section}</span>
+                    </td>
+                    <td style={{ color: "var(--dimmed)", fontSize: "13px" }}>{r.displayDate}</td>
+                    <td style={{ fontFamily: "var(--font-sans)", fontSize: "13px", color: r.timeIn === "—" ? "var(--muted)" : "var(--white-shade)" }}>{r.timeIn}</td>
+                    <td>
+                      <span className={`status-badge ${r.status}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
+                        {r.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: "right", paddingRight: "24px" }}>
+                      <button className="action-btn-hover" style={{ width: "auto", padding: "6px 12px", marginLeft: "auto" }}>Review</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          {filtered.length === 0 && (
+            <div style={{ padding: "64px 24px", textAlign: "center", color: "var(--dimmed)", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+              <div style={{ width: 48, height: 48, border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Search size={20} color="var(--dimmed)" />
+              </div>
+              <p style={{ fontSize: 13, margin: 0 }}>No records found matching your current search or filters.</p>
+            </div>
+          )}
         </div>
       </div>
-    </>
+      
+      <style jsx>{`
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .search-input:focus, .date-input:focus {
+          border-color: rgba(255,255,255,0.15) !important;
+        }
+
+        /* Native date picker icon styling */
+        .date-input::-webkit-calendar-picker-indicator {
+          filter: invert(1);
+          opacity: 0.3;
+          cursor: pointer;
+        }
+        .date-input::-webkit-calendar-picker-indicator:hover {
+          opacity: 0.6;
+        }
+
+        .btn-ghost:hover {
+          background: var(--surface2) !important;
+          border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .user-row {
+          transition: background 0.15s ease;
+        }
+        .user-row:hover {
+          background: var(--surface2);
+        }
+
+        .action-btn-hover {
+          background: transparent;
+          border: 1px solid transparent;
+          color: var(--dimmed);
+          cursor: pointer;
+          border-radius: var(--radius-sm);
+          opacity: 0;
+          transition: all 0.15s ease;
+          font-size: 11px;
+          font-family: var(--font-sans);
+          font-weight: 500;
+        }
+        .user-row:hover .action-btn-hover {
+          opacity: 1;
+          border-color: var(--border);
+          background: var(--surface);
+        }
+        .action-btn-hover:hover {
+          color: var(--white);
+          background: var(--surface2) !important;
+        }
+      `}</style>
+    </div>
   );
 }
