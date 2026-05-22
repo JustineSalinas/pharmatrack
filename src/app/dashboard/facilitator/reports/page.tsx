@@ -359,9 +359,19 @@ function StudentModal({ onClose }: { onClose: () => void }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
+const SUB_TABS = [
+  { key: "events", label: "Most Attended Events" },
+  { key: "subjects", label: "Subject Breakdown" },
+  { key: "students", label: "Attendance Per Student" },
+  { key: "atrisk", label: "At-Risk Students" },
+] as const;
+
+type SubTabKey = typeof SUB_TABS[number]["key"];
+
 export default function FacultyReports() {
   const maxRate = Math.max(...weeklyData.map(d => d.rate));
   const [showStudentModal, setShowStudentModal] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<SubTabKey>("events");
 
   return (
     <>
@@ -492,7 +502,48 @@ export default function FacultyReports() {
         </div>
       </div>
 
-      {/* ── NEW: Most Attended Events ── */}
+      {/* ── Compact Sub-Navbar ── */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "5px 6px",
+        background: T.surface2,
+        borderRadius: 10,
+        border: `1px solid ${T.border}`,
+        marginBottom: 16,
+      }}>
+        {SUB_TABS.map((tab) => {
+          const isActive = activeSubTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveSubTab(tab.key)}
+              style={{
+                flex: 1,
+                padding: "9px 12px",
+                fontSize: 12,
+                fontWeight: isActive ? 600 : 400,
+                color: isActive ? "#000" : T.mutedMid,
+                background: isActive
+                  ? `linear-gradient(135deg, ${T.gold}, #d4a83a)`
+                  : "transparent",
+                border: "none",
+                borderRadius: 7,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                whiteSpace: "nowrap",
+                letterSpacing: "0.01em",
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Tab: Most Attended Events ── */}
+      {activeSubTab === "events" && (
       <div style={{ ...card, marginBottom: 16 }}>
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -547,9 +598,10 @@ export default function FacultyReports() {
               })}
           </tbody>
         </table>
-      </div>
+      </div>)}
 
-      {/* ── Subject Breakdown ── */}
+      {/* ── Tab: Subject Breakdown ── */}
+      {activeSubTab === "subjects" && (
       <div style={{ ...card, marginBottom: 16 }}>
         <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.border}` }}>
           <div style={sectionLabel}>Subject Breakdown</div>
@@ -596,9 +648,10 @@ export default function FacultyReports() {
             ))}
           </tbody>
         </table>
-      </div>
+      </div>)}
 
-      {/* ── Per-Student Attendance (preview + expand) ── */}
+      {/* ── Tab: Attendance Per Student (preview + expand) ── */}
+      {activeSubTab === "students" && (
       <div style={{ ...card, marginBottom: 16 }}>
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -685,9 +738,10 @@ export default function FacultyReports() {
             view all
           </span>
         </div>
-      </div>
+      </div>)}
 
-      {/* ── At-Risk Students ── */}
+      {/* ── Tab: At-Risk Students ── */}
+      {activeSubTab === "atrisk" && (
       <div style={card}>
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -764,7 +818,7 @@ export default function FacultyReports() {
             ))}
           </tbody>
         </table>
-      </div>
+      </div>)}
     </>
   );
 }
