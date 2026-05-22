@@ -11,7 +11,7 @@ create table if not exists public.users (
   id          uuid primary key references auth.users(id) on delete cascade,
   email       text not null unique,
   full_name   text not null,
-  account_type text not null check (account_type in ('student', 'faculty', 'admin')),
+  account_type text not null check (account_type in ('student', 'facilitator', 'admin')),
   created_at  timestamptz default now()
 );
 
@@ -49,53 +49,53 @@ create policy "Students can read their own profile"
   on public.student_profiles for select
   using (auth.uid() = user_id);
 
-create policy "Faculty and admins can read all student profiles"
+create policy "Facilitator and admins can read all student profiles"
   on public.student_profiles for select
   using (
     exists (
       select 1 from public.users
       where id = auth.uid()
-      and account_type in ('faculty', 'admin')
+      and account_type in ('facilitator', 'admin')
     )
   );
 
 -- ============================================================
--- FACULTY PROFILES
+-- FACILITATOR PROFILES
 -- ============================================================
-create table if not exists public.faculty_profiles (
+create table if not exists public.facilitator_profiles (
   id          uuid primary key default uuid_generate_v4(),
   user_id     uuid not null references public.users(id) on delete cascade,
   department  text not null default 'Pharmacy',
   created_at  timestamptz default now()
 );
 
-alter table public.faculty_profiles enable row level security;
+alter table public.facilitator_profiles enable row level security;
 
-create policy "Faculty can read their own profile"
-  on public.faculty_profiles for select
+create policy "Facilitator can read their own profile"
+  on public.facilitator_profiles for select
   using (auth.uid() = user_id);
 
 -- ============================================================
 -- QR SESSIONS
 -- ============================================================
 create table if not exists public.qr_sessions (
-  id          uuid primary key default uuid_generate_v4(),
-  faculty_id  uuid not null references public.users(id) on delete cascade,
-  subject     text not null,
-  section     text not null,
-  date        date not null,
-  expires_at  timestamptz not null,
-  code        text not null unique,
-  created_at  timestamptz default now()
+  id              uuid primary key default uuid_generate_v4(),
+  facilitator_id  uuid not null references public.users(id) on delete cascade,
+  subject         text not null,
+  section         text not null,
+  date            date not null,
+  expires_at      timestamptz not null,
+  code            text not null unique,
+  created_at      timestamptz default now()
 );
 
 alter table public.qr_sessions enable row level security;
 
-create policy "Faculty can create QR sessions"
+create policy "Facilitator can create QR sessions"
   on public.qr_sessions for insert
   with check (
-    auth.uid() = faculty_id and
-    exists (select 1 from public.users where id = auth.uid() and account_type = 'faculty')
+    auth.uid() = facilitator_id and
+    exists (select 1 from public.users where id = auth.uid() and account_type = 'facilitator')
   );
 
 create policy "Authenticated users can read QR sessions"
@@ -136,14 +136,14 @@ create policy "Students can read their own attendance"
   on public.attendance_records for select
   using (auth.uid() = student_id);
 
-create policy "Faculty can read attendance for their sessions"
+create policy "Facilitator can read attendance for their sessions"
   on public.attendance_records for select
   using (
     exists (
       select 1 from public.qr_sessions qs
       join public.users u on u.id = auth.uid()
       where qs.id = session_id
-      and (qs.faculty_id = auth.uid() or u.account_type in ('faculty', 'admin'))
+      and (qs.facilitator_id = auth.uid() or u.account_type in ('facilitator', 'admin'))
     )
   );
 
