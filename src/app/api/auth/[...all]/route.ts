@@ -46,13 +46,36 @@ export async function POST(req: NextRequest) {
     if (authErr) return NextResponse.json({ error: authErr.message }, { status: 400 });
 
     const userId = authData.user.id;
+    const status = account_type === "student" ? "approved" : "pending";
 
-    await supabase.from("users").insert({ id: userId, email, full_name, account_type });
+    const { error: userInsertErr } = await supabase.from("users").insert({
+      id: userId,
+      email,
+      full_name,
+      account_type,
+      status
+    });
+
+    if (userInsertErr) {
+      await supabase.auth.admin.deleteUser(userId);
+      return NextResponse.json({ error: userInsertErr.message }, { status: 500 });
+    }
 
     if (account_type === "student") {
-      await supabase.from("student_profiles").insert({ user_id: userId, student_id_number, section, current_year });
-    } else {
-      await supabase.from("faculty_profiles").insert({ user_id: userId, department: "Pharmacy" });
+      const qr_code_id = `QR-${crypto.randomUUID().replace(/-/g, "").substring(0, 8).toUpperCase()}`;
+      const { error: profileErr } = await supabase.from("student_profiles").insert({
+        user_id: userId, student_id_number, section, current_year, qr_code_id,
+      });
+      if (profileErr) {
+        await supabase.auth.admin.deleteUser(userId);
+        return NextResponse.json({ error: profileErr.message }, { status: 500 });
+      }
+    } else if (account_type === "facilitator") {
+      const { error: profileErr } = await supabase.from("facilitator_profiles").insert({ user_id: userId, department: "Pharmacy" });
+      if (profileErr) {
+        await supabase.auth.admin.deleteUser(userId);
+        return NextResponse.json({ error: profileErr.message }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ ok: true, userId });

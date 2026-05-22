@@ -1,38 +1,99 @@
 "use client";
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { logoutUser } from "@/lib/auth-client";
 
-const studentNav = [
-  { href: "/dashboard", label: "Overview", icon: "🏠" },
-  { href: "/check-in", label: "Check-In", icon: "📷" },
-  { href: "/dashboard/records", label: "My Records", icon: "📋" },
-  { href: "/dashboard/schedule", label: "Schedule", icon: "🗓️" },
-];
-const accountNav = [
-  { href: "/dashboard/profile", label: "Profile", icon: "👤" },
-  { href: "/dashboard/notifications", label: "Notifications", icon: "🔔" },
-];
+import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { logoutUser, getCurrentUser, getAuthUser } from "@/lib/auth-client";
+import Sidebar from "@/components/Sidebar";
+import type { PharmaUser, StudentProfile, FacilitatorProfile } from "@/lib/schema";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<
+    | (PharmaUser & { student_profiles: StudentProfile | null })
+    | (PharmaUser & { facilitator_profiles: FacilitatorProfile | null })
+    | PharmaUser
+    | null
+  >(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const authUser = await getAuthUser();
+        if (!authUser) {
+          router.push("/login");
+          return;
+        }
+
+        const u = await getCurrentUser();
+        if (!u) {
+          console.log("Dashboard layout: User authenticated but no profile, redirecting to onboarding.");
+          router.push("/onboarding");
+          return;
+        }
+        console.log("Dashboard layout: User loaded successfully:", u.email);
+        setUser(u);
+      } catch (err: any) {
+        console.error("Dashboard layout: Error loading user:", err.message);
+        router.push("/login");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadUser();
+  }, [router]);
 
   const handleLogout = async () => {
     await logoutUser();
-    window.location.href = "/login";
+    router.push("/login");
   };
 
-  const NavLink = ({ href, label, icon }: { href: string; label: string; icon: string }) => (
-    <Link
-      href={href}
-      className={`nav-item ${pathname === href ? "active" : ""}`}
-      onClick={() => setSidebarOpen(false)}
-    >
-      <span className="ni-icon">{icon}</span> {label}
-    </Link>
-  );
+  if (loading) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "var(--bg)", color: "var(--gold)" }}>
+        <div className="loader">Loading Portal...</div>
+      </div>
+    );
+  }
+
+  // If Admin is pending, show restricted view
+  if (user?.account_type === "admin" && user?.status === "pending") {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center" }}>
+        <div className="card" style={{ maxWidth: "500px" }}>
+          <h2 style={{ color: "var(--gold)" }}>Approval Pending</h2>
+          <p style={{ margin: "20px 0" }}>Your admin account is currently awaiting verification by the Department Head. You will be granted full access once approved.</p>
+          <button onClick={handleLogout} className="btn btn-outline" style={{ width: "100%" }}>Log Out</button>
+        </div>
+      </div>
+    );
+  }
+
+  // If Facilitator is pending or rejected, show restricted view
+  if (user?.account_type === "facilitator" && user?.status !== "approved") {
+    const isRejected = user?.status === "rejected";
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center" }}>
+        <div className="card" style={{ maxWidth: "500px" }}>
+          <h2 style={{ color: isRejected ? "var(--danger)" : "var(--gold)" }}>
+            {isRejected ? "Account Rejected" : "Pending Approval"}
+          </h2>
+          <p style={{ margin: "20px 0" }}>
+            {isRejected
+              ? "Your facilitator account has been rejected. Please contact the System Administrator for more information."
+              : "Your facilitator account is currently awaiting approval by the System Administrator. You will be granted access once approved."}
+          </p>
+          <button onClick={handleLogout} className="btn btn-outline" style={{ width: "100%" }}>Log Out</button>
+        </div>
+      </div>
+    );
+  }
+
+  const role = user?.account_type || "student";
+  const userName = user?.full_name || "User";
+  const userSub = role === "admin" ? "System Admin" : role === "facilitator" ? "Facilitator" : "Student";
+  const avatarInitials = typeof userName === "string" ? userName.substring(0, 2).toUpperCase() : "U";
 
   return (
     <div className="dash-layout">
@@ -48,34 +109,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         className="mobile-menu-btn"
       >☰</button>
 
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="sidebar-logo">
-          <Link href="/" className="logo-row" style={{ margin: 0, justifyContent: "flex-start" }}>
-            <div className="logo-mark" style={{ width: 34, height: 34, fontSize: 14 }}>⚗️</div>
-            <span style={{ fontSize: 13 }}>PHARMATRACK</span>
-          </Link>
-        </div>
-        <div className="nav-section">
-          <div className="nav-section-label">Main</div>
-          {studentNav.map((n) => <NavLink key={n.href} {...n} />)}
-        </div>
-        <div className="nav-section">
-          <div className="nav-section-label">Account</div>
-          {accountNav.map((n) => <NavLink key={n.href} {...n} />)}
-        </div>
-        <div className="sidebar-footer">
-          <div className="user-chip" onClick={handleLogout} style={{ cursor: "pointer" }}>
-            <div className="avatar">JD</div>
-            <div className="user-info">
-              <strong>Juan Dela Cruz</strong>
-              <span>PharmA · 2nd Year</span>
-            </div>
-            <span style={{ color: "var(--muted)" }}>⏻</span>
-          </div>
-        </div>
-      </aside>
+      {/* Wrapping Sidebar in a div that controls mobile open state if needed */}
+      <div className={`sidebar-wrapper ${sidebarOpen ? "open" : ""}`}>
+        <Sidebar
+          role={role as any}
+          userName={userName}
+          userSub={userSub}
+          avatarInitials={avatarInitials}
+        />
+      </div>
 
-      <main className="main-content page-enter">{children}</main>
+      {/* Mobile Overlay — only renders when sidebar is open to handle closing without broad listeners */}
+      {sidebarOpen && (
+        <div
+          className="mobile-sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 40,
+            background: "rgba(0,0,0,0.4)",
+            backdropFilter: "blur(4px)"
+          }}
+        />
+      )}
+
+      <main className="main-content page-enter">
+        {children}
+      </main>
     </div>
   );
 }
