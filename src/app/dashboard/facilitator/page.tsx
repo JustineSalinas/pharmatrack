@@ -24,12 +24,53 @@ export default function FacilitatorOverview() {
         const u = await getCurrentUser();
         setUser(u);
 
-        setTodayAttendance([]);
+        const todayStart = new Date();
+        todayStart.setHours(0,0,0,0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23,59,59,999);
+        const todayStr = todayStart.toISOString().split("T")[0];
+
+        const [
+          { count: totalStudents },
+          { count: activeEventsToday },
+          { count: scansToday },
+          { count: studentsAbsent },
+          { data: feedData }
+        ] = await Promise.all([
+          supabase.from("users").select("*", { count: "exact", head: true }).eq("account_type", "student").eq("status", "approved"),
+          supabase.from("events").select("*", { count: "exact", head: true }).eq("date", todayStr),
+          supabase.from("attendance_records").select("*", { count: "exact", head: true }).gte("created_at", todayStart.toISOString()).lte("created_at", todayEnd.toISOString()),
+          supabase.from("attendance_records").select("*", { count: "exact", head: true }).gte("created_at", todayStart.toISOString()).lte("created_at", todayEnd.toISOString()).eq("status", "absent"),
+          supabase.from("attendance_records").select(`
+            status,
+            time_in,
+            created_at,
+            users!student_id (
+              full_name,
+              student_profiles (
+                section
+              )
+            )
+          `)
+          .gte("created_at", todayStart.toISOString())
+          .lte("created_at", todayEnd.toISOString())
+          .order("created_at", { ascending: false })
+          .limit(10)
+        ]);
+
+        const formattedFeed = (feedData || []).map((r: any) => ({
+          name: r.users?.full_name || "Unknown",
+          section: (r.users?.student_profiles?.[0]?.section) || (r.users?.student_profiles?.section) || "N/A",
+          timeIn: r.time_in ? new Date(r.time_in).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
+          status: r.status
+        }));
+
+        setTodayAttendance(formattedFeed);
         setStats({
-          totalStudents: 0,
-          activeEventsToday: 0,
-          scansToday: 0,
-          studentsAbsent: 0,
+          totalStudents: totalStudents || 0,
+          activeEventsToday: activeEventsToday || 0,
+          scansToday: scansToday || 0,
+          studentsAbsent: studentsAbsent || 0,
         });
 
       } catch (err) {
