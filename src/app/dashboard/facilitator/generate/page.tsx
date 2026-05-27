@@ -5,6 +5,7 @@ import {
   ScanLine, CheckCircle, XCircle, Calendar, BookOpen, Wifi, WifiOff,
   LogIn, LogOut, AlertTriangle, ChevronDown,
 } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth-client";
 
 const SUBJECTS = ["Pharmacology 301", "Pharmacognosy", "Clinical Pharmacy", "Pharmaceutical Chemistry", "Pharmacy Law & Ethics"];
 
@@ -171,10 +172,12 @@ export default function ScannerPage() {
   const [scanResult, setScanResult] = useState<{ success: boolean; message: string; student?: string } | null>(null);
   const [entries, setEntries] = useState<ScanEntry[]>([]);
   const [tick, setTick] = useState(0);
-  const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tickInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionCode, setSessionCode] = useState<string | null>(null);
 
   useEffect(() => {
+    getCurrentUser().then(setUser);
     tickInterval.current = setInterval(() => setTick(t => t + 1), 60000);
     return () => {
       if (tickInterval.current) clearInterval(tickInterval.current);
@@ -182,8 +185,40 @@ export default function ScannerPage() {
     };
   }, []);
 
-  const handleStartScanning = () => { setScanning(true); setScanResult(null); };
-  const handleStopScanning = () => { setScanning(false); setScanResult(null); };
+  const handleStartScanning = async () => { 
+    if (!user) return;
+    setScanning(true); 
+    setScanResult(null); 
+
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 2);
+    
+    try {
+      const { data, error } = await supabase.from("qr_sessions").insert({
+        facilitator_id: user.id,
+        subject: form.subject,
+        section: "All",
+        date: form.date,
+        expires_at: expiresAt.toISOString(),
+        code: code
+      }).select().single();
+      
+      if (error) throw error;
+      setSessionId(data.id);
+      setSessionCode(data.code);
+    } catch (err) {
+      console.error(err);
+      setScanResult({ success: false, message: "Failed to create session." });
+      setScanning(false);
+    }
+  };
+  const handleStopScanning = () => { 
+    setScanning(false); 
+    setScanResult(null); 
+    setSessionId(null);
+    setSessionCode(null);
+  };
 
   const showResult = (result: typeof scanResult) => {
     setScanResult(result);
@@ -191,29 +226,76 @@ export default function ScannerPage() {
     resultTimer.current = setTimeout(() => setScanResult(null), 3500);
   };
 
-  const handleSimulateScan = () => {
-    const mockStudents = ["Juan dela Cruz", "Maria Santos", "Carlo Reyes", "Ana Lim", "Ben Torres"];
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const handleSimulateScan = async () => {
+    if (!sessionId) {
+      showResult({ success: false, message: "Please open scanner first." });
+      return;
+    }
+
+    const { data: students } = await supabase.from("users").select("id, full_name").eq("account_type", "student");
+    if (!students || students.length === 0) {
+      showResult({ success: false, message: "No students in database to simulate scan." });
+      return;
+    }
+
+    const targetUser = students[Math.floor(Math.random() * students.length)];
+    const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
     if (mode === "check-in") {
-      const student = mockStudents[Math.floor(Math.random() * mockStudents.length)];
-      const alreadyIn = entries.find(e => e.student === student && e.status === "checked-in");
-      if (alreadyIn) { showResult({ success: false, message: "Already checked in.", student }); return; }
-      setEntries(prev => [{ student, checkInTime: timeStr, checkInTimestamp: Date.now(), checkOutTime: null, duration: null, status: "checked-in" }, ...prev]);
-      showResult({ success: true, message: "Successfully checked in.", student });
+      const { data: existing } = await supabase.from("attendance_records")
+        .select("id")
+        .eq("session_id", sessionId)
+        .eq("student_id", targetUser.id)
+        .single();
+        
+      if (existing) {
+        showResult({ success: false, message: "Already checked in.", student: targetUser.full_name });
+        return;
+      }
+      
+      const { error } = await supabase.from("attendance_records").insert({
+        student_id: targetUser.id,
+        session_id: sessionId,
+        status: "present",
+        time_in: new Date().toISOString(),
+        scanned_by: user.id
+      });
+
+      if (error) {
+        showResult({ success: false, message: "Check-in failed: " + error.message });
+      } else {
+        setEntries(prev => [{ student: targetUser.full_name, checkInTime: timeStr, checkInTimestamp: Date.now(), checkOutTime: null, duration: null, status: "checked-in" }, ...prev]);
+        showResult({ success: true, message: "Successfully checked in.", student: targetUser.full_name });
+      }
     } else {
-      const checkedIn = entries.filter(e => e.status === "checked-in");
-      if (checkedIn.length === 0) { showResult({ success: false, message: "No checked-in students found." }); return; }
-      const target = checkedIn[Math.floor(Math.random() * checkedIn.length)];
-      const durationMs = Date.now() - target.checkInTimestamp;
-      const durationStr = elapsed(durationMs);
-      setEntries(prev => prev.map(e =>
-        e.student === target.student && e.status === "checked-in"
-          ? { ...e, checkOutTime: timeStr, duration: durationStr, status: "checked-out" }
-          : e
-      ));
-      showResult({ success: true, message: `Checked out after ${durationStr}.`, student: target.student });
+      const { data: existing } = await supabase.from("attendance_records")
+        .select("id, time_in")
+        .eq("session_id", sessionId)
+        .eq("student_id", targetUser.id)
+        .is("time_out", null)
+        .maybeSingle();
+        
+      if (!existing) {
+        showResult({ success: false, message: "No open check-in found.", student: targetUser.full_name });
+        return;
+      }
+
+      const { error } = await supabase.from("attendance_records").update({
+        time_out: new Date().toISOString()
+      }).eq("id", existing.id);
+
+      if (error) {
+        showResult({ success: false, message: "Check-out failed: " + error.message });
+      } else {
+        const durationMs = Date.now() - new Date(existing.time_in).getTime();
+        const durationStr = elapsed(durationMs);
+        setEntries(prev => prev.map(e =>
+          e.student === targetUser.full_name && e.status === "checked-in"
+            ? { ...e, checkOutTime: timeStr, duration: durationStr, status: "checked-out" }
+            : e
+        ));
+        showResult({ success: true, message: `Checked out after ${durationStr}.`, student: targetUser.full_name });
+      }
     }
   };
 
