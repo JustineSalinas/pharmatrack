@@ -604,7 +604,7 @@ export default function FacultyReports() {
         <tbody>
           ${allStudents.map(s => {
             const cls = s.rate >= 85 ? "green" : s.rate >= 75 ? "amber" : "red";
-            return \`<tr><td>${s.name}</td><td>${s.id}</td><td>${s.section}</td><td><span class="badge ${cls}">${s.rate}%</span></td></tr>\`;
+            return "<tr><td>" + s.name + "</td><td>" + s.id + "</td><td>" + s.section + "</td><td><span class=\"badge " + cls + "\">" + s.rate + "%</span></td></tr>";
           }).join("")}
         </tbody>
       </table>
