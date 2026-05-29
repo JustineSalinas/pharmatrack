@@ -95,15 +95,12 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="fade-in">
+    <div className="fade-in sd-root">
       {/* Header and Actions in a single row */}
-      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "32px" }}>
+      <header className="sd-header">
         <div>
-          <div className="breadcrumb" style={{ fontSize: "11px", textTransform: "uppercase", fontWeight: 600, color: "var(--dimmed)", letterSpacing: "0.06em", marginBottom: "8px" }}>
-            <span>Admin Control</span><span style={{ margin: "0 8px" }}>/</span><span>Users</span>
-          </div>
-          <h2 style={{ fontSize: "28px", fontWeight: 700, margin: 0, letterSpacing: "-0.03em", color: "var(--white)" }}>User Management</h2>
-          <p style={{ color: "var(--dimmed)", fontSize: "13px", marginTop: "4px", margin: 0 }}>{users.length} registered accounts in the database</p>
+          <p className="sd-header-eyebrow">Admin Control</p>
+          <h1 className="sd-header-title">User Management</h1>
         </div>
         <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <div className="search-bar-wrap" style={{ position: "relative", width: "260px" }}>
@@ -117,7 +114,7 @@ export default function AdminUsers() {
             />
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Role Filters - Tab Style */}
       <div style={{ display: "flex", gap: "24px", marginBottom: "24px", alignItems: "center", borderBottom: "1px solid var(--border)" }}>
@@ -147,7 +144,7 @@ export default function AdminUsers() {
               {label} 
               <span style={{ 
                 fontSize: "11px", 
-                background: filter === f ? "rgba(232,184,75,0.1)" : "var(--surface2)", 
+                background: filter === f ? "rgba(180, 83, 9, 0.08)" : "var(--surface2)", 
                 color: filter === f ? "var(--gold)" : "var(--dimmed)",
                 padding: "2px 6px", 
                 borderRadius: "10px",
@@ -276,64 +273,13 @@ export default function AdminUsers() {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
         .search-input:focus {
-          border-color: rgba(255,255,255,0.15) !important;
+          border-color: rgba(0, 0, 0, 0.15) !important;
         }
 
         .btn-ghost-amber:hover {
           border-color: var(--gold) !important;
           color: var(--gold) !important;
-          background: rgba(232,184,75,0.05) !important;
-        }
-
-        .user-row {
-          transition: background 0.15s ease;
-        }
-        .user-row:hover {
-          background: var(--surface2);
-        }
-
-        .action-btn-hover {
-          background: transparent;
-          border: 1px solid transparent;
-          color: var(--dimmed);
-          cursor: pointer;
-          padding: 6px;
-          border-radius: var(--radius-sm);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0;
-          transition: all 0.15s ease;
-          font-size: 11px;
-          font-family: var(--font-sans);
-          font-weight: 500;
-        }
-        .user-row:hover .action-btn-hover {
-          opacity: 1;
-        }
-        
-        /* Always show if it's pending so admin doesn't miss it */
-        .user-row .approve-btn, .user-row .reject-btn {
-           opacity: 1;
-           border: 1px solid var(--border);
-        }
-
-        .suspend-btn:hover, .reject-btn:hover {
-          color: var(--danger);
-          background: rgba(248, 113, 113, 0.1);
-          border-color: rgba(248, 113, 113, 0.2);
-        }
-
-        .approve-btn:hover, .restore-btn:hover {
-          color: var(--success);
-          background: rgba(74, 222, 128, 0.1);
-          border-color: rgba(74, 222, 128, 0.2);
-        }
-
-        .reset-btn:hover {
-          color: #60a5fa;
-          background: rgba(96, 165, 250, 0.1);
-          border-color: rgba(96, 165, 250, 0.2);
+          background: rgba(180, 83, 9, 0.04) !important;
         }
       `}</style>
     </div>

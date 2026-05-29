@@ -735,7 +735,7 @@ function SettingGroup({
                   <input
                     type="time"
                     className="settings-input"
-                    style={{ minWidth: "130px", colorScheme: "dark" }}
+                    style={{ minWidth: "130px", colorScheme: "light" }}
                     value={val}
                     onChange={(e) => onUpdate(s.id, e.target.value)}
                   />

@@ -1,10 +1,22 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
-  Loader2, Users, LogIn, LogOut, CalendarCheck, QrCode, BarChart2, UserCog,
+  Loader2,
+  Users,
+  LogIn,
+  LogOut,
+  CalendarCheck,
+  QrCode,
+  BarChart2,
+  Calendar,
+  ChevronRight,
+  ArrowRight,
+  Clock,
+  ScanLine
 } from "lucide-react";
 
 export default function FacilitatorOverview() {
@@ -24,13 +36,86 @@ export default function FacilitatorOverview() {
         const u = await getCurrentUser();
         setUser(u);
 
-        setTodayAttendance([]);
+        // 1. Total Students
+        const { count: studentCount } = await supabase
+          .from("users")
+          .select("*", { count: "exact", head: true })
+          .eq("account_type", "student");
+
+        // 2. Active Events Today
+        const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+        const { count: activeEventsCount } = await supabase
+          .from("events")
+          .select("*", { count: "exact", head: true })
+          .eq("date", todayStr);
+
+        // 3. Scans Today & Students Absent (client-side classification from attendance_records)
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999);
+
+        const { data: todayRecords } = await supabase
+          .from("attendance_records")
+          .select("id, status")
+          .gte("created_at", startOfToday.toISOString())
+          .lte("created_at", endOfToday.toISOString()) as any;
+
+        let todayScans = 0;
+        let todayAbsents = 0;
+        if (todayRecords) {
+          todayRecords.forEach((r: any) => {
+            if (r.status === "present" || r.status === "late") {
+              todayScans++;
+            } else if (r.status === "absent") {
+              todayAbsents++;
+            }
+          });
+        }
+
         setStats({
-          totalStudents: 0,
-          activeEventsToday: 0,
-          scansToday: 0,
-          studentsAbsent: 0,
+          totalStudents: studentCount || 0,
+          activeEventsToday: activeEventsCount || 0,
+          scansToday: todayScans,
+          studentsAbsent: todayAbsents,
         });
+
+        // 4. Live Activity Feed (Recent Scans)
+        const { data: recentAtt } = await supabase
+          .from("attendance_records")
+          .select(`
+            id,
+            time_in,
+            status,
+            created_at,
+            events ( name ),
+            users ( 
+              id,
+              full_name,
+              student_profiles ( section )
+            )
+          `)
+          .order("created_at", { ascending: false })
+          .limit(8) as any;
+
+        const formatted = (recentAtt || []).map((r: any) => {
+          const uData = r.users as any;
+          const profiles = uData?.student_profiles;
+          const section = Array.isArray(profiles) 
+            ? profiles[0]?.section 
+            : (profiles?.section || "N/A");
+          
+          return {
+            id: r.id,
+            name: uData?.full_name || "Unknown Student",
+            section: section,
+            timeIn: r.time_in ? new Date(r.time_in).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
+            status: r.status || "present",
+            eventName: r.events?.name || "Event"
+          };
+        });
+
+        setTodayAttendance(formatted);
 
       } catch (err) {
         console.error("Facilitator dash error", err);
@@ -43,13 +128,20 @@ export default function FacilitatorOverview() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-        <Loader2 className="animate-spin" size={40} color="var(--gold)" />
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+        <Loader2 size={20} color="var(--muted)" style={{ animation: "spin 1s linear infinite" }} />
       </div>
     );
   }
 
+  const firstName = user?.full_name?.split(" ")[0] ?? "Facilitator";
 
+  const getGreeting = () => {
+    const hr = new Date().getHours();
+    if (hr < 12) return "morning";
+    if (hr < 17) return "afternoon";
+    return "evening";
+  };
 
   const quickActions = [
     {
@@ -65,6 +157,12 @@ export default function FacilitatorOverview() {
       href: "/dashboard/facilitator/events",
     },
     {
+      icon: <Users size={16} />,
+      label: "Students",
+      sub: "View students list",
+      href: "/dashboard/facilitator/students",
+    },
+    {
       icon: <BarChart2 size={16} />,
       label: "View Reports",
       sub: "Attendance records",
@@ -72,283 +170,158 @@ export default function FacilitatorOverview() {
     },
   ];
 
-  const bannerStats = [
-    {
-      icon: <Users size={18} />,
-      label: "Total Students",
-      value: stats.totalStudents,
-      accent: "rgba(255,255,255,0.55)",
-    },
-    {
-      icon: <CalendarCheck size={18} />,
-      label: "Active Events Today",
-      value: stats.activeEventsToday,
-      accent: "var(--gold, #f0c040)",
-    },
-    {
-      icon: <LogIn size={18} />,
-      label: "Scans Today",
-      value: stats.scansToday,
-      accent: "#4ade80",
-    },
-    {
-      icon: <LogOut size={18} />,
-      label: "Students Absent",
-      value: stats.studentsAbsent,
-      accent: "#f87171",
-    },
-  ];
-
-  const scanLineKeyframes = `
-    @keyframes scanLine {
-      0%   { top: 8px; opacity: 0; }
-      10%  { opacity: 1; }
-      90%  { opacity: 1; }
-      100% { top: calc(100% - 8px); opacity: 0; }
-    }
-    .scan-line-anim {
-      position: absolute;
-      left: 6px;
-      right: 6px;
-      height: 1.5px;
-      background: rgba(200, 146, 42, 0.55);
-      animation: scanLine 2s ease-in-out infinite;
-    }
-  `;
-
   return (
-    <>
-      <style>{scanLineKeyframes}</style>
-      {/* Page Header */}
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
-          Facilitator
+    <div className="fade-in sd-root">
+      {/* HEADER */}
+      <header className="sd-header">
+        <div>
+          <p className="sd-header-eyebrow">Facilitator Portal</p>
+          <h1 className="sd-header-title">
+            Good {getGreeting()}, <span className="sd-header-name">{firstName}</span> 👋
+          </h1>
         </div>
-        <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Dashboard</h2>
-      </div>
+        <div className="sd-header-date">
+          <Calendar size={13} />
+          {new Date().toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" })}
+        </div>
+      </header>
 
-      {/* Top Banner Card — 4 Stats */}
-      <div style={{
-        background: "var(--card, #13152a)",
-        border: "1px solid var(--border, rgba(255,255,255,0.07))",
-        borderRadius: 12,
-        padding: "24px 28px",
-        marginBottom: 20,
-        marginTop: 32,
-      }}>
-        <div style={{
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: "0.08em",
-          color: "var(--muted)",
-          textTransform: "uppercase",
-          marginBottom: 24,
-        }}>
-          Today's Overview
+      {/* STATS STRIP */}
+      <div className="sd-stat-tiles" style={{ gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "none", width: "100%", display: "grid", gap: "16px", marginBottom: "24px" }}>
+        <div className="sd-stat-tile">
+          <div className="sd-tile-icon-wrap" style={{ background: "rgba(107, 114, 128, 0.08)", color: "var(--muted)" }}>
+            <Users size={18} />
+          </div>
+          <div>
+            <div className="sd-tile-number">{stats.totalStudents}</div>
+            <div className="sd-tile-label">Total Students</div>
+          </div>
         </div>
 
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 0,
-        }}>
-          {bannerStats.map((s, i) => (
-            <div
-              key={s.label}
-              style={{
-                padding: "0 28px",
-                borderRight: i < bannerStats.length - 1
-                  ? "1px solid var(--border, rgba(255,255,255,0.07))"
-                  : "none",
-              }}
-            >
-              {/* Icon */}
-              <div style={{ color: s.accent, marginBottom: 12, opacity: 0.85 }}>
-                {s.icon}
-              </div>
-              {/* Value */}
-              <div style={{
-                fontSize: 36,
-                fontWeight: 700,
-                color: "var(--foreground, #fff)",
-                lineHeight: 1,
-                marginBottom: 8,
-              }}>
-                {s.value}
-              </div>
-              {/* Label */}
-              <div style={{
-                fontSize: 11,
-                color: "var(--muted)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                lineHeight: 1.4,
-              }}>
-                {s.label}
-              </div>
-            </div>
-          ))}
+        <div className="sd-stat-tile">
+          <div className="sd-tile-icon-wrap" style={{ background: "var(--gold-dim)", color: "var(--gold)" }}>
+            <CalendarCheck size={18} />
+          </div>
+          <div>
+            <div className="sd-tile-number">{stats.activeEventsToday}</div>
+            <div className="sd-tile-label">Active Events</div>
+          </div>
+        </div>
+
+        <div className="sd-stat-tile">
+          <div className="sd-tile-icon-wrap" style={{ background: "rgba(22, 163, 74, 0.08)", color: "var(--success)" }}>
+            <LogIn size={18} />
+          </div>
+          <div>
+            <div className="sd-tile-number">{stats.scansToday}</div>
+            <div className="sd-tile-label">Scans Today</div>
+          </div>
+        </div>
+
+        <div className="sd-stat-tile">
+          <div className="sd-tile-icon-wrap" style={{ background: "rgba(220, 38, 38, 0.08)", color: "var(--danger)" }}>
+            <LogOut size={18} />
+          </div>
+          <div>
+            <div className="sd-tile-number">{stats.studentsAbsent}</div>
+            <div className="sd-tile-label">Absent Today</div>
+          </div>
         </div>
       </div>
 
-      {/* Bottom: Attendance Feed + Quick Actions */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 220px", gap: 16, alignItems: "start" }}>
-
-        {/* Attendance Feed */}
-        <div style={{
-          background: "var(--card, #13152a)",
-          border: "1px solid var(--border, rgba(255,255,255,0.07))",
-          borderRadius: 12,
-          overflow: "hidden",
-        }}>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))",
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Live Activity Feed</span>
-            <a style={{ color: "var(--gold)", fontSize: 12, cursor: "pointer" }}>View all →</a>
+      {/* BOTTOM LAYOUT */}
+      <div className="sd-bottom-row" style={{ gridTemplateColumns: "1fr 300px" }}>
+        {/* LEFT: Live Activity Feed */}
+        <div className="recent-scans">
+          <div className="recent-scans-header">
+            <h3>Live Activity Feed</h3>
+            <Link href="/dashboard/facilitator/attendance">
+              View all <ArrowRight size={12} style={{ display: "inline", marginLeft: 2, verticalAlign: "middle" }} />
+            </Link>
           </div>
 
           {todayAttendance.length > 0 ? (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))" }}>
-                  {["Student", "Section", "Time In", "Status"].map(h => (
-                    <th key={h} style={{ padding: "10px 20px", textAlign: "left", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {todayAttendance.map((s, idx) => (
-                  <tr key={idx} style={{ borderBottom: "1px solid var(--border, rgba(255,255,255,0.04))" }}>
-                    <td style={{ padding: "12px 20px" }}>{s.name}</td>
-                    <td style={{ padding: "12px 20px" }}><span className="tag">{s.section}</span></td>
-                    <td style={{ padding: "12px 20px", color: "var(--muted)", fontSize: 12 }}>{s.timeIn}</td>
-                    <td style={{ padding: "12px 20px" }}><span className={`badge badge-${s.status}`}>{s.status.toUpperCase()}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            todayAttendance.map((scan) => {
+              const initials = scan.name
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+                .substring(0, 2)
+                .toUpperCase() || "U";
+              return (
+                <div className="scan-item" key={scan.id}>
+                  <div className="scan-avatar">{initials}</div>
+                  <div className="scan-info">
+                    <div className="scan-name">{scan.name}</div>
+                    <div className="scan-detail">
+                      <Clock size={10} style={{ display: "inline", marginRight: 3, verticalAlign: "middle" }} />
+                      {scan.eventName} · {scan.timeIn} · <span className="tag" style={{ border: "1px solid var(--border)", padding: "1px 4px", borderRadius: 4, fontSize: 10 }}>{scan.section}</span>
+                    </div>
+                  </div>
+                  <div className={`status-badge ${scan.status}`}>{scan.status}</div>
+                </div>
+              );
+            })
           ) : (
-            /* ── Scanner Empty State ── */
-            <div style={{ padding: "52px 20px", textAlign: "center" }}>
-              <div style={{
-                width: 52,
-                height: 52,
-                border: "1.5px dashed rgba(255,255,255,0.18)",
-                borderRadius: 10,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 16px",
-                position: "relative",
-                overflow: "hidden",
-              }}>
-                {[
-                  { top: 5, left: 5, borderWidth: "1.5px 0 0 1.5px" },
-                  { top: 5, right: 5, borderWidth: "1.5px 1.5px 0 0" },
-                  { bottom: 5, left: 5, borderWidth: "0 0 1.5px 1.5px" },
-                  { bottom: 5, right: 5, borderWidth: "0 1.5px 1.5px 0" },
-                ].map((style, i) => (
-                  <span key={i} style={{
-                    position: "absolute",
-                    width: 9,
-                    height: 9,
-                    borderColor: "rgba(255,255,255,0.35)",
-                    borderStyle: "solid",
-                    ...style,
-                  }} />
-                ))}
-                <div className="scan-line-anim" />
-              </div>
-
-              <div style={{ fontSize: 13.5, color: "rgba(255,255,255,0.52)", marginBottom: 4 }}>
-                No scans recorded yet.
-              </div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", marginBottom: 18 }}>
-                Start an event to begin tracking.
-              </div>
-              <Link
-                href="/dashboard/facilitator/generate"
+            <div style={{ padding: "52px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+              <div
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 7,
-                  padding: "8px 20px",
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.18)",
+                  width: 48,
+                  height: 48,
+                  border: "1px dashed var(--border)",
                   borderRadius: 8,
-                  color: "rgba(255,255,255,0.72)",
-                  fontSize: 13.5,
-                  textDecoration: "none",
-                  transition: "background 0.15s, border-color 0.15s",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.28)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)";
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <QrCode size={15} style={{ opacity: 0.6 }} />
-                Open Scanner
-              </Link>
+                <ScanLine size={20} color="var(--dimmed)" />
+              </div>
+              <p style={{ fontSize: 13, color: "var(--dimmed)", textAlign: "center", margin: 0, lineHeight: 1.6 }}>
+                No scans recorded today.
+                <br />
+                Attendance will appear here once events begin.
+              </p>
             </div>
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div style={{
-          background: "var(--card, #13152a)",
-          border: "1px solid var(--border, rgba(255,255,255,0.07))",
-          borderRadius: 12,
-          overflow: "hidden",
-        }}>
-          <div style={{
-            padding: "14px 16px",
-            borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))",
-            fontSize: 11, fontWeight: 600, color: "var(--muted)",
-            textTransform: "uppercase", letterSpacing: "0.08em",
-          }}>
-            Quick Actions
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {quickActions.map((a, i) => (
-              <Link
-                key={a.label}
-                href={a.href}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  padding: "14px 16px",
-                  borderBottom: i < quickActions.length - 1 ? "1px solid var(--border, rgba(255,255,255,0.05))" : "none",
-                  color: "var(--foreground, #fff)",
-                  textDecoration: "none",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-              >
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  background: "rgba(255,200,0,0.1)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "var(--gold)", flexShrink: 0,
-                }}>
-                  {a.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{a.label}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{a.sub}</div>
-                </div>
-              </Link>
-            ))}
+        {/* RIGHT: Quick Actions */}
+        <div className="sd-right-col">
+          <div className="sd-quick-links">
+            <p className="sd-panel-label" style={{ marginBottom: 10 }}>
+              Quick Actions
+            </p>
+            <div className="sd-quick-grid" style={{ gridTemplateColumns: "1fr" }}>
+              {quickActions.map((a) => (
+                <Link href={a.href as any} className="sd-quick-card" key={a.label}>
+                  <div className="sd-quick-icon" style={{ background: "var(--gold-dim)", color: "var(--gold)" }}>
+                    {a.icon}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
+                    <span className="sd-quick-label" style={{ fontWeight: 600 }}>
+                      {a.label}
+                    </span>
+                    <span style={{ fontSize: "11px", color: "var(--muted)" }}>{a.sub}</span>
+                  </div>
+                  <ChevronRight size={14} className="sd-quick-arrow" />
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
-
       </div>
-    </>
+
+      <style jsx>{`
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
+    </div>
   );
 }

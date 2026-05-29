@@ -279,7 +279,7 @@ export default function EventsManagement() {
                   <input 
                     type="date" className="settings-input" 
                     value={date} onChange={e => setDate(e.target.value)} required 
-                    style={{ colorScheme: "dark" }}
+                    style={{ colorScheme: "light" }}
                   />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -287,7 +287,7 @@ export default function EventsManagement() {
                   <input 
                     type="time" className="settings-input" 
                     value={startTime} onChange={e => setStartTime(e.target.value)} required 
-                    style={{ colorScheme: "dark" }}
+                    style={{ colorScheme: "light" }}
                   />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -295,7 +295,7 @@ export default function EventsManagement() {
                   <input 
                     type="time" className="settings-input" 
                     value={lateTime} onChange={e => setLateTime(e.target.value)} required 
-                    style={{ colorScheme: "dark", borderColor: "rgba(232, 184, 75, 0.3)", background: "rgba(232, 184, 75, 0.05)" }}
+                    style={{ colorScheme: "light", borderColor: "rgba(180, 83, 9, 0.3)", background: "rgba(180, 83, 9, 0.04)" }}
                   />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -303,7 +303,7 @@ export default function EventsManagement() {
                   <input 
                     type="time" className="settings-input" 
                     value={endTime} onChange={e => setEndTime(e.target.value)} required 
-                    style={{ colorScheme: "dark", borderColor: "rgba(248, 113, 113, 0.3)", background: "rgba(248, 113, 113, 0.05)" }}
+                    style={{ colorScheme: "light", borderColor: "rgba(220, 38, 38, 0.3)", background: "rgba(220, 38, 38, 0.04)" }}
                   />
                 </div>
               </div>
