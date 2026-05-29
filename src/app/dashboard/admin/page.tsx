@@ -106,12 +106,12 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="fade-in">
+    <div className="fade-in sd-root">
       {/* HEADER */}
-      <header className="dash-header">
-        <div className="dash-header-left">
-          <span className="breadcrumb-text">Admin</span>
-          <h1>Overview</h1>
+      <header className="sd-header">
+        <div>
+          <p className="sd-header-eyebrow">Admin Portal</p>
+          <h1 className="sd-header-title">Overview</h1>
         </div>
         <div className="dash-header-right">
           <Link href="/dashboard/admin/users" className="dash-search" style={{ textDecoration: "none", color: "var(--dimmed)" }}>
