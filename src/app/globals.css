@@ -1,31 +1,30 @@
 
 
 :root {
-  /* Core Palette — Light Mode */
-  --bg: #F7F8FA;
-  --surface: #FFFFFF;
-  --surface2: #F1F3F5;
-  --card: #FFFFFF;
-  --border: rgba(0, 0, 0, 0.08);
-  --border-subtle: rgba(0, 0, 0, 0.04);
+  /* Core Palette — Linear/Vercel */
+  --bg: #1a0b36;
+  --surface: #16161D;
+  --surface2: #1C1C25;
+  --border: rgba(255, 255, 255, 0.05);
+  --border-subtle: rgba(255, 255, 255, 0.03);
 
   /* Typography */
-  --white: #111827;
-  --white-shade: #374151;
-  --muted: #6B7280;
-  --dimmed: #9CA3AF;
+  --white: #FFFFFF;
+  --white-shade: rgba(255, 255, 255, 0.85);
+  --muted: #888888;
+  --dimmed: #666666;
 
-  /* Accent — Darker Amber for contrast on white */
-  --gold: #B45309;
-  --gold2: #D97706;
-  --gold-dim: rgba(180, 83, 9, 0.08);
+  /* Accent — Amber only, use sparingly */
+  --gold: #E8B84B;
+  --gold2: #F0C96B;
+  --gold-dim: rgba(232, 184, 75, 0.1);
 
-  /* Semantic — darker for white bg contrast */
-  --danger: #DC2626;
-  --success: #16A34A;
-  --teal: #0D9488;
-  --teal-dim: rgba(13, 148, 136, 0.08);
-  --mint: #16A34A;
+  /* Semantic */
+  --danger: #F87171;
+  --success: #4ADE80;
+  --teal: #2DD4BF;
+  --teal-dim: rgba(45, 212, 191, 0.1);
+  --mint: #4ADE80;
 
   /* Sizing */
   --radius: 8px;
@@ -101,10 +100,10 @@ textarea {
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--surface2); }
-::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
-html { scrollbar-width: thin; scrollbar-color: #D1D5DB var(--bg); }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2a2a35; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3a48; }
+html { scrollbar-width: thin; scrollbar-color: #2a2a35 var(--bg); }
 
 /* Page transitions */
 .page-enter {
@@ -1552,6 +1551,54 @@ html { scrollbar-width: thin; scrollbar-color: #D1D5DB var(--bg); }
   background-color: var(--bg);
   position: relative;
   z-index: 1;
+
+  /* Core Palette — Light Mode Override */
+  --bg: #F7F8FA;
+  --surface: #FFFFFF;
+  --surface2: #F1F3F5;
+  --card: #FFFFFF;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.04);
+
+  /* Typography */
+  --white: #111827;
+  --white-shade: #374151;
+  --muted: #6B7280;
+  --dimmed: #9CA3AF;
+
+  /* Accent — Darker Amber for contrast on white */
+  --gold: #B45309;
+  --gold2: #D97706;
+  --gold-dim: rgba(180, 83, 9, 0.08);
+
+  /* Semantic — darker for white bg contrast */
+  --danger: #DC2626;
+  --success: #16A34A;
+  --teal: #0D9488;
+  --teal-dim: rgba(13, 148, 136, 0.08);
+  --mint: #16A34A;
+
+  /* Scrollbar override for dashboards */
+  scrollbar-width: thin;
+  scrollbar-color: #D1D5DB #F7F8FA;
+}
+
+/* Dashboard-specific scrollbar styling */
+.dash-layout ::-webkit-scrollbar {
+  width: 5px;
+}
+
+.dash-layout ::-webkit-scrollbar-track {
+  background: #F7F8FA;
+}
+
+.dash-layout ::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 99px;
+}
+
+.dash-layout ::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
 }
 
 /* Sidebar Wrapper & Styling */
