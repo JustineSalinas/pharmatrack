@@ -26,7 +26,7 @@ export default function ProfilePage() {
         const u = await getCurrentUser();
         if (u) {
           setUser(u);
-          const sp = u.student_profiles?.[0] || {};
+          const sp = u.student_profiles || {};
           setForm({
             full_name: u.full_name || "",
             email: u.email || "",
@@ -57,10 +57,10 @@ export default function ProfilePage() {
       if (!user) return;
       const { error: e1 } = await supabase.from("users").update({ full_name: form.full_name }).eq("id", user.id);
       if (e1) throw e1;
-      if (user.account_type === "student" && user.student_profiles?.[0]) {
+      if (user.account_type === "student" && user.student_profiles) {
         const { error: e2 } = await supabase.from("student_profiles")
           .update({ section: form.section, current_year: form.current_year })
-          .eq("id", user.student_profiles[0].id);
+          .eq("user_id", user.id);
         if (e2) throw e2;
       }
       setSaved(true); setTimeout(() => setSaved(false), 2500);

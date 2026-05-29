@@ -175,6 +175,9 @@ export default function ScannerPage() {
   const [user, setUser] = useState<any>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionCode, setSessionCode] = useState<string | null>(null);
+  
+  const tickInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     getCurrentUser().then(setUser);
