@@ -180,7 +180,7 @@ function LoginForm() {
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
                   <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
                 </div>
-                <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 2.2rem)", lineHeight: 1.2 }}>Welcome, pharmacists!</h2>
+                <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 2.2rem)", lineHeight: 1.2 }}>Welcome, pharmates!</h2>
                 <p>Access your official Pharmatrack portal.</p>
               </div>
 
