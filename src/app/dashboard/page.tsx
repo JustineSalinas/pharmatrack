@@ -126,7 +126,7 @@ export default function StudentDashboard() {
       <header className="sd-header">
         <div>
           <p className="sd-header-eyebrow">{isStudent ? "Student Portal" : "Facilitator Portal"}</p>
-          <h1 className="sd-header-title">Good {getGreeting()}, <span className="sd-header-name">{firstName}</span> 👋</h1>
+          <h1 className="sd-header-title">Good {getGreeting()}, <span className="sd-header-name">{firstName}!</span></h1>
         </div>
         <div className="sd-header-date">
           <Calendar size={13} />
