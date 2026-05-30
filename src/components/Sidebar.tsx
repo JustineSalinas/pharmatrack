@@ -18,10 +18,7 @@ import {
   LogOut,
   HeadphonesIcon,
   AlertTriangle,
-  Mail,
-  Phone,
-  MapPin,
-  Clock
+  Mail
 } from "lucide-react";
 
 interface NavItem { href: string; label: string; icon: React.ReactNode; }
@@ -202,9 +199,9 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
             <div className="support-icon-wrap">
               <HeadphonesIcon size={24} />
             </div>
-            <h3 className="support-title">Support Helpdesk</h3>
+            <h3 className="support-title">Contact Support</h3>
             <p className="support-desc">
-              Have questions or running into issues with PharmaTrack? Reach out to our technical team.
+              Have questions or running into issues with PharmaTrack? Reach out to our technical support team.
             </p>
 
             <div className="support-info-list">
@@ -213,27 +210,6 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
                 <div>
                   <span className="support-info-label">Email:</span>
                   <span className="support-info-value">support@pharmatrack.edu.ph</span>
-                </div>
-              </div>
-              <div className="support-info-item">
-                <Phone size={16} className="support-info-icon" />
-                <div>
-                  <span className="support-info-label">Hotline:</span>
-                  <span className="support-info-value">+63 (33) 337-1234 (ext. 402)</span>
-                </div>
-              </div>
-              <div className="support-info-item">
-                <MapPin size={16} className="support-info-icon" />
-                <div>
-                  <span className="support-info-label">Office:</span>
-                  <span className="support-info-value">Pharmacy IT Lab, Annex Bldg Rm 202</span>
-                </div>
-              </div>
-              <div className="support-info-item">
-                <Clock size={16} className="support-info-icon" />
-                <div>
-                  <span className="support-info-label">Hours:</span>
-                  <span className="support-info-value">Mon – Fri, 8:00 AM – 5:00 PM</span>
                 </div>
               </div>
             </div>
