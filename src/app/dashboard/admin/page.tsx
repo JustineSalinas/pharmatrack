@@ -13,6 +13,7 @@ import {
   UserCheck,
   Loader2,
   ScanLine,
+  UserCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";

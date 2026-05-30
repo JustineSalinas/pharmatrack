@@ -289,13 +289,13 @@ export default function AdminReports() {
         </div>
 
         {/* Flagged Students - Elevated Warning */}
-        <div className="stat-card" style={{ background: "linear-gradient(180deg, var(--surface) 0%, rgba(212, 175, 55, 0.05) 100%)", border: "1px solid var(--gold-dim)", borderRadius: "var(--radius)", padding: "20px", display: "flex", flexDirection: "column", boxShadow: "0 4px 20px rgba(212, 175, 55, 0.05)" }}>
+        <div className="stat-card" style={{ background: "linear-gradient(180deg, var(--surface) 0%, rgba(220, 38, 38, 0.05) 100%)", border: "1px solid rgba(220, 38, 38, 0.2)", borderRadius: "var(--radius)", padding: "20px", display: "flex", flexDirection: "column", boxShadow: "0 4px 20px rgba(220, 38, 38, 0.05)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-            <div style={{ fontSize: "11px", color: "var(--gold)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Flagged Students</div>
-            <AlertTriangle size={16} color="var(--gold)" />
+            <div style={{ fontSize: "11px", color: "var(--danger)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Flagged Students</div>
+            <AlertTriangle size={16} color="var(--danger)" />
           </div>
-          <div style={{ fontSize: "28px", fontWeight: 700, color: "var(--gold)", letterSpacing: "-0.02em" }}>{metrics.flaggedStudents}</div>
-          <div style={{ fontSize: "11px", color: "var(--gold)", opacity: 0.8, marginTop: "6px" }}>Critical attendance &lt; 75%</div>
+          <div style={{ fontSize: "28px", fontWeight: 700, color: "var(--danger)", letterSpacing: "-0.02em" }}>{metrics.flaggedStudents}</div>
+          <div style={{ fontSize: "11px", color: "var(--danger)", opacity: 0.8, marginTop: "6px" }}>Critical attendance &lt; 75%</div>
         </div>
       </div>
 
