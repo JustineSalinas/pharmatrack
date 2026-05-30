@@ -377,12 +377,12 @@ export default function AdminSettings() {
               padding: "0 16px",
               borderRadius: "var(--radius-sm)",
               border: isDirty
-                ? "1px solid var(--gold)"
+                ? "1px solid var(--success)"
                 : "1px solid var(--border)",
               background: isDirty
-                ? "rgba(212, 175, 55, 0.1)"
+                ? "rgba(22, 163, 74, 0.1)"
                 : "var(--surface)",
-              color: isDirty ? "var(--gold)" : "var(--dimmed)",
+              color: isDirty ? "var(--success)" : "var(--dimmed)",
               fontSize: "13px",
               fontWeight: 600,
               cursor: isDirty ? "pointer" : "not-allowed",
@@ -630,18 +630,18 @@ function SettingGroup({
               >
                 <div
                   style={{
-                    width: "32px",
-                    height: "32px",
+                    width: "36px",
+                    height: "36px",
                     borderRadius: "8px",
-                    background: "var(--surface2)",
+                    background: "rgba(79, 70, 229, 0.08)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
-                    border: "1px solid var(--border)",
+                    border: "1px solid rgba(79, 70, 229, 0.18)",
                   }}
                 >
-                  <Icon size={15} color="var(--dimmed)" />
+                  <Icon size={18} strokeWidth={2.5} color="var(--gold)" />
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <strong

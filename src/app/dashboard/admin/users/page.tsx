@@ -169,7 +169,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Users Table */}
-      <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="panel indigo-table-panel" style={{ padding: 0, overflow: "hidden" }}>
         <div className="table-wrap">
           <table className="attendance-table" style={{ width: "100%" }}>
             <thead>
@@ -191,8 +191,12 @@ export default function AdminUsers() {
                   <tr key={u.id} className="user-row">
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                        <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", fontWeight: 600, flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--dimmed)" }}>
-                          {initials}
+                        <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", fontWeight: 600, flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--dimmed)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {u.account_type === "admin" ? (
+                            <img src="/usa.png" alt="USA Logo" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "2px" }} />
+                          ) : (
+                            initials
+                          )}
                         </div>
                         <span style={{ fontWeight: 500, color: "var(--white)" }}>{u.full_name}</span>
                       </div>
@@ -271,7 +275,7 @@ export default function AdminUsers() {
           </table>
           {filtered.length === 0 && (
             <div style={{ padding: "64px 24px", textAlign: "center", color: "var(--dimmed)", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
-              <div style={{ width: 48, height: 48, border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 48, height: 48, border: "1px dashed rgba(79, 70, 229, 0.3)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(79, 70, 229, 0.04)" }}>
                 <Search size={20} color="var(--dimmed)" />
               </div>
               <p style={{ fontSize: 13, margin: 0 }}>No users found matching your search or filter.</p>
@@ -291,6 +295,45 @@ export default function AdminUsers() {
           border-color: var(--gold) !important;
           color: var(--gold) !important;
           background: rgba(180, 83, 9, 0.04) !important;
+        }
+
+        .indigo-table-panel {
+          background: rgba(79, 70, 229, 0.04) !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+        }
+        
+        .indigo-table-panel :global(.attendance-table) {
+          background: transparent !important;
+        }
+
+        .indigo-table-panel :global(.attendance-table th) {
+          background: rgba(79, 70, 229, 0.09) !important;
+          color: var(--gold) !important;
+          font-weight: 600 !important;
+          border-bottom: 1px solid rgba(79, 70, 229, 0.12) !important;
+        }
+
+        .indigo-table-panel :global(.attendance-table td) {
+          border-bottom: 1px solid rgba(79, 70, 229, 0.05) !important;
+        }
+
+        /* Alternate zebra rows for premium look and easier scanning */
+        .indigo-table-panel :global(.attendance-table tr:nth-child(even)) {
+          background: rgba(79, 70, 229, 0.02) !important;
+        }
+
+        .indigo-table-panel :global(.attendance-table tr:nth-child(odd)) {
+          background: rgba(79, 70, 229, 0.005) !important;
+        }
+
+        .indigo-table-panel :global(.attendance-table tr:hover) {
+          background: rgba(79, 70, 229, 0.07) !important;
+        }
+
+        .indigo-table-panel :global(.avatar) {
+          background: rgba(79, 70, 229, 0.08) !important;
+          border-color: rgba(79, 70, 229, 0.15) !important;
+          color: var(--gold) !important;
         }
       `}</style>
     </div>

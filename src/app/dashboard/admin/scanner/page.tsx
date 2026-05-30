@@ -15,7 +15,9 @@ import {
   Clock,
   MapPin,
   History,
-  Users
+  Users,
+  Sparkles,
+  QrCode
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -31,33 +33,45 @@ export default function ScannerPage() {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const router = useRouter();
 
-  // Load events and admin profile
+  // Load events and admin profile with robust error handling
   useEffect(() => {
     async function init() {
-      const user = await getCurrentUser();
-      if (!user) {
-        // Let root DashboardLayout handle redirect to login to avoid hydration race conditions
-        return;
-      }
-      if (user.account_type !== "admin") {
-        if (user.account_type === "facilitator") {
-          router.push("/dashboard/facilitator");
-        } else {
-          router.push("/dashboard");
+      try {
+        setLoading(true);
+        const user = await getCurrentUser();
+        
+        if (!user) {
+          console.warn("Scanner init: No session user found. Let dashboard layout redirect...");
+          setLoading(false);
+          return;
         }
-        return;
-      }
-      setAdmin(user);
-      
-      const { data: events } = await supabase
-        .from("events")
-        .select("*")
-        .order("date", { ascending: false });
-      
-      setActiveEvents(events || []);
-      if (events && events.length > 0) {
-        setSelectedEventId(events[0].id);
-      } else {
+        
+        if (user.account_type !== "admin") {
+          if (user.account_type === "facilitator") {
+            router.push("/dashboard/facilitator");
+          } else {
+            router.push("/dashboard");
+          }
+          return;
+        }
+        
+        setAdmin(user);
+        
+        const { data: events, error } = await supabase
+          .from("events")
+          .select("*")
+          .order("date", { ascending: false });
+        
+        if (error) throw error;
+        
+        setActiveEvents(events || []);
+        if (events && events.length > 0) {
+          setSelectedEventId(events[0].id);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Error initializing scanner:", err);
         setLoading(false);
       }
     }
@@ -160,8 +174,11 @@ export default function ScannerPage() {
         await qrScanner.start(
           { facingMode: "environment" },
           {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
+            fps: 15,
+            qrbox: (width, height) => {
+              const size = Math.min(width, height) * 0.75;
+              return { width: size, height: size };
+            }
           },
           onScanSuccess,
           onScanFailure
@@ -171,7 +188,7 @@ export default function ScannerPage() {
         setIsScanning(false);
         alert("Could not start camera: " + (err.message || "Permissions denied"));
       }
-    }, 150);
+    }, 100);
   };
 
   const stopCamera = async () => {
@@ -193,7 +210,7 @@ export default function ScannerPage() {
 
     // Pause camera scanning
     await stopCamera();
-    setScanResult({ success: true, message: "Processing scan...", submessage: `Code: ${decodedText}` });
+    setScanResult({ success: true, message: "Verifying credentials...", submessage: `Code: ${decodedText}` });
 
     try {
       // 1. Find the student by QR Code ID
@@ -207,7 +224,7 @@ export default function ScannerPage() {
         setScanResult({ 
           success: false, 
           message: "Invalid QR Code", 
-          submessage: "Student profile not found in database." 
+          submessage: "Student record not found in the system database." 
         });
         return;
       }
@@ -230,8 +247,8 @@ export default function ScannerPage() {
       if (now > new Date(event.check_in_end)) {
          setScanResult({ 
            success: false, 
-           message: "Check-in Window Closed", 
-           submessage: `Attendance checks ended at ${new Date(event.check_in_end).toLocaleTimeString()}`
+           message: "Check-in Closed", 
+           submessage: `Attendance window ended at ${new Date(event.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
          });
          return;
       }
@@ -262,7 +279,7 @@ export default function ScannerPage() {
            setScanResult({ 
              success: false, 
              message: "Already Logged", 
-             submessage: `${studentName} has already checked in and checked out.` 
+             submessage: `${studentName} has already recorded both check-in and check-out.` 
            });
         }
       } else {
@@ -289,7 +306,7 @@ export default function ScannerPage() {
       fetchRecentScans(selectedEventId);
     } catch (err: any) {
       console.error(err);
-      setScanResult({ success: false, message: "Scan Error", submessage: err.message });
+      setScanResult({ success: false, message: "Scan Failed", submessage: err.message });
     }
   }
 
@@ -297,556 +314,805 @@ export default function ScannerPage() {
     // Silently process failures (standard for html5-qrcode scans)
   }
 
+  const punctualCount = recentScans.filter(r => r.status === "present").length;
+  const lateCount = recentScans.filter(r => r.status === "late").length;
+
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
-        <Loader2 className="animate-spin" size={24} color="var(--gold)" />
+        <Loader2 className="animate-spin" size={24} color="#4f46e5" />
       </div>
     );
   }
 
   return (
-    <div className="qr-scanner-portal">
-      <div className="sd-root">
-        
-        {/* PAGE HEADER */}
-        <header className="sd-header">
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <button 
-              onClick={() => router.push("/dashboard/admin")} 
-              className="btn-secondary" 
-              style={{ padding: "6px 12px", display: "flex", alignItems: "center", gap: "6px" }}
-            >
-              <ArrowLeft size={16} /> Back
-            </button>
-            <h1 className="sd-header-title">Admin Portal / QR Scanner</h1>
-          </div>
-        </header>
+    <div className="fade-in sd-root qr-scanner-terminal-page">
+      
+      {/* PAGE HEADER */}
+      <header className="sd-header">
+        <div>
+          <p className="sd-header-eyebrow">Real-Time Attendance Monitoring</p>
+          <h1 className="sd-header-title">QR Scanner Terminal</h1>
+        </div>
+        <div>
+          <button 
+            onClick={() => router.push("/dashboard/admin")} 
+            className="btn-back"
+          >
+            <ArrowLeft size={15} />
+            <span>Return to Dashboard</span>
+          </button>
+        </div>
+      </header>
 
-        {/* TWO-COLUMN LAYOUT */}
-        <div className="scanner-grid">
+      {/* TWO-COLUMN SCANNER PANEL GRID */}
+      <div className="scanner-grid">
+        
+        {/* LEFT COLUMN: Setup details and Real-time Metrics */}
+        <div className="controls-column">
           
-          {/* LEFT COLUMN: Controls & Event Config & Metrics */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* EVENT SELECTOR & SPECS */}
+          <div className="setup-card">
+            <h3 className="card-section-title">Terminal Configuration</h3>
             
-            {/* EVENT CONFIGURATION CARD */}
-            <div className="card">
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "11px", color: "var(--qr-text-muted)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.06em" }}>Target Event</label>
+            <div className="form-group">
+              <label className="input-label">Select Active Event</label>
+              <div className="select-wrapper">
                 <select 
-                  className="select-field"
+                  className="custom-select"
                   value={selectedEventId}
                   onChange={(e) => { setSelectedEventId(e.target.value); stopCamera(); setScanResult(null); }}
                   disabled={isScanning}
                 >
                   {activeEvents.length > 0 ? (
                     activeEvents.map(e => (
-                      <option key={e.id} value={e.id}>{e.name} ({new Date(e.date).toLocaleDateString()})</option>
+                      <option key={e.id} value={e.id}>{e.name} ({new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})</option>
                     ))
                   ) : (
                     <option value="">No events scheduled</option>
                   )}
                 </select>
               </div>
+            </div>
 
-              {selectedEvent && (
-                <div className="event-details">
-                  <div className="detail-row">
-                    <span className="detail-label">Location</span>
-                    <span className="detail-value">{selectedEvent.location}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Late Threshold</span>
-                    <span className="detail-value">{new Date(selectedEvent.check_in_late).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Closing Time</span>
-                    <span className="detail-value">{new Date(selectedEvent.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            {selectedEvent && (
+              <div className="event-info-panel">
+                <div className="info-row">
+                  <MapPin size={16} className="info-icon" />
+                  <div>
+                    <span className="info-label">Venue / Location</span>
+                    <span className="info-val">{selectedEvent.location}</span>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* LIVE METRICS PANEL */}
-            <div className="card metrics-card">
-              <div className="metric-item">
-                <span className="metric-label">Scans Logged</span>
-                <span className="metric-value">{recentScans.length}</span>
+                <div className="info-row">
+                  <CalendarDays size={16} className="info-icon" />
+                  <div>
+                    <span className="info-label">Event Date</span>
+                    <span className="info-val">{new Date(selectedEvent.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <Clock size={16} className="info-icon" />
+                  <div>
+                    <span className="info-label">Check-in Windows</span>
+                    <span className="info-val">
+                      Late at: <strong>{new Date(selectedEvent.check_in_late).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                      <br />
+                      Closes: <strong>{new Date(selectedEvent.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="metric-divider" />
-              <div className="metric-item">
-                <span className="metric-label">Active Scanners</span>
-                <span className="metric-value">1</span>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* RIGHT COLUMN: Viewport & Scan Results */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            
-            {!isScanning && !scanResult && (
-              <div className="scanner-feed-container">
-                <button 
-                  onClick={startCamera} 
-                  className="btn-primary" 
-                  disabled={!selectedEventId}
-                >
-                  <Camera size={16} /> Start Scan Session
-                </button>
-              </div>
-            )}
-
-            {isScanning && (
-              <div className="scanner-feed-container">
-                <div id="reader">
-                  <div className="scanner-overlay-line" />
-                </div>
-                <button 
-                  onClick={stopCamera} 
-                  className="btn-secondary" 
-                  style={{ marginTop: "16px" }}
-                >
-                  Pause Camera
-                </button>
-              </div>
-            )}
-
-            {scanResult && (
-              <div className="scanner-feed-container">
-                <div className="result-container">
-                  {scanResult.success ? (
-                    <CheckCircle2 size={64} color="#16a34a" />
-                  ) : (
-                    <XCircle size={64} color="#dc2626" />
-                  )}
-                  <div>
-                    <h2 className={`result-title ${scanResult.success ? "success" : "error"}`}>
-                      {scanResult.message}
-                    </h2>
-                    <p className="result-submessage">{scanResult.submessage}</p>
-                  </div>
-                  
-                  <button 
-                    onClick={() => { setScanResult(null); startCamera(); }} 
-                    className="btn-primary"
-                    style={{ marginTop: "8px" }}
-                  >
-                    Next Scan
-                  </button>
-                </div>
-              </div>
-            )}
+          {/* LIVE METRICS PANEL */}
+          <div className="metrics-card">
+            <div className="metric-box">
+              <span className="metric-num-total">{recentScans.length}</span>
+              <span className="metric-title">Total Logs</span>
+            </div>
+            <div className="metric-sep" />
+            <div className="metric-box">
+              <span className="metric-num-present">{punctualCount}</span>
+              <span className="metric-title">Punctual</span>
+            </div>
+            <div className="metric-sep" />
+            <div className="metric-box">
+              <span className="metric-num-late">{lateCount}</span>
+              <span className="metric-title">Tardy / Late</span>
+            </div>
           </div>
         </div>
 
-        {/* BOTTOM ROW: RECENT SCANS TABLE */}
-        <div className="table-container">
-          <div className="table-header">
-            Scan Logs (Live Activity Feed)
-          </div>
+        {/* RIGHT COLUMN: Active Camera Viewport / Results Screen */}
+        <div className="viewport-column">
           
-          <div style={{ overflowX: "auto" }}>
-            <table className="flat-table">
-              <thead>
-                <tr>
-                  <th style={{ paddingLeft: "24px" }}>Student</th>
-                  <th>Student ID</th>
-                  <th>Section</th>
-                  <th>Time In</th>
-                  <th>Time Out</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentScans.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ padding: "40px 24px", textAlign: "center", color: "var(--qr-text-muted)" }}>
-                      No scans logged for this activity yet.
-                    </td>
-                  </tr>
-                ) : (
-                  recentScans.map((r, i) => (
-                    <tr key={i}>
-                      <td style={{ paddingLeft: "24px", fontWeight: 500 }}>
-                        {r.name}
-                      </td>
-                      <td style={{ color: "var(--qr-text-muted)", fontFamily: "var(--font-sans)" }}>{r.idNumber}</td>
-                      <td>
-                        <span className="tag">{r.section}</span>
-                      </td>
-                      <td>{r.timeIn}</td>
-                      <td>{r.timeOut}</td>
-                      <td>
-                        <span className={`status-badge ${r.status}`}>
-                          {r.status.toUpperCase()}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* CAMERA FEED PLACEHOLDER */}
+          {!isScanning && !scanResult && (
+            <div className="viewport-placeholder">
+              <div className="pulse-circle">
+                <QrCode size={40} className="placeholder-icon" />
+              </div>
+              <h3 className="placeholder-title">Scanner Standby</h3>
+              <p className="placeholder-text">Please verify the selected target event details, then click below to launch the camera session.</p>
+              
+              <button 
+                onClick={startCamera} 
+                className="btn-start-scanner"
+                disabled={!selectedEventId}
+              >
+                <Camera size={18} />
+                <span>Initialize Scanner</span>
+              </button>
+            </div>
+          )}
+
+          {/* ACTIVE QR SCANNER */}
+          {isScanning && (
+            <div className="viewport-active">
+              <div className="viewfinder-frame">
+                <div className="corner-bracket top-left" />
+                <div className="corner-bracket top-right" />
+                <div className="corner-bracket bottom-left" />
+                <div className="corner-bracket bottom-right" />
+                
+                <div id="reader" />
+                <div className="laser-beam" />
+              </div>
+              
+              <button 
+                onClick={stopCamera} 
+                className="btn-pause-scanner"
+              >
+                <span>Disconnect Stream</span>
+              </button>
+            </div>
+          )}
+
+          {/* SCAN OUTCOME STATUS SCREEN */}
+          {scanResult && (
+            <div className="viewport-result">
+              <div className="result-card">
+                <div className={`status-icon-wrap ${scanResult.success ? "success" : "error"}`}>
+                  {scanResult.success ? (
+                    <CheckCircle2 size={44} />
+                  ) : (
+                    <XCircle size={44} />
+                  )}
+                </div>
+                
+                <div className="result-text-block">
+                  <h2 className={`result-headline ${scanResult.success ? "success" : "error"}`}>
+                    {scanResult.message}
+                  </h2>
+                  <p className="result-explanation">{scanResult.submessage}</p>
+                </div>
+                
+                <button 
+                  onClick={() => { setScanResult(null); startCamera(); }} 
+                  className="btn-next-scan"
+                >
+                  <Sparkles size={16} />
+                  <span>Resume Scanning</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* SCOPED COMPONENT STYLES */}
-      <style jsx>{`
-        .qr-scanner-portal {
-          --qr-bg: #f3f4f6;
-          --qr-card-bg: #ffffff;
-          --qr-border: #e5e7eb;
-          --qr-text: #111827;
-          --qr-text-muted: #4b5563;
-          --qr-text-dim: #9ca3af;
-          --qr-accent: #2563eb;
-          --qr-accent-hover: #1d4ed8;
-          --qr-accent-dim: #eff6ff;
+      {/* BOTTOM SECTION: RECENT SCANS LOG TABLE */}
+      <div className="panel indigo-table-panel" style={{ padding: 0, overflow: "hidden", marginTop: "12px" }}>
+        <div className="table-header-custom">
+          <History size={16} />
+          <span>Real-time Activity Logs (Recent Scans)</span>
+        </div>
+        
+        <div className="table-wrap">
+          <table className="attendance-table" style={{ width: "100%" }}>
+            <thead>
+              <tr>
+                <th style={{ paddingLeft: "24px" }}>Student Profile</th>
+                <th>Student ID</th>
+                <th>Section</th>
+                <th>Time Checked In</th>
+                <th>Time Checked Out</th>
+                <th>Log Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentScans.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "48px 24px", textAlign: "center", color: "#4b5563" }}>
+                    No scans logged for this activity yet. Launch camera to start logging.
+                  </td>
+                </tr>
+              ) : (
+                recentScans.map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ paddingLeft: "24px", fontWeight: 500, color: "#111827" }}>
+                      {r.name}
+                    </td>
+                    <td style={{ color: "#4b5563", fontFamily: "monospace", fontSize: "13px" }}>{r.idNumber}</td>
+                    <td>
+                      <span className="section-badge">{r.section}</span>
+                    </td>
+                    <td style={{ color: "#374151" }}>{r.timeIn}</td>
+                    <td style={{ color: "#374151" }}>{r.timeOut}</td>
+                    <td>
+                      <span className={`status-badge ${r.status === 'present' ? 'present' : r.status === 'late' ? 'late' : 'absent'}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
+                        {r.status.toUpperCase()}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-          background-color: var(--qr-bg);
-          color: var(--qr-text);
-          min-height: 100vh;
-          margin: -40px -48px;
-          padding: 40px 48px;
-          box-sizing: border-box;
+      {/* NATIVE STYLE TAG FOR UNCOMPROMISED OVERRIDES PREVENTING STYLED-JSX DISCARD ERRORS */}
+      <style>{`
+        .qr-scanner-terminal-page {
+          width: 100%;
         }
 
-        @media (max-width: 768px) {
-          .qr-scanner-portal {
-            margin: -24px -16px -100px -16px;
-            padding: 24px 16px 100px 16px;
-          }
-        }
-
-        .sd-root {
-          max-width: 1200px;
-          margin: 0 auto;
+        .qr-scanner-terminal-page .sd-header {
           display: flex;
-          flex-direction: column;
-          gap: 24px;
+          align-items: flex-start;
+          justify-content: space-between;
+          padding-bottom: 20px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+          margin-bottom: 4px;
         }
 
-        .sd-header {
+        .qr-scanner-terminal-page .sd-header-eyebrow {
+          font-size: 11px;
+          font-weight: 600;
+          color: #6b7280 !important;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 4px;
+        }
+
+        .qr-scanner-terminal-page .sd-header-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: #111827 !important;
+          letter-spacing: -0.03em;
+          line-height: 1.2;
+        }
+
+        .qr-scanner-terminal-page .btn-back {
+          background: #ffffff !important;
+          border: 1px solid #d1d5db !important;
+          border-radius: 6px !important;
+          color: #374151 !important;
+          font-size: 13px;
+          font-weight: 500;
+          padding: 8px 14px;
+          cursor: pointer;
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          padding-bottom: 16px;
-          border-bottom: 1px solid var(--qr-border);
+          gap: 8px;
+          transition: all 0.15s ease;
         }
 
-        .sd-header-title {
-          font-size: 20px;
-          font-weight: 600;
-          color: var(--qr-text);
-          margin: 0;
-          letter-spacing: -0.02em;
+        .qr-scanner-terminal-page .btn-back:hover {
+          background: #f9fafb !important;
+          color: #111827 !important;
+          border-color: #4f46e5 !important;
         }
 
-        .scanner-grid {
+        .qr-scanner-terminal-page .scanner-grid {
           display: grid;
-          grid-template-columns: 1fr 1.2fr;
+          grid-template-columns: 1fr 1.3fr;
           gap: 24px;
         }
 
-        @media (max-width: 768px) {
-          .scanner-grid {
+        @media (max-width: 900px) {
+          .qr-scanner-terminal-page .scanner-grid {
             grid-template-columns: 1fr;
           }
         }
 
-        .card {
-          background: var(--qr-card-bg);
-          border: 1px solid var(--qr-border);
-          border-radius: 6px;
-          padding: 20px;
-          box-shadow: none;
+        .qr-scanner-terminal-page .controls-column {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 20px;
         }
 
-        .select-field {
-          width: 100%;
-          height: 38px;
-          padding: 0 12px;
-          border-radius: 6px;
-          border: 1px solid #d1d5db;
-          background: #ffffff;
-          color: var(--qr-text);
+        .qr-scanner-terminal-page .setup-card {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          padding: 24px !important;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .qr-scanner-terminal-page .card-section-title {
           font-size: 14px;
-          outline: none;
-          cursor: pointer;
-          transition: border-color 0.15s ease;
-        }
-
-        .select-field:focus {
-          border-color: var(--qr-accent);
-        }
-
-        .event-details {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .detail-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 13.5px;
-        }
-
-        .detail-label {
-          color: var(--qr-text-muted);
-          font-weight: 500;
-        }
-
-        .detail-value {
-          color: var(--qr-text);
-          font-weight: 400;
-        }
-
-        .metrics-card {
-          flex-direction: row;
-          justify-content: space-around;
-          align-items: center;
-          padding: 16px 20px;
-        }
-
-        .metric-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-          flex: 1;
-        }
-
-        .metric-label {
-          font-size: 11px;
           font-weight: 600;
-          color: var(--qr-text-muted);
+          color: #4f46e5 !important;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.06em;
+          margin-bottom: 4px;
+          margin-top: 0;
         }
 
-        .metric-value {
-          font-size: 24px;
-          font-weight: 600;
-          color: var(--qr-text);
-        }
-
-        .metric-divider {
-          width: 1px;
-          height: 36px;
-          background-color: var(--qr-border);
-        }
-
-        .scanner-feed-container {
-          background: #f9fafb;
-          border: 1px solid var(--qr-border);
-          border-radius: 6px;
+        .qr-scanner-terminal-page .form-group {
           display: flex;
           flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          min-height: 320px;
-          position: relative;
-          padding: 24px;
-          box-sizing: border-box;
-        }
-
-        .btn-primary {
-          background-color: var(--qr-accent);
-          color: #ffffff;
-          padding: 12px 32px;
-          font-size: 14px;
-          font-weight: 600;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
           gap: 8px;
-          transition: background-color 0.15s ease;
         }
 
-        .btn-primary:hover {
-          background-color: var(--qr-accent-hover);
-        }
-
-        .btn-primary:disabled {
-          background-color: var(--qr-text-dim);
-          cursor: not-allowed;
-        }
-
-        .btn-secondary {
-          background: #ffffff;
-          border: 1px solid #d1d5db;
-          color: #374151;
-          padding: 8px 20px;
-          font-size: 13px;
-          font-weight: 500;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .btn-secondary:hover {
-          background: #f9fafb;
-          border-color: #9ca3af;
-        }
-
-        #reader {
-          width: 280px;
-          height: 280px;
-          overflow: hidden;
-          border-radius: 6px;
-          border: 1px solid var(--qr-border);
-          position: relative;
-          background: #000;
-        }
-
-        .scanner-overlay-line {
-          position: absolute;
-          left: 10%;
-          right: 10%;
-          height: 3px;
-          background: var(--qr-accent);
-          box-shadow: 0 0 10px var(--qr-accent);
-          animation: scanVertical 2.2s linear infinite;
-        }
-
-        @keyframes scanVertical {
-          0% { top: 10%; opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { top: 90%; opacity: 0; }
-        }
-
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        .result-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-          text-align: center;
-        }
-
-        .result-title {
-          font-size: 18px;
-          font-weight: 600;
-          margin: 0 0 4px 0;
-        }
-
-        .result-title.success {
-          color: #16a34a;
-        }
-
-        .result-title.error {
-          color: #dc2626;
-        }
-
-        .result-submessage {
-          color: var(--qr-text-muted);
-          font-size: 14px;
-          margin: 0;
-        }
-
-        .table-container {
-          background: var(--qr-card-bg);
-          border: 1px solid var(--qr-border);
-          border-radius: 6px;
-          overflow: hidden;
-          margin-bottom: 24px;
-        }
-
-        .table-header {
-          padding: 16px 24px;
-          border-bottom: 1px solid var(--qr-border);
-          font-weight: 600;
-          font-size: 15px;
-          color: var(--qr-text);
-        }
-
-        .flat-table {
-          width: 100%;
-          border-collapse: collapse;
-          text-align: left;
-        }
-
-        .flat-table th {
-          padding: 12px 24px;
+        .qr-scanner-terminal-page .input-label {
           font-size: 12px;
           font-weight: 600;
-          color: var(--qr-text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          border-bottom: 1px solid var(--qr-border);
-          background: #f9fafb;
+          color: #374151 !important;
         }
 
-        .flat-table td {
-          padding: 14px 24px;
-          font-size: 14px;
-          color: var(--qr-text);
+        .qr-scanner-terminal-page .custom-select {
+          width: 100% !important;
+          height: 42px !important;
+          padding: 0 16px !important;
+          border-radius: 6px !important;
+          border: 1px solid #d1d5db !important;
+          background: #f9fafb !important;
+          color: #111827 !important;
+          font-size: 14px !important;
+          font-weight: 500 !important;
+          outline: none !important;
+          cursor: pointer !important;
+          appearance: none !important;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(79,70,229,0.7)'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+          background-repeat: no-repeat !important;
+          background-position: right 14px center !important;
+          background-size: 15px !important;
+          padding-right: 40px !important;
+          transition: all 0.15s ease !important;
         }
 
-        .flat-table tbody tr {
-          border-bottom: none;
+        .qr-scanner-terminal-page .custom-select:focus:not(:disabled) {
+          border-color: #4f46e5 !important;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
         }
 
-        .flat-table tbody tr:nth-child(even) {
-          background-color: #f9fafb;
+        .qr-scanner-terminal-page .event-info-panel {
+          background: #f9fafb !important;
+          border-radius: 6px !important;
+          padding: 16px !important;
+          display: flex;
+          flex-direction: column !important;
+          gap: 16px !important;
+          border: 1px solid rgba(79, 70, 229, 0.08) !important;
         }
 
-        .flat-table tbody tr:hover {
-          background-color: #f3f4f6;
+        .qr-scanner-terminal-page .info-row {
+          display: flex !important;
+          align-items: flex-start !important;
+          gap: 12px !important;
         }
 
-        .tag {
-          display: inline-block;
-          background: #f3f4f6;
-          border: 1px solid var(--qr-border);
-          border-radius: 4px;
-          padding: 2px 6px;
-          color: var(--qr-text-muted);
-          font-size: 11px;
+        .qr-scanner-terminal-page .info-icon {
+          color: #4f46e5 !important;
+          margin-top: 3px;
+          flex-shrink: 0;
         }
 
-        /* Specific Status badges overrides for QR scanner page */
-        .qr-scanner-portal .status-badge {
-          display: inline-block;
-          padding: 2px 8px;
-          border-radius: 4px;
-          font-size: 11px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
+        .qr-scanner-terminal-page .info-label {
+          display: block !important;
+          font-size: 11px !important;
+          color: #6b7280 !important;
+          text-transform: uppercase !important;
+          font-weight: 600 !important;
+          letter-spacing: 0.05em !important;
+          margin-bottom: 2px !important;
         }
 
-        .qr-scanner-portal .status-badge.present {
-          background: rgba(22, 163, 74, 0.1);
-          color: #16a34a;
-          border: 1px solid rgba(22, 163, 74, 0.2);
+        .qr-scanner-terminal-page .info-val {
+          display: block !important;
+          font-size: 13.5px !important;
+          color: #111827 !important;
+          line-height: 1.4 !important;
         }
 
-        .qr-scanner-portal .status-badge.late {
-          background: rgba(217, 119, 6, 0.1);
-          color: #d97706;
-          border: 1px solid rgba(217, 119, 6, 0.2);
+        .qr-scanner-terminal-page .metrics-card {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          padding: 20px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-around !important;
+          flex-direction: row !important;
         }
 
-        .qr-scanner-portal .status-badge.absent {
-          background: rgba(220, 38, 38, 0.1);
-          color: #dc2626;
-          border: 1px solid rgba(220, 38, 38, 0.2);
+        .qr-scanner-terminal-page .metric-box {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 4px !important;
+          flex: 1 !important;
+        }
+
+        .qr-scanner-terminal-page .metric-num-total {
+          font-size: 26px !important;
+          font-weight: 800 !important;
+          color: #111827 !important;
+          letter-spacing: -0.02em !important;
+        }
+
+        .qr-scanner-terminal-page .metric-num-present {
+          font-size: 26px !important;
+          font-weight: 800 !important;
+          color: #16a34a !important;
+          letter-spacing: -0.02em !important;
+        }
+
+        .qr-scanner-terminal-page .metric-num-late {
+          font-size: 26px !important;
+          font-weight: 800 !important;
+          color: #d97706 !important;
+          letter-spacing: -0.02em !important;
+        }
+
+        .qr-scanner-terminal-page .metric-title {
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          color: #6b7280 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.05em !important;
+        }
+
+        .qr-scanner-terminal-page .metric-sep {
+          width: 1px !important;
+          height: 36px !important;
+          background: rgba(0, 0, 0, 0.08) !important;
+        }
+
+        .qr-scanner-terminal-page .viewport-placeholder {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-align: center !important;
+          padding: 48px 32px !important;
+          flex: 1 !important;
+          min-height: 360px !important;
+        }
+
+        .qr-scanner-terminal-page .pulse-circle {
+          width: 72px !important;
+          height: 72px !important;
+          border-radius: 50% !important;
+          background: rgba(79, 70, 229, 0.06) !important;
+          border: 1px solid rgba(79, 70, 229, 0.15) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          margin-bottom: 20px !important;
+          animation: scanPulse 3s infinite ease-in-out !important;
+        }
+
+        @keyframes scanPulse {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.15); }
+          50% { transform: scale(1.06); box-shadow: 0 0 20px 4px rgba(79, 70, 229, 0.08); }
+        }
+
+        .qr-scanner-terminal-page .placeholder-icon {
+          color: #4f46e5 !important;
+        }
+
+        .qr-scanner-terminal-page .placeholder-title {
+          font-size: 18px !important;
+          font-weight: 700 !important;
+          color: #111827 !important;
+          margin-bottom: 8px !important;
+          margin-top: 0;
+        }
+
+        .qr-scanner-terminal-page .placeholder-text {
+          font-size: 13.5px !important;
+          color: #4b5563 !important;
+          max-width: 320px !important;
+          line-height: 1.5 !important;
+          margin-bottom: 24px !important;
+          margin-top: 0;
+        }
+
+        .qr-scanner-terminal-page .btn-start-scanner {
+          background: #4f46e5 !important;
+          color: #ffffff !important;
+          padding: 12px 28px !important;
+          font-size: 14px !important;
+          font-weight: 600 !important;
+          border: none !important;
+          border-radius: 6px !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 10px !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2) !important;
+        }
+
+        .qr-scanner-terminal-page .btn-start-scanner:hover:not(:disabled) {
+          filter: brightness(1.1) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 16px rgba(79, 70, 229, 0.3) !important;
+        }
+
+        .qr-scanner-terminal-page .btn-start-scanner:disabled {
+          opacity: 0.5 !important;
+          cursor: not-allowed !important;
+          box-shadow: none !important;
+        }
+
+        .qr-scanner-terminal-page .viewport-active {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          padding: 24px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex: 1 !important;
+          min-height: 360px !important;
+        }
+
+        .qr-scanner-terminal-page .viewfinder-frame {
+          position: relative !important;
+          width: 100% !important;
+          max-width: 320px !important;
+          aspect-ratio: 1 !important;
+          border-radius: 16px !important;
+          overflow: hidden !important;
+          background: #08080c !important;
+          border: 1px solid rgba(79, 70, 229, 0.2) !important;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+          margin-bottom: 20px !important;
+        }
+
+        .qr-scanner-terminal-page .corner-bracket {
+          position: absolute !important;
+          width: 20px !important;
+          height: 20px !important;
+          border: 3px solid #4f46e5 !important;
+          z-index: 10 !important;
+          pointer-events: none !important;
+        }
+
+        .qr-scanner-terminal-page .top-left { top: 12px !important; left: 12px !important; border-right: none !important; border-bottom: none !important; border-top-left-radius: 6px !important; }
+        .qr-scanner-terminal-page .top-right { top: 12px !important; right: 12px !important; border-left: none !important; border-bottom: none !important; border-top-right-radius: 6px !important; }
+        .qr-scanner-terminal-page .bottom-left { bottom: 12px !important; left: 12px !important; border-right: none !important; border-top: none !important; border-bottom-left-radius: 6px !important; }
+        .qr-scanner-terminal-page .bottom-right { bottom: 12px !important; right: 12px !important; border-left: none !important; border-top: none !important; border-bottom-right-radius: 6px !important; }
+
+        .qr-scanner-terminal-page #reader {
+          width: 100% !important;
+          height: 100% !important;
+          border: none !important;
+          background: transparent !important;
+        }
+
+        .qr-scanner-terminal-page #reader video {
+          object-fit: cover !important;
+          width: 100% !important;
+          height: 100% !important;
+          border-radius: 12px !important;
+        }
+
+        .qr-scanner-terminal-page .laser-beam {
+          position: absolute !important;
+          left: 8% !important;
+          right: 8% !important;
+          height: 3px !important;
+          background: #4f46e5 !important;
+          box-shadow: 0 0 10px 2px #4f46e5 !important;
+          z-index: 5 !important;
+          pointer-events: none !important;
+          animation: scanMotion 2s linear infinite alternate !important;
+        }
+
+        @keyframes scanMotion {
+          0% { top: 12%; }
+          100% { top: 88%; }
+        }
+
+        .qr-scanner-terminal-page .btn-pause-scanner {
+          background: rgba(220, 38, 38, 0.08) !important;
+          border: 1px solid rgba(220, 38, 38, 0.15) !important;
+          color: #dc2626 !important;
+          padding: 10px 24px !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          border-radius: 6px !important;
+          cursor: pointer !important;
+          transition: all 0.15s ease !important;
+        }
+
+        .qr-scanner-terminal-page .btn-pause-scanner:hover {
+          background: rgba(220, 38, 38, 0.15) !important;
+          border-color: rgba(220, 38, 38, 0.3) !important;
+        }
+
+        .qr-scanner-terminal-page .viewport-result {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          padding: 32px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex: 1 !important;
+          min-height: 360px !important;
+        }
+
+        .qr-scanner-terminal-page .result-card {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 20px !important;
+          text-align: center !important;
+          animation: resultSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        .qr-scanner-terminal-page .status-icon-wrap {
+          width: 80px !important;
+          height: 80px !important;
+          border-radius: 50% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        .qr-scanner-terminal-page .status-icon-wrap.success {
+          background: rgba(22, 163, 74, 0.08) !important;
+          border: 1px solid rgba(22, 163, 74, 0.2) !important;
+          color: #16a34a !important;
+          box-shadow: 0 0 20px rgba(22, 163, 74, 0.1) !important;
+        }
+
+        .qr-scanner-terminal-page .status-icon-wrap.error {
+          background: rgba(220, 38, 38, 0.08) !important;
+          border: 1px solid rgba(220, 38, 38, 0.2) !important;
+          color: #dc2626 !important;
+          box-shadow: 0 0 20px rgba(220, 38, 38, 0.1) !important;
+        }
+
+        .qr-scanner-terminal-page .result-headline {
+          font-size: 20px !important;
+          font-weight: 700 !important;
+          margin-top: 0;
+          margin-bottom: 0;
+        }
+
+        .qr-scanner-terminal-page .result-headline.success { color: #16a34a !important; }
+        .qr-scanner-terminal-page .result-headline.error { color: #dc2626 !important; }
+
+        .qr-scanner-terminal-page .result-explanation {
+          font-size: 14px !important;
+          color: #4b5563 !important;
+          max-width: 280px !important;
+          line-height: 1.5 !important;
+          margin-top: 0;
+          margin-bottom: 0;
+        }
+
+        .qr-scanner-terminal-page .btn-next-scan {
+          background: #4f46e5 !important;
+          color: #fff !important;
+          border: none !important;
+          border-radius: 6px !important;
+          padding: 12px 28px !important;
+          font-size: 13.5px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15) !important;
+        }
+
+        .qr-scanner-terminal-page .btn-next-scan:hover {
+          filter: brightness(1.1) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 16px rgba(79, 70, 229, 0.25) !important;
+        }
+
+        .qr-scanner-terminal-page .table-header-custom {
+          display: flex !important;
+          align-items: center !important;
+          gap: 10px !important;
+          padding: 16px 24px !important;
+          font-weight: 600 !important;
+          font-size: 14px !important;
+          color: #4f46e5 !important;
+          border-bottom: 1px solid rgba(79, 70, 229, 0.12) !important;
+        }
+
+        .qr-scanner-terminal-page .section-badge {
+          background: rgba(79, 70, 229, 0.05) !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 4px !important;
+          padding: 2px 6px !important;
+          color: #4f46e5 !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          display: inline-block !important;
+        }
+
+        /* ── TABLE THEMING ── */
+        .qr-scanner-terminal-page .indigo-table-panel {
+          background: rgba(79, 70, 229, 0.04) !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+        }
+        
+        .qr-scanner-terminal-page .attendance-table {
+          background: transparent !important;
+        }
+
+        .qr-scanner-terminal-page .attendance-table th {
+          background: rgba(79, 70, 229, 0.09) !important;
+          color: #4f46e5 !important;
+          font-weight: 600 !important;
+          border-bottom: 1px solid rgba(79, 70, 229, 0.12) !important;
+        }
+
+        .qr-scanner-terminal-page .attendance-table td {
+          border-bottom: 1px solid rgba(79, 70, 229, 0.05) !important;
+        }
+
+        /* Alternate zebra rows */
+        .qr-scanner-terminal-page .attendance-table tr:nth-child(even) {
+          background: rgba(79, 70, 229, 0.02) !important;
+        }
+
+        .qr-scanner-terminal-page .attendance-table tr:nth-child(odd) {
+          background: rgba(79, 70, 229, 0.005) !important;
+        }
+
+        .qr-scanner-terminal-page .attendance-table tr:hover {
+          background: rgba(79, 70, 229, 0.07) !important;
+        }
+
+        /* Specific Status badges overrides for scanner logs */
+        .qr-scanner-terminal-page .status-badge {
+          display: inline-block !important;
+          padding: 2px 8px !important;
+          border-radius: 4px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.04em !important;
+        }
+
+        .qr-scanner-terminal-page .status-badge.present {
+          background: rgba(22, 163, 74, 0.1) !important;
+          color: #16a34a !important;
+          border: 1px solid rgba(22, 163, 74, 0.2) !important;
+        }
+
+        .qr-scanner-terminal-page .status-badge.late {
+          background: rgba(217, 119, 6, 0.1) !important;
+          color: #d97706 !important;
+          border: 1px solid rgba(217, 119, 6, 0.2) !important;
+        }
+
+        .qr-scanner-terminal-page .status-badge.absent {
+          background: rgba(220, 38, 38, 0.1) !important;
+          color: #dc2626 !important;
+          border: 1px solid rgba(220, 38, 38, 0.2) !important;
         }
       `}</style>
     </div>
