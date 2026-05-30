@@ -17,7 +17,11 @@ import {
   Settings,
   LogOut,
   HeadphonesIcon,
-  AlertTriangle
+  AlertTriangle,
+  Mail,
+  Phone,
+  MapPin,
+  Clock
 } from "lucide-react";
 
 interface NavItem { href: string; label: string; icon: React.ReactNode; }
@@ -83,12 +87,17 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
 export default function Sidebar({ role, userName, userSub, avatarInitials }: SidebarProps) {
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     setLoggingOut(true);
     await logoutUser();
     window.location.href = "/login";
+  };
+
+  const handleEmailSupport = () => {
+    window.location.href = "mailto:support@pharmatrack.edu.ph?subject=PharmaTrack%20Support%20Request";
   };
 
   return (
@@ -143,7 +152,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
 
         {/* Footer */}
         <div className="sidebar-footer">
-          <button className="sidebar-support-btn" onClick={() => {}}>
+          <button className="sidebar-support-btn" onClick={() => setShowSupportModal(true)}>
             <HeadphonesIcon size={16} />
             <span>Contact Support</span>
           </button>
@@ -186,8 +195,70 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
         </div>
       )}
 
+      {/* Contact Support Modal */}
+      {showSupportModal && (
+        <div className="support-overlay" onClick={() => setShowSupportModal(false)}>
+          <div className="support-card" onClick={(e) => e.stopPropagation()}>
+            <div className="support-icon-wrap">
+              <HeadphonesIcon size={24} />
+            </div>
+            <h3 className="support-title">Support Helpdesk</h3>
+            <p className="support-desc">
+              Have questions or running into issues with PharmaTrack? Reach out to our technical team.
+            </p>
+
+            <div className="support-info-list">
+              <div className="support-info-item">
+                <Mail size={16} className="support-info-icon" />
+                <div>
+                  <span className="support-info-label">Email:</span>
+                  <span className="support-info-value">support@pharmatrack.edu.ph</span>
+                </div>
+              </div>
+              <div className="support-info-item">
+                <Phone size={16} className="support-info-icon" />
+                <div>
+                  <span className="support-info-label">Hotline:</span>
+                  <span className="support-info-value">+63 (33) 337-1234 (ext. 402)</span>
+                </div>
+              </div>
+              <div className="support-info-item">
+                <MapPin size={16} className="support-info-icon" />
+                <div>
+                  <span className="support-info-label">Office:</span>
+                  <span className="support-info-value">Pharmacy IT Lab, Annex Bldg Rm 202</span>
+                </div>
+              </div>
+              <div className="support-info-item">
+                <Clock size={16} className="support-info-icon" />
+                <div>
+                  <span className="support-info-label">Hours:</span>
+                  <span className="support-info-value">Mon – Fri, 8:00 AM – 5:00 PM</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="support-actions">
+              <button
+                className="support-close-btn"
+                onClick={() => setShowSupportModal(false)}
+              >
+                Close
+              </button>
+              <button
+                className="support-email-btn"
+                onClick={handleEmailSupport}
+              >
+                <Mail size={14} />
+                Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
-        .logout-overlay {
+        .logout-overlay, .support-overlay {
           position: fixed;
           inset: 0;
           z-index: 9999;
@@ -199,7 +270,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
           animation: fadeIn 0.15s ease;
         }
 
-        .logout-card {
+        .logout-card, .support-card {
           background: #ffffff;
           border: 1px solid #e5e7eb;
           border-radius: 14px;
@@ -211,20 +282,33 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
           animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .logout-icon-wrap {
+        .support-card {
+          max-width: 400px;
+        }
+
+        .logout-icon-wrap, .support-icon-wrap {
           width: 48px;
           height: 48px;
           border-radius: 12px;
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
           display: flex;
           align-items: center;
           justify-content: center;
           margin: 0 auto 16px;
         }
 
-        .logout-title {
+        .logout-icon-wrap {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #dc2626;
+        }
+
+        .support-icon-wrap {
+          background: rgba(79, 70, 229, 0.08);
+          border: 1px solid rgba(79, 70, 229, 0.18);
+          color: #4f46e5;
+        }
+
+        .logout-title, .support-title {
           font-size: 17px;
           font-weight: 600;
           color: #111827;
@@ -232,19 +316,64 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
           letter-spacing: -0.01em;
         }
 
-        .logout-desc {
+        .support-title {
+          font-size: 18px;
+          font-weight: 700;
+        }
+
+        .logout-desc, .support-desc {
           font-size: 13.5px;
           color: #6b7280;
           margin: 0 0 24px;
           line-height: 1.5;
         }
 
-        .logout-actions {
+        .support-desc {
+          font-size: 13px;
+          margin-bottom: 20px;
+        }
+
+        .support-info-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-bottom: 24px;
+          text-align: left;
+          background: #f9fafb;
+          padding: 16px;
+          border-radius: 10px;
+          border: 1px solid #f3f4f6;
+        }
+
+        .support-info-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 13px;
+          color: #374151;
+        }
+
+        .support-info-icon {
+          color: #4f46e5;
+          flex-shrink: 0;
+        }
+
+        .support-info-label {
+          font-weight: 600;
+          color: #111827;
+          margin-right: 6px;
+        }
+
+        .support-info-value {
+          color: #4b5563;
+        }
+
+        .logout-actions, .support-actions {
           display: flex;
           gap: 10px;
         }
 
-        .logout-cancel-btn {
+        .logout-cancel-btn, .support-close-btn {
           flex: 1;
           height: 40px;
           border-radius: 8px;
@@ -258,27 +387,42 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
           font-family: var(--font-sans);
         }
 
-        .logout-cancel-btn:hover {
+        .logout-cancel-btn:hover, .support-close-btn:hover {
           background: #f9fafb;
           border-color: #9ca3af;
         }
 
-        .logout-confirm-btn {
+        .logout-confirm-btn, .support-email-btn {
           flex: 1;
           height: 40px;
           border-radius: 8px;
           border: none;
-          background: #dc2626;
           color: #ffffff;
           font-size: 13.5px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.15s ease;
           font-family: var(--font-sans);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+
+        .logout-confirm-btn {
+          background: #dc2626;
         }
 
         .logout-confirm-btn:hover {
           background: #b91c1c;
+        }
+
+        .support-email-btn {
+          background: #4f46e5;
+        }
+
+        .support-email-btn:hover {
+          background: #4338ca;
         }
 
         .logout-confirm-btn:disabled {
@@ -299,3 +443,4 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
     </>
   );
 }
+
