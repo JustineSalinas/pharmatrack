@@ -1747,6 +1747,11 @@ html { scrollbar-width: thin; scrollbar-color: #2a2a35 var(--bg); }
   line-height: 1;
 }
 
+/* Balance visual weight by adding slight left-padding to inactive labels */
+.nav-link:not(.nav-link--active) .nav-link-label {
+  padding-left: 2px;
+}
+
 /* Footer */
 .sidebar-footer {
   flex-shrink: 0;
