@@ -144,8 +144,8 @@ export default function EventsManagement() {
           <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Manage Events</h2>
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>Create and schedule pharmacy council activities.</p>
         </div>
-        <button className="btn btn-gold" onClick={() => { resetForm(); setShowModal(true); }}>
-          <PlusCircle size={20} style={{ marginRight: "8px" }} /> Create Event
+        <button className="btn-create-event" onClick={() => { resetForm(); setShowModal(true); }}>
+          <PlusCircle size={16} /> Create Event
         </button>
       </header>
 
@@ -319,7 +319,8 @@ export default function EventsManagement() {
                 </button>
                 <button 
                   type="submit" 
-                  style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#000", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: isSubmitting ? 0.7 : 1, transition: "all 0.15s ease" }}
+                  className="btn-submit-event"
+                  style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#fff", background: "#4f46e5", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: isSubmitting ? 0.7 : 1, transition: "all 0.15s ease" }}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -333,6 +334,27 @@ export default function EventsManagement() {
       )}
 
       <style jsx>{`
+        .btn-create-event {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: #4f46e5 !important;
+          color: #ffffff !important;
+          border: none;
+          padding: 8px 14px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .btn-create-event:hover {
+          background: #4338ca !important;
+          transform: translateY(-1px);
+        }
+        .btn-submit-event:hover {
+          background: #4338ca !important;
+        }
         .animate-spin {
           animation: spin 1s linear infinite;
         }

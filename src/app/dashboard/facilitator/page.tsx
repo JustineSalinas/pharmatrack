@@ -171,25 +171,25 @@ export default function FacilitatorOverview() {
   ];
 
   return (
-    <div className="fade-in sd-root">
+    <div className="fade-in sd-root facilitator-overview-page">
       {/* HEADER */}
       <header className="sd-header">
         <div>
           <p className="sd-header-eyebrow">Facilitator Portal</p>
           <h1 className="sd-header-title">
-            Good {getGreeting()}, <span className="sd-header-name">{firstName}</span> 👋
+            Good {getGreeting()}, <span className="sd-header-name">{firstName}!</span>
           </h1>
         </div>
         <div className="sd-header-date">
-          <Calendar size={13} />
-          {new Date().toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" })}
+          <Calendar size={13} style={{ color: "#4f46e5" }} />
+          <span>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" })}</span>
         </div>
       </header>
 
       {/* STATS STRIP */}
       <div className="sd-stat-tiles" style={{ gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "none", width: "100%", display: "grid", gap: "16px", marginBottom: "24px" }}>
         <div className="sd-stat-tile">
-          <div className="sd-tile-icon-wrap" style={{ background: "rgba(107, 114, 128, 0.08)", color: "var(--muted)" }}>
+          <div className="sd-tile-icon-wrap" style={{ background: "rgba(79, 70, 229, 0.08)", color: "#4f46e5" }}>
             <Users size={18} />
           </div>
           <div>
@@ -199,7 +199,7 @@ export default function FacilitatorOverview() {
         </div>
 
         <div className="sd-stat-tile">
-          <div className="sd-tile-icon-wrap" style={{ background: "var(--gold-dim)", color: "var(--gold)" }}>
+          <div className="sd-tile-icon-wrap" style={{ background: "rgba(79, 70, 229, 0.08)", color: "#4f46e5" }}>
             <CalendarCheck size={18} />
           </div>
           <div>
@@ -209,7 +209,7 @@ export default function FacilitatorOverview() {
         </div>
 
         <div className="sd-stat-tile">
-          <div className="sd-tile-icon-wrap" style={{ background: "rgba(22, 163, 74, 0.08)", color: "var(--success)" }}>
+          <div className="sd-tile-icon-wrap" style={{ background: "rgba(22, 163, 74, 0.08)", color: "#16a34a" }}>
             <LogIn size={18} />
           </div>
           <div>
@@ -219,7 +219,7 @@ export default function FacilitatorOverview() {
         </div>
 
         <div className="sd-stat-tile">
-          <div className="sd-tile-icon-wrap" style={{ background: "rgba(220, 38, 38, 0.08)", color: "var(--danger)" }}>
+          <div className="sd-tile-icon-wrap" style={{ background: "rgba(220, 38, 38, 0.08)", color: "#dc2626" }}>
             <LogOut size={18} />
           </div>
           <div>
@@ -236,7 +236,8 @@ export default function FacilitatorOverview() {
           <div className="recent-scans-header">
             <h3>Live Activity Feed</h3>
             <Link href="/dashboard/facilitator/attendance">
-              View all <ArrowRight size={12} style={{ display: "inline", marginLeft: 2, verticalAlign: "middle" }} />
+              <span>View all</span>
+              <ArrowRight size={12} style={{ display: "inline-block", marginLeft: 4 }} />
             </Link>
           </div>
 
@@ -254,11 +255,12 @@ export default function FacilitatorOverview() {
                   <div className="scan-info">
                     <div className="scan-name">{scan.name}</div>
                     <div className="scan-detail">
-                      <Clock size={10} style={{ display: "inline", marginRight: 3, verticalAlign: "middle" }} />
-                      {scan.eventName} · {scan.timeIn} · <span className="tag" style={{ border: "1px solid var(--border)", padding: "1px 4px", borderRadius: 4, fontSize: 10 }}>{scan.section}</span>
+                      <Clock size={10} style={{ display: "inline-block", marginRight: 3, verticalAlign: "middle", color: "#4f46e5" }} />
+                      <span>{scan.eventName} · {scan.timeIn} · </span>
+                      <span className="tag" style={{ border: "1px solid rgba(79, 70, 229, 0.12)", padding: "2px 6px", borderRadius: 4, fontSize: 10, background: "rgba(79, 70, 229, 0.05)", color: "#4f46e5", fontWeight: 600 }}>{scan.section}</span>
                     </div>
                   </div>
-                  <div className={`status-badge ${scan.status}`}>{scan.status}</div>
+                  <div className={`status-badge ${scan.status}`}>{scan.status.toUpperCase()}</div>
                 </div>
               );
             })
@@ -268,16 +270,17 @@ export default function FacilitatorOverview() {
                 style={{
                   width: 48,
                   height: 48,
-                  border: "1px dashed var(--border)",
+                  border: "1px dashed rgba(79, 70, 229, 0.3)",
                   borderRadius: 8,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  background: "rgba(79, 70, 229, 0.04)"
                 }}
               >
-                <ScanLine size={20} color="var(--dimmed)" />
+                <ScanLine size={20} color="#4f46e5" />
               </div>
-              <p style={{ fontSize: 13, color: "var(--dimmed)", textAlign: "center", margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 13, color: "#4b5563", textAlign: "center", margin: 0, lineHeight: 1.6 }}>
                 No scans recorded today.
                 <br />
                 Attendance will appear here once events begin.
@@ -295,14 +298,14 @@ export default function FacilitatorOverview() {
             <div className="sd-quick-grid" style={{ gridTemplateColumns: "1fr" }}>
               {quickActions.map((a) => (
                 <Link href={a.href as any} className="sd-quick-card" key={a.label}>
-                  <div className="sd-quick-icon" style={{ background: "var(--gold-dim)", color: "var(--gold)" }}>
+                  <div className="sd-quick-icon" style={{ background: "rgba(79, 70, 229, 0.08)", color: "#4f46e5" }}>
                     {a.icon}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
                     <span className="sd-quick-label" style={{ fontWeight: 600 }}>
                       {a.label}
                     </span>
-                    <span style={{ fontSize: "11px", color: "var(--muted)" }}>{a.sub}</span>
+                    <span style={{ fontSize: "11px", color: "#4b5563" }}>{a.sub}</span>
                   </div>
                   <ChevronRight size={14} className="sd-quick-arrow" />
                 </Link>
@@ -312,14 +315,261 @@ export default function FacilitatorOverview() {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
+      {/* NATIVE STYLE TAG FOR UNCOMPROMISED OVERRIDES PREVENTING STYLED-JSX DISCARD ERRORS */}
+      <style>{`
+        .facilitator-overview-page {
+          width: 100%;
+        }
+
+        .facilitator-overview-page .sd-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          padding-bottom: 20px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+          margin-bottom: 4px;
+        }
+
+        .facilitator-overview-page .sd-header-eyebrow {
+          font-size: 11px;
+          font-weight: 600;
+          color: #6b7280 !important;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 4px;
+        }
+
+        .facilitator-overview-page .sd-header-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: #111827 !important;
+          letter-spacing: -0.03em;
+          line-height: 1.2;
+        }
+
+        .facilitator-overview-page .sd-header-date {
+          display: flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          font-size: 12px !important;
+          color: #4f46e5 !important;
+          background: rgba(79, 70, 229, 0.06) !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          padding: 6px 12px !important;
+          border-radius: 99px !important;
+          white-space: nowrap !important;
+        }
+
+        .facilitator-overview-page .sd-stat-tile {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 10px !important;
+          padding: 14px 18px !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 14px !important;
+          position: relative !important;
+          overflow: hidden !important;
+        }
+
+        .facilitator-overview-page .sd-tile-icon-wrap {
+          width: 36px !important;
+          height: 36px !important;
+          border-radius: 9px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex-shrink: 0 !important;
+        }
+
+        .facilitator-overview-page .sd-tile-number {
+          font-size: 26px !important;
+          font-weight: 800 !important;
+          color: #111827 !important;
+          letter-spacing: -0.04em !important;
+          line-height: 1 !important;
+        }
+
+        .facilitator-overview-page .sd-tile-label {
+          font-size: 11px !important;
+          color: #6b7280 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.07em !important;
+          font-weight: 600 !important;
+          margin-top: 2px !important;
+        }
+
+        /* ── LIVE ACTIVITY FEED ── */
+        .facilitator-overview-page .recent-scans {
+          background: rgba(79, 70, 229, 0.04) !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+        }
+
+        .facilitator-overview-page .recent-scans-header {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          padding: 16px 20px !important;
+          border-bottom: 1px solid rgba(79, 70, 229, 0.12) !important;
+          background: rgba(79, 70, 229, 0.03) !important;
+        }
+
+        .facilitator-overview-page .recent-scans-header h3 {
+          margin: 0 !important;
+          font-size: 14px !important;
+          font-weight: 600 !important;
+          color: #4f46e5 !important;
+        }
+
+        .facilitator-overview-page .recent-scans-header a {
+          color: #4f46e5 !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          text-decoration: none !important;
+          display: flex !important;
+          align-items: center !important;
+        }
+
+        .facilitator-overview-page .scan-item {
+          display: flex !important;
+          align-items: center !important;
+          gap: 12px !important;
+          padding: 12px 20px !important;
+          background: transparent !important;
+          border-bottom: 1px solid rgba(79, 70, 229, 0.05) !important;
+          transition: background 0.15s ease !important;
+        }
+
+        .facilitator-overview-page .scan-item:last-child {
+          border-bottom: none !important;
+        }
+
+        .facilitator-overview-page .scan-item:hover {
+          background: rgba(79, 70, 229, 0.07) !important;
+        }
+
+        .facilitator-overview-page .scan-avatar {
+          width: 28px !important;
+          height: 28px !important;
+          border-radius: 6px !important;
+          background: rgba(79, 70, 229, 0.08) !important;
+          border: 1px solid rgba(79, 70, 229, 0.15) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-weight: 600 !important;
+          font-size: 11px !important;
+          color: #4f46e5 !important;
+          flex-shrink: 0 !important;
+        }
+
+        .facilitator-overview-page .scan-name {
+          font-weight: 600 !important;
+          font-size: 13px !important;
+          color: #111827 !important;
+        }
+
+        .facilitator-overview-page .scan-detail {
+          font-size: 12px !important;
+          color: #4b5563 !important;
+          margin-top: 2px !important;
+        }
+
+        /* ── QUICK ACTIONS ── */
+        .facilitator-overview-page .sd-quick-links {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          padding: 16px 18px !important;
+        }
+
+        .facilitator-overview-page .sd-panel-label {
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          color: #4f46e5 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.08em !important;
+        }
+
+        .facilitator-overview-page .sd-quick-card {
+          display: flex !important;
+          align-items: center !important;
+          gap: 12px !important;
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.08) !important;
+          border-radius: 9px !important;
+          padding: 11px 13px !important;
+          text-decoration: none !important;
+          transition: all 0.15s ease !important;
+          margin-bottom: 8px !important;
+        }
+
+        .facilitator-overview-page .sd-quick-card:last-child {
+          margin-bottom: 0 !important;
+        }
+
+        .facilitator-overview-page .sd-quick-card:hover {
+          background: rgba(79, 70, 229, 0.04) !important;
+          border-color: rgba(79, 70, 229, 0.18) !important;
+          transform: translateY(-1px) !important;
+        }
+
+        .facilitator-overview-page .sd-quick-icon {
+          width: 32px !important;
+          height: 32px !important;
+          border-radius: 8px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex-shrink: 0 !important;
+        }
+
+        .facilitator-overview-page .sd-quick-label {
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          color: #111827 !important;
+        }
+
+        .facilitator-overview-page .sd-quick-arrow {
+          color: #4f46e5 !important;
+          flex-shrink: 0 !important;
+          transition: transform 0.15s ease !important;
+        }
+
+        .facilitator-overview-page .sd-quick-card:hover .sd-quick-arrow {
+          transform: translateX(2px) !important;
+        }
+
+        /* ── STATUS BADGES ── */
+        .facilitator-overview-page .status-badge {
+          display: inline-block !important;
+          padding: 2px 8px !important;
+          border-radius: 4px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.04em !important;
+        }
+
+        .facilitator-overview-page .status-badge.present {
+          background: rgba(22, 163, 74, 0.1) !important;
+          color: #16a34a !important;
+          border: 1px solid rgba(22, 163, 74, 0.2) !important;
+        }
+
+        .facilitator-overview-page .status-badge.late {
+          background: rgba(217, 119, 6, 0.1) !important;
+          color: #d97706 !important;
+          border: 1px solid rgba(217, 119, 6, 0.2) !important;
+        }
+
+        .facilitator-overview-page .status-badge.absent {
+          background: rgba(220, 38, 38, 0.1) !important;
+          color: #dc2626 !important;
+          border: 1px solid rgba(220, 38, 38, 0.2) !important;
         }
       `}</style>
     </div>
