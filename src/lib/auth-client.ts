@@ -25,9 +25,13 @@ export async function signInWithGoogle() {
  * Returns auth user info including email_confirmed_at for verification checks.
  */
 export async function getAuthUser() {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session || !session.user) {
+    // Fallback to getUser() in case session is refreshing or needs validation
+    const { data: { user } } = await supabase.auth.getUser();
+    return user || null;
+  }
+  return session.user;
 }
 
 export async function registerStudent(input: StudentRegisterInput) {
@@ -183,16 +187,18 @@ export async function logoutUser() {
 }
 
 export async function getCurrentUser() {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (authError) {
-    console.error("Auth error fetching user:", authError.message);
-    return null;
-  }
+  let user = session?.user;
   
   if (!user) {
-    console.log("No authenticated user session found.");
-    return null;
+    // Fallback to getUser() in case session is refreshing or needs validation
+    const { data: { user: fetchedUser }, error: authError } = await supabase.auth.getUser();
+    if (authError || !fetchedUser) {
+      console.log("No authenticated user session found.");
+      return null;
+    }
+    user = fetchedUser;
   }
 
   // Fetch base user profile first
