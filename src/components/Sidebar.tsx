@@ -94,7 +94,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
   };
 
   const handleEmailSupport = () => {
-    window.location.href = "mailto:support@pharmatrack.edu.ph?subject=PharmaTrack%20Support%20Request";
+    window.location.href = "mailto:cdg.solutionsph@gmail.com?subject=PharmaTrack%20Support%20Request";
   };
 
   return (
@@ -209,7 +209,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
                 <Mail size={16} className="support-info-icon" />
                 <div>
                   <span className="support-info-label">Email:</span>
-                  <span className="support-info-value">support@pharmatrack.edu.ph</span>
+                  <span className="support-info-value">cdg.solutionsph@gmail.com</span>
                 </div>
               </div>
             </div>
