@@ -128,6 +128,7 @@ function LoginForm() {
     <div className="page-wrapper">
       {/* ANIMATED BACKGROUND (DARKER) */}
       <div className="animated-bg darker">
+        <div className="hero-watermark"></div>
         <div className="blob blob-1 darker"></div>
         <div className="blob blob-2 darker"></div>
         <div className="blob blob-3 darker"></div>
@@ -314,6 +315,7 @@ export default function LoginPage() {
     <Suspense fallback={
       <div className="page-wrapper">
         <div className="animated-bg darker">
+          <div className="hero-watermark"></div>
           <div className="blob blob-1 darker"></div>
           <div className="blob blob-2 darker"></div>
           <div className="blob blob-3 darker"></div>
