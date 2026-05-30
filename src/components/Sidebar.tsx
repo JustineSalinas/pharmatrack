@@ -13,8 +13,9 @@ import {
   QrCode, 
   Users, 
   BarChart, 
-  Settings, 
-  ChevronDown
+  Settings,
+  LogOut,
+  HeadphonesIcon
 } from "lucide-react";
 
 interface NavItem { href: string; label: string; icon: React.ReactNode; }
@@ -31,17 +32,17 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
     {
       section: "Main",
       items: [
-        { href: "/dashboard", label: "Overview", icon: <Home size={16} /> },
-        { href: "/check-in", label: "Check-In", icon: <Camera size={16} /> },
-        { href: "/dashboard/records", label: "My Records", icon: <ClipboardList size={16} /> },
-        { href: "/dashboard/schedule", label: "Schedule", icon: <Calendar size={16} /> },
+        { href: "/dashboard", label: "Overview", icon: <Home size={18} /> },
+        { href: "/check-in", label: "Check-In", icon: <Camera size={18} /> },
+        { href: "/dashboard/records", label: "My Records", icon: <ClipboardList size={18} /> },
+        { href: "/dashboard/schedule", label: "Schedule", icon: <Calendar size={18} /> },
       ],
     },
     {
       section: "Account",
       items: [
-        { href: "/dashboard/profile", label: "Profile", icon: <User size={16} /> },
-        { href: "/dashboard/notifications", label: "Notifications", icon: <Bell size={16} /> },
+        { href: "/dashboard/profile", label: "Profile", icon: <User size={18} /> },
+        { href: "/dashboard/notifications", label: "Notifications", icon: <Bell size={18} /> },
       ],
     },
   ],
@@ -49,29 +50,29 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
     {
       section: "Main",
       items: [
-        { href: "/dashboard/facilitator", label: "Dashboard", icon: <Home size={16} /> },
-        { href: "/dashboard/facilitator/events", label: "Manage Events", icon: <Calendar size={16} /> },
-        { href: "/dashboard/facilitator/generate", label: "QR Scanner", icon: <QrCode size={16} /> },
-        { href: "/dashboard/facilitator/attendance", label: "Attendance Logs", icon: <ClipboardList size={16} /> },
-        { href: "/dashboard/facilitator/students", label: "Students", icon: <Users size={16} /> },
-        { href: "/dashboard/facilitator/reports", label: "Reports", icon: <BarChart size={16} /> },
+        { href: "/dashboard/facilitator", label: "Dashboard", icon: <Home size={18} /> },
+        { href: "/dashboard/facilitator/events", label: "Manage Events", icon: <Calendar size={18} /> },
+        { href: "/dashboard/facilitator/generate", label: "QR Scanner", icon: <QrCode size={18} /> },
+        { href: "/dashboard/facilitator/attendance", label: "Attendance Logs", icon: <ClipboardList size={18} /> },
+        { href: "/dashboard/facilitator/students", label: "Students", icon: <Users size={18} /> },
+        { href: "/dashboard/facilitator/reports", label: "Reports", icon: <BarChart size={18} /> },
       ],
     },
     {
       section: "Account",
-      items: [{ href: "/dashboard/profile", label: "Profile", icon: <User size={16} /> }],
+      items: [{ href: "/dashboard/profile", label: "Profile", icon: <User size={18} /> }],
     },
   ],
   admin: [
     {
       section: "Main",
       items: [
-        { href: "/dashboard/admin", label: "Dashboard", icon: <Home size={16} /> },
-        { href: "/dashboard/admin/users", label: "User Management", icon: <Users size={16} /> },
-        { href: "/dashboard/admin/attendance", label: "Attendance Logs", icon: <ClipboardList size={16} /> },
-        { href: "/dashboard/admin/scanner", label: "QR Scanner", icon: <QrCode size={16} /> },
-        { href: "/dashboard/admin/reports", label: "Analytics", icon: <BarChart size={16} /> },
-        { href: "/dashboard/admin/settings", label: "Settings", icon: <Settings size={16} /> },
+        { href: "/dashboard/admin", label: "Dashboard", icon: <Home size={18} /> },
+        { href: "/dashboard/admin/users", label: "User Management", icon: <Users size={18} /> },
+        { href: "/dashboard/admin/attendance", label: "Attendance Logs", icon: <ClipboardList size={18} /> },
+        { href: "/dashboard/admin/scanner", label: "QR Scanner", icon: <QrCode size={18} /> },
+        { href: "/dashboard/admin/reports", label: "Analytics", icon: <BarChart size={18} /> },
+        { href: "/dashboard/admin/settings", label: "Settings", icon: <Settings size={18} /> },
       ],
     },
   ],
@@ -90,85 +91,63 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
   return (
     <aside className="sidebar">
       {/* Scrollable Nav Area */}
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", padding: "24px 16px 16px 16px" }}>
-        {/* Brand Logo & Name */}
-        <div className="sidebar-logo">
-          <div style={{ 
-            width: "36px", 
-            height: "36px", 
-            borderRadius: "50%", 
-            background: "var(--gold-dim)", 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            flexShrink: 0,
-            border: "1px solid rgba(180, 83, 9, 0.15)"
-          }}>
-            <img 
-              src="/pham-logo.png" 
-              alt="PharmaTrack Logo" 
-              style={{ width: "20px", height: "20px", objectFit: "contain" }} 
+      <div className="sidebar-scroll-area">
+
+        {/* Brand */}
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-icon">
+            <img
+              src="/pham-logo.png"
+              alt="PharmaTrack Logo"
+              style={{ width: "20px", height: "20px", objectFit: "contain" }}
             />
           </div>
-          <div
+          <span
+            className="sidebar-brand-name"
             onClick={() => window.location.reload()}
-            style={{ cursor: "pointer", display: "flex", flexDirection: "column" }}
             role="button"
+            style={{ cursor: "pointer" }}
           >
-            <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--white)", letterSpacing: "-0.015em" }}>
-              PharmaTrack
-            </span>
-          </div>
+            PharmaTrack
+          </span>
         </div>
 
-        {/* Nav Menu Sections */}
-        {(navByRole[role] ?? navByRole.student).map((group) => (
-          <div className="nav-section" key={group.section}>
-            <div className="nav-section-label">
-              {group.section === "Main" ? "MAIN MENU" : group.section.toUpperCase()}
+        {/* Nav Sections */}
+        <nav className="sidebar-nav">
+          {(navByRole[role] ?? navByRole.student).map((group) => (
+            <div className="nav-group" key={group.section}>
+              <p className="nav-group-label">
+                {group.section === "Main" ? "Main Menu" : group.section}
+              </p>
+              {group.items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href as any}
+                    className={`nav-link${isActive ? " nav-link--active" : ""}`}
+                  >
+                    <span className="nav-link-icon">{item.icon}</span>
+                    <span className="nav-link-label">{item.label}</span>
+                  </Link>
+                );
+              })}
             </div>
-            {group.items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href as any}
-                className={`nav-item ${pathname === item.href ? "active" : ""}`}
-              >
-                <span className="ni-icon">{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        ))}
+          ))}
+        </nav>
       </div>
 
-      {/* User Dropdown Card (Logout trigger) placed at the bottom */}
-      <div className="sidebar-footer" style={{ flexShrink: 0, padding: "16px" }}>
-        <div className="sidebar-user-card" onClick={handleLogout} role="button" title="Click to log out" style={{ margin: 0 }}>
-          <div className="avatar" style={{ 
-            width: "32px", 
-            height: "32px", 
-            borderRadius: "50%", 
-            background: "var(--surface2)", 
-            color: "var(--white-shade)", 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            fontSize: "12px", 
-            fontWeight: 600, 
-            flexShrink: 0 
-          }}>
-            {role === "admin" ? "SA" : avatarInitials}
-          </div>
-          <div className="user-info" style={{ display: "flex", flexDirection: "column", gap: "1px", flex: 1, overflow: "hidden" }}>
-            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--white)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {role === "admin" ? "System Admin" : userName}
-            </span>
-            <span style={{ fontSize: "10.5px", color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {role === "admin" ? "Admin Account" : role === "facilitator" ? "Facilitator" : "Student Account"}
-            </span>
-          </div>
-          <ChevronDown size={14} style={{ color: "var(--dimmed)", flexShrink: 0, marginLeft: "4px" }} />
-        </div>
+      {/* Footer */}
+      <div className="sidebar-footer">
+        <button className="sidebar-support-btn" onClick={() => {}}>
+          <HeadphonesIcon size={16} />
+          <span>Contact Support</span>
+        </button>
+
+        <button className="sidebar-logout-btn" onClick={handleLogout}>
+          <LogOut size={16} />
+          <span>Logout</span>
+        </button>
       </div>
     </aside>
   );

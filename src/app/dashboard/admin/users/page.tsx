@@ -25,8 +25,7 @@ export default function AdminUsers() {
       const u = await getCurrentUser() as any;
 
       if (!u) {
-        // No session at all — send to login
-        router.push("/login");
+        // Let root DashboardLayout handle redirect to login to avoid hydration race conditions
         return;
       }
 

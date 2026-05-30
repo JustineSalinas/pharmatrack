@@ -111,11 +111,15 @@ export default function AdminReports() {
       try {
         const u = await getCurrentUser();
         if (!u) {
-          router.push("/login");
+          // Let root DashboardLayout handle redirect to login to avoid hydration race conditions
           return;
         }
-        if (u.account_type === "student") {
-          router.push("/dashboard");
+        if (u.account_type !== "admin") {
+          if (u.account_type === "facilitator") {
+            router.push("/dashboard/facilitator");
+          } else {
+            router.push("/dashboard");
+          }
           return;
         }
 
