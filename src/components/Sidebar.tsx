@@ -119,34 +119,6 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
         </div>
       </div>
 
-      {/* User Dropdown Card (Logout trigger) */}
-      <div className="sidebar-user-card" onClick={handleLogout} role="button" title="Click to log out">
-        <div className="avatar" style={{ 
-          width: "32px", 
-          height: "32px", 
-          borderRadius: "50%", 
-          background: "var(--surface2)", 
-          color: "var(--white-shade)", 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center", 
-          fontSize: "12px", 
-          fontWeight: 600, 
-          flexShrink: 0 
-        }}>
-          {role === "admin" ? "SA" : avatarInitials}
-        </div>
-        <div className="user-info" style={{ display: "flex", flexDirection: "column", gap: "1px", flex: 1, overflow: "hidden" }}>
-          <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--white)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {role === "admin" ? "System Admin" : userName}
-          </span>
-          <span style={{ fontSize: "10.5px", color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {role === "admin" ? "Admin Account" : role === "facilitator" ? "Facilitator" : "Student Account"}
-          </span>
-        </div>
-        <ChevronDown size={14} style={{ color: "var(--dimmed)", flexShrink: 0, marginLeft: "4px" }} />
-      </div>
-
       {/* Nav Menu Sections */}
       {(navByRole[role] ?? navByRole.student).map((group) => (
         <div className="nav-section" key={group.section}>
@@ -165,6 +137,36 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
           ))}
         </div>
       ))}
+
+      {/* User Dropdown Card (Logout trigger) placed at the bottom */}
+      <div className="sidebar-footer">
+        <div className="sidebar-user-card" onClick={handleLogout} role="button" title="Click to log out" style={{ margin: "0 4px" }}>
+          <div className="avatar" style={{ 
+            width: "32px", 
+            height: "32px", 
+            borderRadius: "50%", 
+            background: "var(--surface2)", 
+            color: "var(--white-shade)", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            fontSize: "12px", 
+            fontWeight: 600, 
+            flexShrink: 0 
+          }}>
+            {role === "admin" ? "SA" : avatarInitials}
+          </div>
+          <div className="user-info" style={{ display: "flex", flexDirection: "column", gap: "1px", flex: 1, overflow: "hidden" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--white)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {role === "admin" ? "System Admin" : userName}
+            </span>
+            <span style={{ fontSize: "10.5px", color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {role === "admin" ? "Admin Account" : role === "facilitator" ? "Facilitator" : "Student Account"}
+            </span>
+          </div>
+          <ChevronDown size={14} style={{ color: "var(--dimmed)", flexShrink: 0, marginLeft: "4px" }} />
+        </div>
+      </div>
     </aside>
   );
 }
