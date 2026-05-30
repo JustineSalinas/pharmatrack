@@ -182,7 +182,7 @@ function LoginForm() {
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
                   <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
                 </div>
-                <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 2.2rem)", lineHeight: 1.2 }}>Welcome, pharmates!</h2>
+                <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 2.2rem)", lineHeight: 1.2 }}>Welcome, Pharmates!</h2>
                 <p>Access your official Pharmatrack portal.</p>
               </div>
 
@@ -246,7 +246,7 @@ function LoginForm() {
                   <input
                     type="email"
                     className="input-field"
-                    placeholder="Student@usa.edu.ph"
+                    placeholder="student@usa.edu.ph"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -294,7 +294,7 @@ function LoginForm() {
                   style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem", border: "none" }}
                   disabled={loading}
                 >
-                  {loading ? "Logging in..." : "Secure log in"}
+                  {loading ? "Logging in..." : "Secure Log In"}
                 </button>
               </form>
 
