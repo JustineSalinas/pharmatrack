@@ -36,11 +36,15 @@ export default function ScannerPage() {
     async function init() {
       const user = await getCurrentUser();
       if (!user) {
-        router.push("/login");
+        // Let root DashboardLayout handle redirect to login to avoid hydration race conditions
         return;
       }
       if (user.account_type !== "admin") {
-        router.push("/dashboard");
+        if (user.account_type === "facilitator") {
+          router.push("/dashboard/facilitator");
+        } else {
+          router.push("/dashboard");
+        }
         return;
       }
       setAdmin(user);
@@ -302,112 +306,90 @@ export default function ScannerPage() {
   }
 
   return (
-    <div className="fade-in sd-root">
-      
-      {/* PAGE HEADER */}
-      <header className="sd-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button onClick={() => router.push("/dashboard/admin")} className="sp-back-btn" style={{ padding: "6px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface)", cursor: "pointer" }}>
-            <ArrowLeft size={16} />
-          </button>
-          <div>
-            <p className="sd-header-eyebrow">Admin Portal</p>
-            <h1 className="sd-header-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <ScanLine size={20} color="var(--gold)" /> QR Scanner
-            </h1>
-          </div>
-        </div>
-      </header>
-
-      {/* TWO-COLUMN LAYOUT */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "24px", marginBottom: "32px" }} className="scanner-grid">
+    <div className="qr-scanner-portal">
+      <div className="sd-root">
         
-        {/* LEFT COLUMN: Controls & Event Config */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        {/* PAGE HEADER */}
+        <header className="sd-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <button 
+              onClick={() => router.push("/dashboard/admin")} 
+              className="btn-secondary" 
+              style={{ padding: "6px 12px", display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <ArrowLeft size={16} /> Back
+            </button>
+            <h1 className="sd-header-title">Admin Portal / QR Scanner</h1>
+          </div>
+        </header>
+
+        {/* TWO-COLUMN LAYOUT */}
+        <div className="scanner-grid">
           
-          {/* EVENT SELECTION CARD */}
-          <div className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <CalendarDays size={18} color="var(--gold)" />
-              <h3 style={{ fontSize: "15px", fontWeight: 600, color: "var(--white)", margin: 0 }}>Configure Active Activity</h3>
-            </div>
+          {/* LEFT COLUMN: Controls & Event Config & Metrics */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.06em" }}>Target Event</label>
-              <select 
-                className="input-field select-field"
-                value={selectedEventId}
-                onChange={(e) => { setSelectedEventId(e.target.value); stopCamera(); setScanResult(null); }}
-                disabled={isScanning}
-                style={{ width: "100%", height: "38px", padding: "0 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", outline: "none", cursor: "pointer" }}
-              >
-                {activeEvents.length > 0 ? (
-                  activeEvents.map(e => (
-                    <option key={e.id} value={e.id}>{e.name} ({new Date(e.date).toLocaleDateString()})</option>
-                  ))
-                ) : (
-                  <option value="">No events scheduled</option>
-                )}
-              </select>
+            {/* EVENT CONFIGURATION CARD */}
+            <div className="card">
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "11px", color: "var(--qr-text-muted)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.06em" }}>Target Event</label>
+                <select 
+                  className="select-field"
+                  value={selectedEventId}
+                  onChange={(e) => { setSelectedEventId(e.target.value); stopCamera(); setScanResult(null); }}
+                  disabled={isScanning}
+                >
+                  {activeEvents.length > 0 ? (
+                    activeEvents.map(e => (
+                      <option key={e.id} value={e.id}>{e.name} ({new Date(e.date).toLocaleDateString()})</option>
+                    ))
+                  ) : (
+                    <option value="">No events scheduled</option>
+                  )}
+                </select>
+              </div>
+
+              {selectedEvent && (
+                <div className="event-details">
+                  <div className="detail-row">
+                    <span className="detail-label">Location</span>
+                    <span className="detail-value">{selectedEvent.location}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Late Threshold</span>
+                    <span className="detail-value">{new Date(selectedEvent.check_in_late).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Closing Time</span>
+                    <span className="detail-value">{new Date(selectedEvent.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {selectedEvent && (
-              <div style={{ background: "var(--surface2)", padding: "14px 16px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--white-shade)" }}>
-                  <Clock size={13} color="var(--dimmed)" />
-                  <span>Late threshold: {new Date(selectedEvent.check_in_late).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--white-shade)" }}>
-                  <Clock size={13} color="var(--dimmed)" />
-                  <span>Closing time: {new Date(selectedEvent.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--white-shade)" }}>
-                  <MapPin size={13} color="var(--dimmed)" />
-                  <span>Location: {selectedEvent.location}</span>
-                </div>
+            {/* LIVE METRICS PANEL */}
+            <div className="card metrics-card">
+              <div className="metric-item">
+                <span className="metric-label">Scans Logged</span>
+                <span className="metric-value">{recentScans.length}</span>
               </div>
-            )}
+              <div className="metric-divider" />
+              <div className="metric-item">
+                <span className="metric-label">Active Scanners</span>
+                <span className="metric-value">1</span>
+              </div>
+            </div>
           </div>
 
-          {/* SCANNER MODES & STATS CARD */}
-          <div className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <Users size={18} color="var(--gold)" />
-              <h3 style={{ fontSize: "15px", fontWeight: 600, color: "var(--white)", margin: 0 }}>Attendance Log Controls</h3>
-            </div>
-            <p style={{ margin: 0, fontSize: "12.5px", color: "var(--muted)", lineHeight: 1.5 }}>
-              The system automatically toggles check-in and check-out logs. Scanning a student's ID for the first time registers them as **Present/Late**. Scanning a second time registers a **Check-out**.
-            </p>
-            
-            <div style={{ display: "flex", gap: "12px", borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "4px" }}>
-              <div style={{ flex: 1, textAlign: "center" }}>
-                <div style={{ fontSize: "10px", color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>Scans Logged</div>
-                <div style={{ fontSize: "24px", fontWeight: 700, color: "var(--gold)" }}>{recentScans.length}</div>
-              </div>
-              <div style={{ width: "1px", background: "var(--border)" }}></div>
-              <div style={{ flex: 1, textAlign: "center" }}>
-                <div style={{ fontSize: "10px", color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>Active Scanners</div>
-                <div style={{ fontSize: "24px", fontWeight: 700, color: "var(--success)" }}>1</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Viewport & Scan Results */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          
-          <div className="card" style={{ padding: "30px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "360px", position: "relative" }}>
+          {/* RIGHT COLUMN: Viewport & Scan Results */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
             
             {!isScanning && !scanResult && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px", padding: "40px 0" }}>
-                <div style={{ opacity: 0.1, color: "var(--gold)" }}>
-                  <ScanLine size={96} />
-                </div>
+              <div className="scanner-feed-container">
                 <button 
                   onClick={startCamera} 
-                  className="btn btn-gold pulse-btn" 
+                  className="btn-primary" 
                   disabled={!selectedEventId}
-                  style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 32px", fontSize: "14px", fontWeight: 600, border: "none", borderRadius: "var(--radius)", background: "var(--gold)", color: "#000", cursor: "pointer" }}
                 >
                   <Camera size={16} /> Start Scan Session
                 </button>
@@ -415,25 +397,14 @@ export default function ScannerPage() {
             )}
 
             {isScanning && (
-              <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
-                <div 
-                  id="reader" 
-                  style={{ 
-                    width: "280px", 
-                    height: "280px", 
-                    overflow: "hidden", 
-                    borderRadius: "12px", 
-                    border: "2px solid var(--gold)", 
-                    position: "relative",
-                    background: "#000"
-                  }}
-                >
+              <div className="scanner-feed-container">
+                <div id="reader">
                   <div className="scanner-overlay-line" />
                 </div>
                 <button 
                   onClick={stopCamera} 
-                  className="btn btn-outline" 
-                  style={{ padding: "8px 24px", fontSize: "13px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", cursor: "pointer" }}
+                  className="btn-secondary" 
+                  style={{ marginTop: "16px" }}
                 >
                   Pause Camera
                 </button>
@@ -441,121 +412,441 @@ export default function ScannerPage() {
             )}
 
             {scanResult && (
-              <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", padding: "20px 0", textAlign: "center" }}>
-                {scanResult.success ? (
-                  <CheckCircle2 size={72} color="var(--success)" />
-                ) : (
-                  <XCircle size={72} color="var(--danger)" />
-                )}
-                <div>
-                  <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 6px", color: scanResult.success ? "var(--success)" : "var(--danger)" }}>{scanResult.message}</h2>
-                  <p style={{ color: "var(--white-shade)", fontSize: "14px", margin: 0 }}>{scanResult.submessage}</p>
+              <div className="scanner-feed-container">
+                <div className="result-container">
+                  {scanResult.success ? (
+                    <CheckCircle2 size={64} color="#16a34a" />
+                  ) : (
+                    <XCircle size={64} color="#dc2626" />
+                  )}
+                  <div>
+                    <h2 className={`result-title ${scanResult.success ? "success" : "error"}`}>
+                      {scanResult.message}
+                    </h2>
+                    <p className="result-submessage">{scanResult.submessage}</p>
+                  </div>
+                  
+                  <button 
+                    onClick={() => { setScanResult(null); startCamera(); }} 
+                    className="btn-primary"
+                    style={{ marginTop: "8px" }}
+                  >
+                    Next Scan
+                  </button>
                 </div>
-                
-                <button 
-                  onClick={() => { setScanResult(null); startCamera(); }} 
-                  className="btn btn-gold"
-                  style={{ padding: "10px 24px", fontSize: "13px", fontWeight: 600, border: "none", borderRadius: "var(--radius-sm)", background: "var(--gold)", color: "#000", cursor: "pointer", marginTop: "12px" }}
-                >
-                  Next Scan
-                </button>
               </div>
             )}
           </div>
         </div>
-      </div>
 
-      {/* BOTTOM ROW: RECENT SCANS TABLE */}
-      <div className="card" style={{ padding: "0", overflow: "hidden", marginBottom: "24px" }}>
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "10px" }}>
-          <History size={16} color="var(--gold)" />
-          <h3 style={{ fontSize: "15px", fontWeight: 600, color: "var(--white)", margin: 0 }}>Scan Logs (Live Activity Feed)</h3>
-        </div>
-        
-        <div className="table-wrap">
-          <table className="attendance-table" style={{ width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={{ paddingLeft: "24px" }}>Student</th>
-                <th>Student ID</th>
-                <th>Section</th>
-                <th>Time In</th>
-                <th>Time Out</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentScans.length === 0 ? (
+        {/* BOTTOM ROW: RECENT SCANS TABLE */}
+        <div className="table-container">
+          <div className="table-header">
+            Scan Logs (Live Activity Feed)
+          </div>
+          
+          <div style={{ overflowX: "auto" }}>
+            <table className="flat-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} style={{ padding: "40px 24px", textAlign: "center", color: "var(--dimmed)" }}>
-                    No scans logged for this activity yet.
-                  </td>
+                  <th style={{ paddingLeft: "24px" }}>Student</th>
+                  <th>Student ID</th>
+                  <th>Section</th>
+                  <th>Time In</th>
+                  <th>Time Out</th>
+                  <th>Status</th>
                 </tr>
-              ) : (
-                recentScans.map((r, i) => (
-                  <tr key={i} className="user-row">
-                    <td style={{ paddingLeft: "24px" }}>
-                      <span style={{ fontWeight: 500, color: "var(--white-shade)" }}>{r.name}</span>
-                    </td>
-                    <td><span style={{ fontFamily: "var(--font-sans)", color: "var(--dimmed)", fontSize: "12.5px" }}>{r.idNumber}</span></td>
-                    <td><span className="tag" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--dimmed)", fontSize: "11px" }}>{r.section}</span></td>
-                    <td style={{ color: "var(--white-shade)" }}>{r.timeIn}</td>
-                    <td style={{ color: "var(--white-shade)" }}>{r.timeOut}</td>
-                    <td>
-                      <span className={`status-badge ${r.status}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
-                        {r.status.toUpperCase()}
-                      </span>
+              </thead>
+              <tbody>
+                {recentScans.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: "40px 24px", textAlign: "center", color: "var(--qr-text-muted)" }}>
+                      No scans logged for this activity yet.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  recentScans.map((r, i) => (
+                    <tr key={i}>
+                      <td style={{ paddingLeft: "24px", fontWeight: 500 }}>
+                        {r.name}
+                      </td>
+                      <td style={{ color: "var(--qr-text-muted)", fontFamily: "var(--font-sans)" }}>{r.idNumber}</td>
+                      <td>
+                        <span className="tag">{r.section}</span>
+                      </td>
+                      <td>{r.timeIn}</td>
+                      <td>{r.timeOut}</td>
+                      <td>
+                        <span className={`status-badge ${r.status}`}>
+                          {r.status.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* VIEWPORT OVERLAY SCAN LINE ANIMATION STYLES */}
+      {/* SCOPED COMPONENT STYLES */}
       <style jsx>{`
+        .qr-scanner-portal {
+          --qr-bg: #f3f4f6;
+          --qr-card-bg: #ffffff;
+          --qr-border: #e5e7eb;
+          --qr-text: #111827;
+          --qr-text-muted: #4b5563;
+          --qr-text-dim: #9ca3af;
+          --qr-accent: #2563eb;
+          --qr-accent-hover: #1d4ed8;
+          --qr-accent-dim: #eff6ff;
+
+          background-color: var(--qr-bg);
+          color: var(--qr-text);
+          min-height: 100vh;
+          margin: -40px -48px;
+          padding: 40px 48px;
+          box-sizing: border-box;
+        }
+
+        @media (max-width: 768px) {
+          .qr-scanner-portal {
+            margin: -24px -16px -100px -16px;
+            padding: 24px 16px 100px 16px;
+          }
+        }
+
+        .sd-root {
+          max-width: 1200px;
+          margin: 0 auto;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .sd-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-bottom: 16px;
+          border-bottom: 1px solid var(--qr-border);
+        }
+
+        .sd-header-title {
+          font-size: 20px;
+          font-weight: 600;
+          color: var(--qr-text);
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
+
+        .scanner-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.2fr;
+          gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+          .scanner-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .card {
+          background: var(--qr-card-bg);
+          border: 1px solid var(--qr-border);
+          border-radius: 6px;
+          padding: 20px;
+          box-shadow: none;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .select-field {
+          width: 100%;
+          height: 38px;
+          padding: 0 12px;
+          border-radius: 6px;
+          border: 1px solid #d1d5db;
+          background: #ffffff;
+          color: var(--qr-text);
+          font-size: 14px;
+          outline: none;
+          cursor: pointer;
+          transition: border-color 0.15s ease;
+        }
+
+        .select-field:focus {
+          border-color: var(--qr-accent);
+        }
+
+        .event-details {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 13.5px;
+        }
+
+        .detail-label {
+          color: var(--qr-text-muted);
+          font-weight: 500;
+        }
+
+        .detail-value {
+          color: var(--qr-text);
+          font-weight: 400;
+        }
+
+        .metrics-card {
+          flex-direction: row;
+          justify-content: space-around;
+          align-items: center;
+          padding: 16px 20px;
+        }
+
+        .metric-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          flex: 1;
+        }
+
+        .metric-label {
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--qr-text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+          font-size: 24px;
+          font-weight: 600;
+          color: var(--qr-text);
+        }
+
+        .metric-divider {
+          width: 1px;
+          height: 36px;
+          background-color: var(--qr-border);
+        }
+
+        .scanner-feed-container {
+          background: #f9fafb;
+          border: 1px solid var(--qr-border);
+          border-radius: 6px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 320px;
+          position: relative;
+          padding: 24px;
+          box-sizing: border-box;
+        }
+
+        .btn-primary {
+          background-color: var(--qr-accent);
+          color: #ffffff;
+          padding: 12px 32px;
+          font-size: 14px;
+          font-weight: 600;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          transition: background-color 0.15s ease;
+        }
+
+        .btn-primary:hover {
+          background-color: var(--qr-accent-hover);
+        }
+
+        .btn-primary:disabled {
+          background-color: var(--qr-text-dim);
+          cursor: not-allowed;
+        }
+
+        .btn-secondary {
+          background: #ffffff;
+          border: 1px solid #d1d5db;
+          color: #374151;
+          padding: 8px 20px;
+          font-size: 13px;
+          font-weight: 500;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .btn-secondary:hover {
+          background: #f9fafb;
+          border-color: #9ca3af;
+        }
+
+        #reader {
+          width: 280px;
+          height: 280px;
+          overflow: hidden;
+          border-radius: 6px;
+          border: 1px solid var(--qr-border);
+          position: relative;
+          background: #000;
+        }
+
         .scanner-overlay-line {
           position: absolute;
           left: 10%;
           right: 10%;
           height: 3px;
-          background: var(--gold);
-          box-shadow: 0 0 10px var(--gold);
+          background: var(--qr-accent);
+          box-shadow: 0 0 10px var(--qr-accent);
           animation: scanVertical 2.2s linear infinite;
         }
+
         @keyframes scanVertical {
           0% { top: 10%; opacity: 0; }
           10% { opacity: 1; }
           90% { opacity: 1; }
           100% { top: 90%; opacity: 0; }
         }
+
         .animate-spin {
           animation: spin 1s linear infinite;
         }
+
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        .pulse-btn {
-          animation: pulseShadow 2s infinite;
+
+        .result-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+          text-align: center;
         }
-        @keyframes pulseShadow {
-          0% { box-shadow: 0 0 0 0 rgba(232, 184, 75, 0.4); }
-          70% { box-shadow: 0 0 0 10px rgba(232, 184, 75, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(232, 184, 75, 0); }
+
+        .result-title {
+          font-size: 18px;
+          font-weight: 600;
+          margin: 0 0 4px 0;
         }
-        .user-row {
-          transition: background 0.15s ease;
+
+        .result-title.success {
+          color: #16a34a;
         }
-        .user-row:hover {
-          background: var(--surface2);
+
+        .result-title.error {
+          color: #dc2626;
         }
-        @media (max-width: 768px) {
-          .scanner-grid {
-            grid-template-columns: 1fr !important;
-          }
+
+        .result-submessage {
+          color: var(--qr-text-muted);
+          font-size: 14px;
+          margin: 0;
+        }
+
+        .table-container {
+          background: var(--qr-card-bg);
+          border: 1px solid var(--qr-border);
+          border-radius: 6px;
+          overflow: hidden;
+          margin-bottom: 24px;
+        }
+
+        .table-header {
+          padding: 16px 24px;
+          border-bottom: 1px solid var(--qr-border);
+          font-weight: 600;
+          font-size: 15px;
+          color: var(--qr-text);
+        }
+
+        .flat-table {
+          width: 100%;
+          border-collapse: collapse;
+          text-align: left;
+        }
+
+        .flat-table th {
+          padding: 12px 24px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--qr-text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          border-bottom: 1px solid var(--qr-border);
+          background: #f9fafb;
+        }
+
+        .flat-table td {
+          padding: 14px 24px;
+          font-size: 14px;
+          color: var(--qr-text);
+        }
+
+        .flat-table tbody tr {
+          border-bottom: none;
+        }
+
+        .flat-table tbody tr:nth-child(even) {
+          background-color: #f9fafb;
+        }
+
+        .flat-table tbody tr:hover {
+          background-color: #f3f4f6;
+        }
+
+        .tag {
+          display: inline-block;
+          background: #f3f4f6;
+          border: 1px solid var(--qr-border);
+          border-radius: 4px;
+          padding: 2px 6px;
+          color: var(--qr-text-muted);
+          font-size: 11px;
+        }
+
+        /* Specific Status badges overrides for QR scanner page */
+        .qr-scanner-portal .status-badge {
+          display: inline-block;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .qr-scanner-portal .status-badge.present {
+          background: rgba(22, 163, 74, 0.1);
+          color: #16a34a;
+          border: 1px solid rgba(22, 163, 74, 0.2);
+        }
+
+        .qr-scanner-portal .status-badge.late {
+          background: rgba(217, 119, 6, 0.1);
+          color: #d97706;
+          border: 1px solid rgba(217, 119, 6, 0.2);
+        }
+
+        .qr-scanner-portal .status-badge.absent {
+          background: rgba(220, 38, 38, 0.1);
+          color: #dc2626;
+          border: 1px solid rgba(220, 38, 38, 0.2);
         }
       `}</style>
     </div>

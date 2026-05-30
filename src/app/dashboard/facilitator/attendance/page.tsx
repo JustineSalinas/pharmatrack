@@ -22,7 +22,7 @@ export default function FacilitatorAttendance() {
       try {
         const u = await getCurrentUser();
         if (!u) {
-          router.push("/login");
+          // Let root DashboardLayout handle redirect to login to avoid hydration race conditions
           return;
         }
 
