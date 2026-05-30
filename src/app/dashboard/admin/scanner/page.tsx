@@ -35,7 +35,11 @@ export default function ScannerPage() {
   useEffect(() => {
     async function init() {
       const user = await getCurrentUser();
-      if (!user || user.account_type !== "admin") {
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+      if (user.account_type !== "admin") {
         router.push("/dashboard");
         return;
       }

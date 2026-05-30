@@ -21,7 +21,11 @@ export default function AdminAttendance() {
     async function fetchAttendance() {
       try {
         const u = await getCurrentUser();
-        if (!u || u.account_type === "student") {
+        if (!u) {
+          router.push("/login");
+          return;
+        }
+        if (u.account_type === "student") {
           router.push("/dashboard");
           return;
         }
