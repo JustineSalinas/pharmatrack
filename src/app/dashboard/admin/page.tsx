@@ -56,7 +56,7 @@ export default function AdminDashboard() {
           .from("users")
           .select("*", { count: "exact", head: true })
           .eq("account_type", "facilitator")
-          .eq("is_approved", false);
+          .eq("status", "pending");
 
         // Attendance Rate
         const { data: allAtt } = await supabase
