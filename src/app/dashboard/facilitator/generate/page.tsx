@@ -1,598 +1,1126 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+
+import { useEffect, useState, useRef } from "react";
+import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
-import {
-  ScanLine, CheckCircle, XCircle, Calendar, BookOpen, Wifi, WifiOff,
-  LogIn, LogOut, AlertTriangle, ChevronDown,
-} from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-client";
+import { 
+  ScanLine, 
+  ArrowLeft, 
+  CheckCircle2, 
+  XCircle, 
+  Loader2, 
+  Camera,
+  CalendarDays,
+  Clock,
+  MapPin,
+  History,
+  Sparkles,
+  QrCode
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 
-const SUBJECTS = ["Pharmacology 301", "Pharmacognosy", "Clinical Pharmacy", "Pharmaceutical Chemistry", "Pharmacy Law & Ethics"];
+export default function FacilitatorScannerPage() {
+  const [activeEvents, setActiveEvents] = useState<any[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [facilitator, setFacilitator] = useState<any>(null);
+  const [scanResult, setScanResult] = useState<{ success: boolean; message: string; submessage?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
+  const [recentScans, setRecentScans] = useState<any[]>([]);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const router = useRouter();
 
-type ScanMode = "check-in" | "check-out";
-type ScanEntry = {
-  student: string;
-  checkInTime: string;
-  checkInTimestamp: number;
-  checkOutTime: string | null;
-  duration: string | null;
-  status: "checked-in" | "checked-out";
-};
-
-function elapsed(ms: number) {
-  const m = Math.floor(ms / 60000);
-  if (m < 60) return `${m}m`;
-  return `${Math.floor(m / 60)}h ${m % 60}m`;
-}
-
-function CustomSelect({
-  icon,
-  value,
-  options,
-  onChange,
-  disabled,
-  renderLabel,
-}: {
-  icon: React.ReactNode;
-  value: string | number;
-  options: (string | number)[];
-  onChange: (v: any) => void;
-  disabled?: boolean;
-  renderLabel?: (v: any) => string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [hovered, setHovered] = useState<string | number | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
-  const label = renderLabel ? renderLabel(value) : String(value);
-
+  // Load events and facilitator profile with robust error handling
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => !disabled && setOpen(o => !o)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 14px",
-          background: open ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)",
-          border: `1px solid ${open ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.1)"}`,
-          borderRadius: 8,
-          color: disabled ? "rgba(255,255,255,0.35)" : "var(--foreground, #fff)",
-          fontSize: 13,
-          cursor: disabled ? "not-allowed" : "pointer",
-          textAlign: "left",
-          transition: "background 0.15s, border-color 0.15s",
-          outline: "none",
-        }}
-        onMouseEnter={e => {
-          if (!disabled && !open) {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)";
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.18)";
-          }
-        }}
-        onMouseLeave={e => {
-          if (!open) {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.1)";
-          }
-        }}
-      >
-        <span style={{ color: "var(--muted)", flexShrink: 0, display: "flex" }}>{icon}</span>
-        <span style={{ flex: 1 }}>{label}</span>
-        <ChevronDown
-          size={14}
-          style={{
-            color: "var(--muted)",
-            flexShrink: 0,
-            transition: "transform 0.2s",
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-          }}
-        />
-      </button>
-
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            right: 0,
-            background: "var(--card, #1a1d35)",
-            border: "1px solid rgba(255,255,255,0.14)",
-            borderRadius: 10,
-            overflow: "hidden",
-            zIndex: 50,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
-            animation: "dropIn 0.15s ease",
-          }}
-        >
-          {options.map((opt, i) => {
-            const optLabel = renderLabel ? renderLabel(opt) : String(opt);
-            const isSelected = opt === value;
-            const isHovered = hovered === opt;
-            return (
-              <button
-                key={opt}
-                type="button"
-                onMouseEnter={() => setHovered(opt)}
-                onMouseLeave={() => setHovered(null)}
-                onClick={() => { onChange(opt); setOpen(false); }}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "10px 14px",
-                  background: isHovered
-                    ? "rgba(255,255,255,0.07)"
-                    : isSelected
-                    ? "rgba(240,192,64,0.08)"
-                    : "transparent",
-                  border: "none",
-                  borderBottom: i < options.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
-                  color: isSelected ? "var(--gold, #f0c040)" : "var(--foreground, #fff)",
-                  fontSize: 13,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "background 0.12s",
-                }}
-              >
-                {isSelected && (
-                  <CheckCircle size={13} style={{ color: "var(--gold, #f0c040)", flexShrink: 0 }} />
-                )}
-                {!isSelected && <span style={{ width: 13, flexShrink: 0 }} />}
-                {optLabel}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function ScannerPage() {
-  const [form, setForm] = useState({
-    subject: SUBJECTS[0],
-    date: new Date().toISOString().slice(0, 10),
-  });
-  const [scanning, setScanning] = useState(false);
-  const [mode, setMode] = useState<ScanMode>("check-in");
-  const [scanResult, setScanResult] = useState<{ success: boolean; message: string; student?: string } | null>(null);
-  const [entries, setEntries] = useState<ScanEntry[]>([]);
-  const [tick, setTick] = useState(0);
-  const [user, setUser] = useState<any>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [sessionCode, setSessionCode] = useState<string | null>(null);
-  
-  const tickInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-  const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    getCurrentUser().then(setUser);
-    tickInterval.current = setInterval(() => setTick(t => t + 1), 60000);
-    return () => {
-      if (tickInterval.current) clearInterval(tickInterval.current);
-      if (resultTimer.current) clearTimeout(resultTimer.current);
-    };
-  }, []);
-
-  const handleStartScanning = async () => { 
-    if (!user) return;
-    setScanning(true); 
-    setScanResult(null); 
-
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 2);
-    
-    try {
-      const { data, error } = await supabase.from("qr_sessions").insert({
-        facilitator_id: user.id,
-        subject: form.subject,
-        section: "All",
-        date: form.date,
-        expires_at: expiresAt.toISOString(),
-        code: code
-      }).select().single();
-      
-      if (error) throw error;
-      setSessionId(data.id);
-      setSessionCode(data.code);
-    } catch (err) {
-      console.error(err);
-      setScanResult({ success: false, message: "Failed to create session." });
-      setScanning(false);
-    }
-  };
-  const handleStopScanning = () => { 
-    setScanning(false); 
-    setScanResult(null); 
-    setSessionId(null);
-    setSessionCode(null);
-  };
-
-  const showResult = (result: typeof scanResult) => {
-    setScanResult(result);
-    if (resultTimer.current) clearTimeout(resultTimer.current);
-    resultTimer.current = setTimeout(() => setScanResult(null), 3500);
-  };
-
-  const handleSimulateScan = async () => {
-    if (!sessionId) {
-      showResult({ success: false, message: "Please open scanner first." });
-      return;
-    }
-
-    const { data: students } = await supabase.from("users").select("id, full_name").eq("account_type", "student");
-    if (!students || students.length === 0) {
-      showResult({ success: false, message: "No students in database to simulate scan." });
-      return;
-    }
-
-    const targetUser = students[Math.floor(Math.random() * students.length)];
-    const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-    if (mode === "check-in") {
-      const { data: existing } = await supabase.from("attendance_records")
-        .select("id")
-        .eq("session_id", sessionId)
-        .eq("student_id", targetUser.id)
-        .single();
+    async function init() {
+      try {
+        setLoading(true);
+        const user = await getCurrentUser();
         
-      if (existing) {
-        showResult({ success: false, message: "Already checked in.", student: targetUser.full_name });
-        return;
+        if (!user) {
+          console.warn("Scanner init: No session user found. Let dashboard layout redirect...");
+          setLoading(false);
+          return;
+        }
+        
+        if (user.account_type !== "facilitator") {
+          if (user.account_type === "admin") {
+            router.push("/dashboard/admin");
+          } else {
+            router.push("/dashboard");
+          }
+          return;
+        }
+        
+        setFacilitator(user);
+        
+        const { data: events, error } = await supabase
+          .from("events")
+          .select("*")
+          .order("date", { ascending: false });
+        
+        if (error) throw error;
+        
+        setActiveEvents(events || []);
+        if (events && events.length > 0) {
+          setSelectedEventId(events[0].id);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Error initializing scanner:", err);
+        setLoading(false);
       }
+    }
+    init();
+  }, [router]);
+
+  // Fetch event details and recent scans when event changes
+  useEffect(() => {
+    if (!selectedEventId) return;
+    
+    const ev = activeEvents.find(e => e.id === selectedEventId);
+    setSelectedEvent(ev || null);
+    
+    fetchRecentScans(selectedEventId);
+    
+    // Subscribe to attendance logs channel for real-time list updates
+    const channel = supabase
+      .channel(`facilitator-attendance-scans-${selectedEventId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "attendance_records" },
+        () => {
+          fetchRecentScans(selectedEventId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedEventId, activeEvents]);
+
+  // Handle scanner unmount cleanup
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        if (scannerRef.current.isScanning) {
+          scannerRef.current.stop().catch(err => console.error("Clean up stop failed", err));
+        }
+      }
+    };
+  }, []);
+
+  const fetchRecentScans = async (eventId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select(`
+          id,
+          time_in,
+          time_out,
+          status,
+          users (
+            full_name,
+            email,
+            student_profiles (
+              student_id_number,
+              section
+            )
+          )
+        `)
+        .eq("event_id", eventId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
       
-      const { error } = await supabase.from("attendance_records").insert({
-        student_id: targetUser.id,
-        session_id: sessionId,
-        status: "present",
-        time_in: new Date().toISOString(),
-        scanned_by: user.id
+      const formatted = (data || []).map(r => {
+        const u = r.users as any;
+        const profile = u?.student_profiles || {};
+        return {
+          id: r.id,
+          name: u?.full_name || "Unknown Student",
+          email: u?.email || "",
+          idNumber: profile.student_id_number || "—",
+          section: profile.section || "N/A",
+          timeIn: r.time_in ? new Date(r.time_in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—",
+          timeOut: r.time_out ? new Date(r.time_out).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—",
+          status: r.status
+        };
       });
 
-      if (error) {
-        showResult({ success: false, message: "Check-in failed: " + error.message });
-      } else {
-        setEntries(prev => [{ student: targetUser.full_name, checkInTime: timeStr, checkInTimestamp: Date.now(), checkOutTime: null, duration: null, status: "checked-in" }, ...prev]);
-        showResult({ success: true, message: "Successfully checked in.", student: targetUser.full_name });
+      setRecentScans(formatted);
+    } catch (err) {
+      console.error("Error fetching recent scans:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startCamera = async () => {
+    if (!selectedEventId) return;
+    setScanResult(null);
+    setIsScanning(true);
+
+    // Wait for DOM container reader element to render
+    setTimeout(async () => {
+      try {
+        const qrScanner = new Html5Qrcode("reader");
+        scannerRef.current = qrScanner;
+        await qrScanner.start(
+          { facingMode: "environment" },
+          {
+            fps: 15,
+            qrbox: (width, height) => {
+              const size = Math.min(width, height) * 0.75;
+              return { width: size, height: size };
+            }
+          },
+          onScanSuccess,
+          onScanFailure
+        );
+      } catch (err: any) {
+        console.error("Camera start error", err);
+        setIsScanning(false);
+        alert("Could not start camera: " + (err.message || "Permissions denied"));
       }
-    } else {
-      const { data: existing } = await supabase.from("attendance_records")
-        .select("id, time_in")
-        .eq("session_id", sessionId)
-        .eq("student_id", targetUser.id)
-        .is("time_out", null)
+    }, 100);
+  };
+
+  const stopCamera = async () => {
+    setIsScanning(false);
+    if (scannerRef.current) {
+      try {
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
+      } catch (err) {
+        console.error("Failed to stop camera stream", err);
+      }
+      scannerRef.current = null;
+    }
+  };
+
+  async function onScanSuccess(decodedText: string) {
+    if (!selectedEventId || !facilitator) return;
+
+    // Pause camera scanning
+    await stopCamera();
+    setScanResult({ success: true, message: "Verifying credentials...", submessage: `Code: ${decodedText}` });
+
+    try {
+      // 1. Find the student by QR Code ID
+      const { data: student, error: studentErr } = await supabase
+        .from("student_profiles")
+        .select("*, users(full_name)")
+        .eq("qr_code_id", decodedText)
         .maybeSingle();
-        
-      if (!existing) {
-        showResult({ success: false, message: "No open check-in found.", student: targetUser.full_name });
+
+      if (studentErr || !student) {
+        setScanResult({ 
+          success: false, 
+          message: "Invalid QR Code", 
+          submessage: "Student record not found in the system database." 
+        });
         return;
       }
 
-      const { error } = await supabase.from("attendance_records").update({
-        time_out: new Date().toISOString()
-      }).eq("id", existing.id);
+      const studentName = (student.users as any).full_name;
+      const studentUserId = student.user_id;
 
-      if (error) {
-        showResult({ success: false, message: "Check-out failed: " + error.message });
-      } else {
-        const durationMs = Date.now() - new Date(existing.time_in).getTime();
-        const durationStr = elapsed(durationMs);
-        setEntries(prev => prev.map(e =>
-          e.student === targetUser.full_name && e.status === "checked-in"
-            ? { ...e, checkOutTime: timeStr, duration: durationStr, status: "checked-out" }
-            : e
-        ));
-        showResult({ success: true, message: `Checked out after ${durationStr}.`, student: targetUser.full_name });
+      // 2. Fetch the event details
+      const { data: event } = await supabase.from("events").select("*").eq("id", selectedEventId).single();
+      if (!event) throw new Error("Event not found");
+
+      // 3. Logic for Posting Attendance
+      const now = new Date();
+      let status = "present";
+
+      // Time threshold checks
+      if (now > new Date(event.check_in_late)) {
+        status = "late";
       }
-    }
-  };
+      if (now > new Date(event.check_in_end)) {
+         setScanResult({ 
+           success: false, 
+           message: "Check-in Closed", 
+           submessage: `Attendance window ended at ${new Date(event.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+         });
+         return;
+      }
 
-  const cardStyle: React.CSSProperties = {
-    background: "var(--card, #13152a)",
-    border: "1px solid var(--border, rgba(255,255,255,0.07))",
-    borderRadius: 12,
-    overflow: "hidden",
-  };
+      // Check if already checked in
+      const { data: existingRecord } = await supabase
+        .from("attendance_records")
+        .select("*")
+        .eq("student_id", studentUserId)
+        .eq("event_id", selectedEventId)
+        .maybeSingle();
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: 11,
-    fontWeight: 600,
-    color: "var(--muted)",
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    marginBottom: 6,
-  };
+      if (existingRecord) {
+        // Handle Check-out
+        if (!existingRecord.time_out) {
+           const { error: outErr } = await supabase
+             .from("attendance_records")
+             .update({ time_out: now.toISOString() })
+             .eq("id", existingRecord.id);
+           
+           if (outErr) throw outErr;
+           setScanResult({ 
+             success: true, 
+             message: "Check-out Recorded!", 
+             submessage: `${studentName} has checked out successfully.` 
+           });
+        } else {
+           setScanResult({ 
+             success: false, 
+             message: "Already Logged", 
+             submessage: `${studentName} has already recorded both check-in and check-out.` 
+           });
+        }
+      } else {
+        // Perform Check-in
+        const { error: insErr } = await supabase
+          .from("attendance_records")
+          .insert({
+            student_id: studentUserId,
+            event_id: selectedEventId,
+            status: status,
+            time_in: now.toISOString(),
+            scanned_by: facilitator.id
+          });
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 14px",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 8,
-    color: "var(--foreground, #fff)",
-    fontSize: 13,
-    outline: "none",
-  };
+        if (insErr) throw insErr;
+        setScanResult({ 
+          success: true, 
+          message: `${status.toUpperCase()}!`, 
+          submessage: `${studentName} checked in successfully.` 
+        });
+      }
+      
+      // Refresh list
+      fetchRecentScans(selectedEventId);
+    } catch (err: any) {
+      console.error(err);
+      setScanResult({ success: false, message: "Scan Failed", submessage: err.message });
+    }
+  }
 
-  const css = `
-    @keyframes scanLine {
-      0%   { top: 8%; opacity: 0; }
-      10%  { opacity: 1; }
-      90%  { opacity: 1; }
-      100% { top: 88%; opacity: 0; }
-    }
-    @keyframes pulseGreen {
-      0%, 100% { opacity: 0.6; transform: scale(0.95); }
-      50%       { opacity: 1;   transform: scale(1.05); }
-    }
-    @keyframes dropIn {
-      from { opacity: 0; transform: translateY(-6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .qr-scan-line {
-      position: absolute; left: 12%; right: 12%; height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(200,146,42,0.9), transparent);
-      animation: scanLine 2.2s ease-in-out infinite; border-radius: 2px;
-    }
-    .pulse-dot { animation: pulseGreen 1.5s ease-in-out infinite; }
-  `;
+  function onScanFailure(error: any) {
+    // Silently process failures
+  }
 
-  const checkedInCount = entries.filter(e => e.status === "checked-in").length;
-  const checkedOutCount = entries.filter(e => e.status === "checked-out").length;
+  const punctualCount = recentScans.filter(r => r.status === "present").length;
+  const lateCount = recentScans.filter(r => r.status === "late").length;
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+        <Loader2 className="animate-spin" size={24} color="#4f46e5" />
+      </div>
+    );
+  }
 
   return (
-    <>
-      <style>{css}</style>
-
-      {/* Page Header */}
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
-          Facilitator
+    <div className="fade-in sd-root qr-scanner-terminal-page">
+      
+      {/* PAGE HEADER */}
+      <header className="sd-header">
+        <div>
+          <p className="sd-header-eyebrow">Real-Time Attendance Monitoring</p>
+          <h1 className="sd-header-title">QR Scanner Terminal</h1>
         </div>
-        <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>QR Scanner</h2>
-      </div>
-
-      {/* Main 2-column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 32 }}>
-
-        {/* ── Session Details Card ── */}
-        <div style={{ ...cardStyle, padding: "24px 28px" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 24 }}>
-            Session Details
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-
-            {/* Subject */}
-            <div>
-              <div style={labelStyle}>Subject</div>
-              <CustomSelect
-                icon={<BookOpen size={14} />}
-                value={form.subject}
-                options={SUBJECTS}
-                onChange={v => setForm({ ...form, subject: v })}
-                disabled={scanning}
-              />
-            </div>
-
-            {/* Date */}
-            <div>
-              <div style={labelStyle}>Date</div>
-              <div style={{ position: "relative" }}>
-                <Calendar size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-                <input
-                  type="date"
-                  style={{ ...inputStyle, paddingLeft: 34 }}
-                  value={form.date}
-                  onChange={e => setForm({ ...form, date: e.target.value })}
-                  disabled={scanning}
-                />
-              </div>
-            </div>
-
-            {/* Open / Stop */}
-            {!scanning ? (
-              <button onClick={handleStartScanning} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px 24px", background: "var(--gold, #f0c040)", border: "none", borderRadius: 8, color: "#000", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                <ScanLine size={15} /> Open Scanner
-              </button>
-            ) : (
-              <button onClick={handleStopScanning} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px 24px", background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 8, color: "#f87171", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                <XCircle size={15} /> Stop Scanning
-              </button>
-            )}
-          </div>
-
-          {/* Session Info */}
-          <div style={{ marginTop: 20, padding: "16px 20px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Session Info</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
-              <div><span style={{ color: "var(--muted)" }}>Subject: </span>{form.subject}</div>
-              <div><span style={{ color: "var(--muted)" }}>Date: </span>{form.date}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: "var(--muted)" }}>Status: </span>
-                {scanning
-                  ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#4ade80", fontWeight: 600, fontSize: 12 }}><Wifi size={13} /> Live</span>
-                  : <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "var(--muted)", fontSize: 12 }}><WifiOff size={13} /> Idle</span>}
-              </div>
-            </div>
-          </div>
+        <div>
+          <button 
+            onClick={() => router.push("/dashboard/facilitator")} 
+            className="btn-back"
+          >
+            <ArrowLeft size={15} />
+            <span>Return to Dashboard</span>
+          </button>
         </div>
+      </header>
 
-        {/* ── Scanner Preview Card ── */}
-        <div style={{ ...cardStyle, padding: "24px 28px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 20, alignSelf: "flex-start" }}>
-            Scanner Preview
-          </div>
-
-          {scanning && (
-            <div style={{ display: "flex", gap: 0, marginBottom: 20, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, overflow: "hidden", width: "100%" }}>
-              {(["check-in", "check-out"] as ScanMode[]).map(m => (
-                <button
-                  key={m}
-                  onClick={() => { setMode(m); setScanResult(null); }}
-                  style={{
-                    flex: 1,
-                    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    padding: "10px 0",
-                    background: mode === m ? (m === "check-in" ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.15)") : "transparent",
-                    border: "none",
-                    borderRight: m === "check-in" ? "1px solid rgba(255,255,255,0.1)" : "none",
-                    color: mode === m ? (m === "check-in" ? "#4ade80" : "#f87171") : "rgba(255,255,255,0.35)",
-                    fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    transition: "background 0.2s, color 0.2s",
-                  }}
+      {/* TWO-COLUMN SCANNER PANEL GRID */}
+      <div className="scanner-grid">
+        
+        {/* LEFT COLUMN: Setup details and Real-time Metrics */}
+        <div className="controls-column">
+          
+          {/* EVENT SELECTOR & SPECS */}
+          <div className="setup-card">
+            <h3 className="card-section-title">Terminal Configuration</h3>
+            
+            <div className="form-group">
+              <label className="input-label">Select Active Event</label>
+              <div className="select-wrapper">
+                <select 
+                  className="custom-select"
+                  value={selectedEventId}
+                  onChange={(e) => { setSelectedEventId(e.target.value); stopCamera(); setScanResult(null); }}
+                  disabled={isScanning}
                 >
-                  {m === "check-in" ? <LogIn size={14} /> : <LogOut size={14} />}
-                  {m === "check-in" ? "Check In" : "Check Out"}
-                </button>
-              ))}
+                  {activeEvents.length > 0 ? (
+                    activeEvents.map(e => (
+                      <option key={e.id} value={e.id}>{e.name} ({new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})</option>
+                    ))
+                  ) : (
+                    <option value="">No events scheduled</option>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {selectedEvent && (
+              <div className="event-info-panel">
+                <div className="info-row">
+                  <MapPin size={16} className="info-icon" />
+                  <div>
+                    <span className="info-label">Venue / Location</span>
+                    <span className="info-val">{selectedEvent.location}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <CalendarDays size={16} className="info-icon" />
+                  <div>
+                    <span className="info-label">Event Date</span>
+                    <span className="info-val">{new Date(selectedEvent.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <Clock size={16} className="info-icon" />
+                  <div>
+                    <span className="info-label">Check-in Windows</span>
+                    <span className="info-val">
+                      Late at: <strong>{new Date(selectedEvent.check_in_late).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                      <br />
+                      Closes: <strong>{new Date(selectedEvent.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* LIVE METRICS PANEL */}
+          <div className="metrics-card">
+            <div className="metric-box">
+              <span className="metric-num-total">{recentScans.length}</span>
+              <span className="metric-title">Total Logs</span>
+            </div>
+            <div className="metric-sep" />
+            <div className="metric-box">
+              <span className="metric-num-present">{punctualCount}</span>
+              <span className="metric-title">Punctual</span>
+            </div>
+            <div className="metric-sep" />
+            <div className="metric-box">
+              <span className="metric-num-late">{lateCount}</span>
+              <span className="metric-title">Tardy / Late</span>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Active Camera Viewport / Results Screen */}
+        <div className="viewport-column">
+          
+          {/* CAMERA FEED PLACEHOLDER */}
+          {!isScanning && !scanResult && (
+            <div className="viewport-placeholder">
+              <div className="pulse-circle">
+                <QrCode size={40} className="placeholder-icon" />
+              </div>
+              <h3 className="placeholder-title">Scanner Standby</h3>
+              <p className="placeholder-text">Please verify the selected target event details, then click below to launch the camera session.</p>
+              
+              <button 
+                onClick={startCamera} 
+                className="btn-start-scanner"
+                disabled={!selectedEventId}
+              >
+                <Camera size={18} />
+                <span>Initialize Scanner</span>
+              </button>
             </div>
           )}
 
-          <div style={{
-            width: 200, height: 200, margin: "0 auto 20px", borderRadius: 14, position: "relative",
-            background: scanning ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.02)",
-            border: scanning ? (mode === "check-in" ? "1.5px solid rgba(74,222,128,0.45)" : "1.5px solid rgba(248,113,113,0.45)") : "1.5px dashed rgba(255,255,255,0.12)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            overflow: "hidden", transition: "border-color 0.3s",
-          }}>
-            {[
-              { top: 8, left: 8, borderWidth: "2px 0 0 2px" },
-              { top: 8, right: 8, borderWidth: "2px 2px 0 0" },
-              { bottom: 8, left: 8, borderWidth: "0 0 2px 2px" },
-              { bottom: 8, right: 8, borderWidth: "0 2px 2px 0" },
-            ].map((s, i) => (
-              <span key={i} style={{ position: "absolute", width: 18, height: 18, borderColor: scanning ? (mode === "check-in" ? "rgba(74,222,128,0.7)" : "rgba(248,113,113,0.7)") : "rgba(255,255,255,0.25)", borderStyle: "solid", transition: "border-color 0.3s", ...s }} />
-            ))}
-            {scanning && <div className="qr-scan-line" style={{ background: `linear-gradient(90deg, transparent, ${mode === "check-in" ? "rgba(74,222,128,0.8)" : "rgba(248,113,113,0.8)"}, transparent)` }} />}
-
-            {!scanning ? (
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", lineHeight: 1.5, textAlign: "center" }}>Configure and<br />open scanner</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                {mode === "check-in" ? <LogIn size={26} style={{ color: "rgba(74,222,128,0.6)" }} /> : <LogOut size={26} style={{ color: "rgba(248,113,113,0.6)" }} />}
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>Waiting for QR…</span>
+          {/* ACTIVE QR SCANNER */}
+          {isScanning && (
+            <div className="viewport-active">
+              <div className="viewfinder-frame">
+                <div className="corner-bracket top-left" />
+                <div className="corner-bracket top-right" />
+                <div className="corner-bracket bottom-left" />
+                <div className="corner-bracket bottom-right" />
+                
+                <div id="reader" />
+                <div className="laser-beam" />
               </div>
-            )}
-          </div>
+              
+              <button 
+                onClick={stopCamera} 
+                className="btn-pause-scanner"
+              >
+                <span>Disconnect Stream</span>
+              </button>
+            </div>
+          )}
 
-          {/* Status pill */}
-          <div style={{ marginBottom: 16 }}>
-            {scanning ? (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 14px", background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 99, fontSize: 12, color: "#4ade80", fontWeight: 500 }}>
-                <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "#4ade80", display: "inline-block" }} />
-                Scanner Active — {mode === "check-in" ? "Check In" : "Check Out"} Mode
-              </div>
-            ) : (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 99, fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "inline-block" }} />
-                Scanner Idle
-              </div>
-            )}
-          </div>
-
+          {/* SCAN OUTCOME STATUS SCREEN */}
           {scanResult && (
-            <div style={{
-              width: "100%", marginBottom: 16, padding: "12px 16px",
-              background: scanResult.success ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
-              border: `1px solid ${scanResult.success ? "rgba(74,222,128,0.25)" : "rgba(248,113,113,0.25)"}`,
-              borderRadius: 10, display: "flex", alignItems: "center", gap: 10,
-            }}>
-              {scanResult.success
-                ? <CheckCircle size={16} style={{ color: "#4ade80", flexShrink: 0 }} />
-                : <XCircle size={16} style={{ color: "#f87171", flexShrink: 0 }} />}
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: scanResult.success ? "#4ade80" : "#f87171" }}>{scanResult.student ?? "Error"}</div>
-                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{scanResult.message}</div>
+            <div className="viewport-result">
+              <div className="result-card">
+                <div className={`status-icon-wrap ${scanResult.success ? "success" : "error"}`}>
+                  {scanResult.success ? (
+                    <CheckCircle2 size={44} />
+                  ) : (
+                    <XCircle size={44} />
+                  )}
+                </div>
+                
+                <div className="result-text-block">
+                  <h2 className={`result-headline ${scanResult.success ? "success" : "error"}`}>
+                    {scanResult.message}
+                  </h2>
+                  <p className="result-explanation">{scanResult.submessage}</p>
+                </div>
+                
+                <button 
+                  onClick={() => { setScanResult(null); startCamera(); }} 
+                  className="btn-next-scan"
+                >
+                  <Sparkles size={16} />
+                  <span>Resume Scanning</span>
+                </button>
               </div>
             </div>
-          )}
-
-          {scanning && (
-            <button
-              onClick={handleSimulateScan}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", background: "transparent", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 8, color: "rgba(255,255,255,0.65)", fontSize: 12, cursor: "pointer", transition: "background 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-            >
-              <ScanLine size={13} /> Simulate Scan
-            </button>
           )}
         </div>
       </div>
 
-      {/* ── Live Summary strip ── */}
-      {entries.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12, marginTop: 16 }}>
-          {[
-            { label: "Checked In", value: checkedInCount, color: "#4ade80", bg: "rgba(74,222,128,0.08)", border: "rgba(74,222,128,0.2)" },
-            { label: "Checked Out", value: checkedOutCount, color: "rgba(255,255,255,0.7)", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.1)" },
-          ].map(s => (
-            <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: "14px 20px" }}>
-              <div style={{ fontSize: 28, fontWeight: 700, color: s.color, lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</div>
-            </div>
-          ))}
+      {/* BOTTOM SECTION: RECENT SCANS LOG TABLE */}
+      <div className="panel indigo-table-panel" style={{ padding: 0, overflow: "hidden", marginTop: "12px" }}>
+        <div className="table-header-custom">
+          <History size={16} />
+          <span>Real-time Activity Logs (Recent Scans)</span>
         </div>
-      )}
-
-      {/* ── Recent Scans table ── */}
-      <div style={{ ...cardStyle, marginTop: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))" }}>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>Recent Scans</span>
-          <a style={{ color: "var(--gold, #f0c040)", fontSize: 12, cursor: "pointer" }}>View all →</a>
-        </div>
-        {entries.length > 0 ? (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        
+        <div className="table-wrap">
+          <table className="attendance-table" style={{ width: "100%" }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))" }}>
-                {["Student", "Check In", "Check Out", "Duration", "Status"].map(h => (
-                  <th key={h} style={{ padding: "10px 20px", textAlign: "left", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{h}</th>
-                ))}
+              <tr>
+                <th style={{ paddingLeft: "24px" }}>Student Profile</th>
+                <th>Student ID</th>
+                <th>Section</th>
+                <th>Time Checked In</th>
+                <th>Time Checked Out</th>
+                <th>Log Status</th>
               </tr>
             </thead>
             <tbody>
-              {entries.map((e, idx) => {
-                const liveDuration = e.status === "checked-in" ? elapsed(Date.now() - e.checkInTimestamp) : e.duration;
-                return (
-                  <tr key={idx} style={{ borderBottom: "1px solid var(--border, rgba(255,255,255,0.04))" }}>
-                    <td style={{ padding: "12px 20px", fontWeight: 500 }}>{e.student}</td>
-                    <td style={{ padding: "12px 20px", color: "var(--muted)", fontSize: 12 }}>{e.checkInTime}</td>
-                    <td style={{ padding: "12px 20px", color: "var(--muted)", fontSize: 12 }}>{e.checkOutTime ?? "—"}</td>
-                    <td style={{ padding: "12px 20px", color: "var(--muted)", fontSize: 12 }}>{liveDuration ?? "—"}</td>
-                    <td style={{ padding: "12px 20px" }}>
-                      {e.status === "checked-in" ? (
-                        <span style={{ padding: "3px 10px", background: "rgba(74,222,128,0.1)", color: "#4ade80", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>Checked In</span>
-                      ) : (
-                        <span style={{ padding: "3px 10px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>Checked Out</span>
-                      )}
+              {recentScans.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "48px 24px", textAlign: "center", color: "#4b5563" }}>
+                    No scans logged for this activity yet. Launch camera to start logging.
+                  </td>
+                </tr>
+              ) : (
+                recentScans.map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ paddingLeft: "24px", fontWeight: 500, color: "#111827" }}>
+                      {r.name}
+                    </td>
+                    <td style={{ color: "#4b5563", fontFamily: "monospace", fontSize: "13px" }}>{r.idNumber}</td>
+                    <td>
+                      <span className="section-badge">{r.section}</span>
+                    </td>
+                    <td style={{ color: "#374151" }}>{r.timeIn}</td>
+                    <td style={{ color: "#374151" }}>{r.timeOut}</td>
+                    <td>
+                      <span className={`status-badge ${r.status === 'present' ? 'present' : r.status === 'late' ? 'late' : 'absent'}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
+                        {r.status.toUpperCase()}
+                      </span>
                     </td>
                   </tr>
-                );
-              })}
+                ))
+              )}
             </tbody>
           </table>
-        ) : (
-          <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
-            No scans recorded yet. Start scanning to see results here.
-          </div>
-        )}
+        </div>
       </div>
-    </>
+
+      {/* NATIVE STYLE TAG FOR UNCOMPROMISED OVERRIDES PREVENTING STYLED-JSX DISCARD ERRORS */}
+      <style>{`
+        .qr-scanner-terminal-page {
+          width: 100%;
+        }
+
+        .qr-scanner-terminal-page .sd-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          padding-bottom: 20px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+          margin-bottom: 4px;
+        }
+
+        .qr-scanner-terminal-page .sd-header-eyebrow {
+          font-size: 11px;
+          font-weight: 600;
+          color: #6b7280 !important;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 4px;
+        }
+
+        .qr-scanner-terminal-page .sd-header-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: #111827 !important;
+          letter-spacing: -0.03em;
+          line-height: 1.2;
+        }
+
+        .qr-scanner-terminal-page .btn-back {
+          background: #ffffff !important;
+          border: 1px solid #d1d5db !important;
+          border-radius: 6px !important;
+          color: #374151 !important;
+          font-size: 13px;
+          font-weight: 500;
+          padding: 8px 14px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.15s ease;
+        }
+
+        .qr-scanner-terminal-page .btn-back:hover {
+          background: #f9fafb !important;
+          color: #111827 !important;
+          border-color: #4f46e5 !important;
+        }
+
+        .qr-scanner-terminal-page .scanner-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.3fr;
+          gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+          .qr-scanner-terminal-page .scanner-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .qr-scanner-terminal-page .controls-column {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .qr-scanner-terminal-page .setup-card {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          padding: 24px !important;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .qr-scanner-terminal-page .card-section-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #4f46e5 !important;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          margin-bottom: 4px;
+          margin-top: 0;
+        }
+
+        .qr-scanner-terminal-page .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .qr-scanner-terminal-page .input-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #374151 !important;
+        }
+
+        .qr-scanner-terminal-page .custom-select {
+          width: 100% !important;
+          height: 42px !important;
+          padding: 0 16px !important;
+          border-radius: 6px !important;
+          border: 1px solid #d1d5db !important;
+          background: #f9fafb !important;
+          color: #111827 !important;
+          font-size: 14px !important;
+          font-weight: 500 !important;
+          outline: none !important;
+          cursor: pointer !important;
+          appearance: none !important;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(79,70,229,0.7)'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+          background-repeat: no-repeat !important;
+          background-position: right 14px center !important;
+          background-size: 15px !important;
+          padding-right: 40px !important;
+          transition: all 0.15s ease !important;
+        }
+
+        .qr-scanner-terminal-page .custom-select:focus:not(:disabled) {
+          border-color: #4f46e5 !important;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
+        }
+
+        .qr-scanner-terminal-page .event-info-panel {
+          background: #f9fafb !important;
+          border-radius: 6px !important;
+          padding: 16px !important;
+          display: flex;
+          flex-direction: column !important;
+          gap: 16px !important;
+          border: 1px solid rgba(79, 70, 229, 0.08) !important;
+        }
+
+        .qr-scanner-terminal-page .info-row {
+          display: flex !important;
+          align-items: flex-start !important;
+          gap: 12px !important;
+        }
+
+        .qr-scanner-terminal-page .info-icon {
+          color: #4f46e5 !important;
+          margin-top: 3px;
+          flex-shrink: 0;
+        }
+
+        .qr-scanner-terminal-page .info-label {
+          display: block !important;
+          font-size: 11px !important;
+          color: #6b7280 !important;
+          text-transform: uppercase !important;
+          font-weight: 600 !important;
+          letter-spacing: 0.05em !important;
+          margin-bottom: 2px !important;
+        }
+
+        .qr-scanner-terminal-page .info-val {
+          display: block !important;
+          font-size: 13.5px !important;
+          color: #111827 !important;
+          line-height: 1.4 !important;
+        }
+
+        .qr-scanner-terminal-page .metrics-card {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          padding: 20px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-around !important;
+          flex-direction: row !important;
+        }
+
+        .qr-scanner-terminal-page .metric-box {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 4px !important;
+          flex: 1 !important;
+        }
+
+        .qr-scanner-terminal-page .metric-num-total {
+          font-size: 26px !important;
+          font-weight: 800 !important;
+          color: #111827 !important;
+          letter-spacing: -0.02em !important;
+        }
+
+        .qr-scanner-terminal-page .metric-num-present {
+          font-size: 26px !important;
+          font-weight: 800 !important;
+          color: #16a34a !important;
+          letter-spacing: -0.02em !important;
+        }
+
+        .qr-scanner-terminal-page .metric-num-late {
+          font-size: 26px !important;
+          font-weight: 800 !important;
+          color: #d97706 !important;
+          letter-spacing: -0.02em !important;
+        }
+
+        .qr-scanner-terminal-page .metric-title {
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          color: #6b7280 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.05em !important;
+        }
+
+        .qr-scanner-terminal-page .metric-sep {
+          width: 1px !important;
+          height: 36px !important;
+          background: rgba(0, 0, 0, 0.08) !important;
+        }
+
+        .qr-scanner-terminal-page .viewport-placeholder {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-align: center !important;
+          padding: 48px 32px !important;
+          flex: 1 !important;
+          min-height: 360px !important;
+        }
+
+        .qr-scanner-terminal-page .pulse-circle {
+          width: 72px !important;
+          height: 72px !important;
+          border-radius: 50% !important;
+          background: rgba(79, 70, 229, 0.06) !important;
+          border: 1px solid rgba(79, 70, 229, 0.15) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        .qr-scanner-terminal-page .placeholder-icon {
+          color: #4f46e5 !important;
+        }
+
+        .qr-scanner-terminal-page .placeholder-title {
+          font-size: 18px !important;
+          font-weight: 700 !important;
+          color: #111827 !important;
+          margin-top: 16px !important;
+          margin-bottom: 8px !important;
+        }
+
+        .qr-scanner-terminal-page .placeholder-text {
+          font-size: 13px !important;
+          color: #4b5563 !important;
+          max-width: 320px !important;
+          margin: 0 auto 24px !important;
+          line-height: 1.5 !important;
+        }
+
+        .qr-scanner-terminal-page .btn-start-scanner {
+          background: #4f46e5 !important;
+          border: none !important;
+          color: #ffffff !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          padding: 10px 20px !important;
+          border-radius: 6px !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          transition: all 0.15s ease !important;
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2) !important;
+        }
+
+        .qr-scanner-terminal-page .btn-start-scanner:hover:not(:disabled) {
+          background: #4338ca !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 16px rgba(79, 70, 229, 0.3) !important;
+        }
+
+        .qr-scanner-terminal-page .btn-start-scanner:disabled {
+          background: #e5e7eb !important;
+          color: #9ca3af !important;
+          cursor: not-allowed !important;
+          box-shadow: none !important;
+        }
+
+        .qr-scanner-terminal-page .viewport-active {
+          background: #111827 !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 24px !important;
+          flex: 1 !important;
+          min-height: 360px !important;
+        }
+
+        .qr-scanner-terminal-page .viewfinder-frame {
+          position: relative !important;
+          width: 240px !important;
+          height: 240px !important;
+          border-radius: 12px !important;
+          overflow: hidden !important;
+          background: #000000 !important;
+        }
+
+        .qr-scanner-terminal-page #reader {
+          width: 100% !important;
+          height: 100% !important;
+        }
+
+        .qr-scanner-terminal-page #reader video {
+          object-fit: cover !important;
+          width: 100% !important;
+          height: 100% !important;
+        }
+
+        .qr-scanner-terminal-page .corner-bracket {
+          position: absolute !important;
+          width: 20px !important;
+          height: 20px !important;
+          border-color: #4f46e5 !important;
+          border-style: solid !important;
+          z-index: 10 !important;
+        }
+
+        .qr-scanner-terminal-page .top-left {
+          top: 10px !important;
+          left: 10px !important;
+          border-width: 3px 0 0 3px !important;
+        }
+
+        .qr-scanner-terminal-page .top-right {
+          top: 10px !important;
+          right: 10px !important;
+          border-width: 3px 3px 0 0 !important;
+        }
+
+        .qr-scanner-terminal-page .bottom-left {
+          bottom: 10px !important;
+          left: 10px !important;
+          border-width: 0 0 3px 3px !important;
+        }
+
+        .qr-scanner-terminal-page .bottom-right {
+          bottom: 10px !important;
+          right: 10px !important;
+          border-width: 0 3px 3px 0 !important;
+        }
+
+        .qr-scanner-terminal-page .laser-beam {
+          position: absolute !important;
+          left: 15px !important;
+          right: 15px !important;
+          height: 2px !important;
+          background: #4f46e5 !important;
+          z-index: 9 !important;
+          box-shadow: 0 0 8px #4f46e5 !important;
+          animation: scanLaser 2s linear infinite !important;
+        }
+
+        @keyframes scanLaser {
+          0% { top: 15px; }
+          50% { top: 225px; }
+          100% { top: 15px; }
+        }
+
+        .qr-scanner-terminal-page .btn-pause-scanner {
+          background: rgba(220, 38, 38, 0.1) !important;
+          border: 1px solid rgba(220, 38, 38, 0.2) !important;
+          color: #ef4444 !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          padding: 8px 16px !important;
+          border-radius: 6px !important;
+          cursor: pointer !important;
+          margin-top: 16px !important;
+          transition: all 0.15s ease !important;
+        }
+
+        .qr-scanner-terminal-page .btn-pause-scanner:hover {
+          background: rgba(220, 38, 38, 0.2) !important;
+        }
+
+        .qr-scanner-terminal-page .viewport-result {
+          background: #ffffff !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          border-radius: 8px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 40px !important;
+          flex: 1 !important;
+          min-height: 360px !important;
+        }
+
+        .qr-scanner-terminal-page .result-card {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          text-align: center !important;
+        }
+
+        .qr-scanner-terminal-page .status-icon-wrap {
+          width: 80px !important;
+          height: 80px !important;
+          border-radius: 50% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          margin-bottom: 20px !important;
+        }
+
+        .qr-scanner-terminal-page .status-icon-wrap.success {
+          background: rgba(22, 163, 74, 0.1) !important;
+          color: #16a34a !important;
+          border: 2px solid rgba(22, 163, 74, 0.2) !important;
+        }
+
+        .qr-scanner-terminal-page .status-icon-wrap.error {
+          background: rgba(220, 38, 38, 0.1) !important;
+          color: #dc2626 !important;
+          border: 2px solid rgba(220, 38, 38, 0.2) !important;
+        }
+
+        .qr-scanner-terminal-page .result-headline {
+          font-size: 20px !important;
+          font-weight: 700 !important;
+          margin: 0 0 8px 0 !important;
+        }
+
+        .qr-scanner-terminal-page .result-headline.success {
+          color: #15803d !important;
+        }
+
+        .qr-scanner-terminal-page .result-headline.error {
+          color: #b91c1c !important;
+        }
+
+        .qr-scanner-terminal-page .result-explanation {
+          font-size: 13.5px !important;
+          color: #4b5563 !important;
+          line-height: 1.5 !important;
+          margin: 0 0 24px 0 !important;
+          max-width: 280px !important;
+        }
+
+        .qr-scanner-terminal-page .btn-next-scan {
+          background: #4f46e5 !important;
+          border: none !important;
+          color: #ffffff !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          padding: 10px 18px !important;
+          border-radius: 6px !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          transition: all 0.15s ease !important;
+        }
+
+        .qr-scanner-terminal-page .btn-next-scan:hover {
+          background: #4338ca !important;
+        }
+
+        .qr-scanner-terminal-page .table-header-custom {
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          padding: 14px 20px !important;
+          background: rgba(79, 70, 229, 0.05) !important;
+          border-bottom: 1px solid rgba(79, 70, 229, 0.12) !important;
+          font-size: 13.5px !important;
+          font-weight: 600 !important;
+          color: #4f46e5 !important;
+        }
+
+        .qr-scanner-terminal-page .table-wrap {
+          overflow-x: auto !important;
+        }
+
+        .qr-scanner-terminal-page .attendance-table {
+          border-collapse: collapse !important;
+          font-size: 13px !important;
+        }
+
+        .qr-scanner-terminal-page .attendance-table th {
+          background: #ffffff !important;
+          color: #4b5563 !important;
+          font-weight: 600 !important;
+          font-size: 11px !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.05em !important;
+          padding: 10px 16px !important;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+          text-align: left !important;
+        }
+
+        .qr-scanner-terminal-page .attendance-table td {
+          padding: 12px 16px !important;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+          color: #374151 !important;
+        }
+
+        .qr-scanner-terminal-page .attendance-table tr:hover {
+          background: rgba(79, 70, 229, 0.02) !important;
+        }
+
+        .qr-scanner-terminal-page .section-badge {
+          background: rgba(79, 70, 229, 0.06) !important;
+          border: 1px solid rgba(79, 70, 229, 0.12) !important;
+          color: #4f46e5 !important;
+          padding: 2px 6px !important;
+          border-radius: 4px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+        }
+
+        .qr-scanner-terminal-page .status-badge {
+          display: inline-block !important;
+          padding: 2px 8px !important;
+          border-radius: 4px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.04em !important;
+        }
+
+        .qr-scanner-terminal-page .status-badge.present {
+          background: rgba(22, 163, 74, 0.1) !important;
+          color: #16a34a !important;
+          border: 1px solid rgba(22, 163, 74, 0.2) !important;
+        }
+
+        .qr-scanner-terminal-page .status-badge.late {
+          background: rgba(217, 119, 6, 0.1) !important;
+          color: #d97706 !important;
+          border: 1px solid rgba(217, 119, 6, 0.2) !important;
+        }
+
+        .qr-scanner-terminal-page .status-badge.absent {
+          background: rgba(220, 38, 38, 0.1) !important;
+          color: #dc2626 !important;
+          border: 1px solid rgba(220, 38, 38, 0.2) !important;
+        }
+
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
   );
 }

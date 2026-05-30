@@ -1,138 +1,227 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   Search, Users, CheckCircle, XCircle, Clock, ChevronRight, X,
-  BookOpen, TrendingUp, AlertTriangle, FileText,
+  TrendingUp, AlertTriangle, FileText, Loader2, Calendar, MapPin
 } from "lucide-react";
-
-const allStudents = [
-  { name: "Ana Santos",    id: "2026-001", section: "PharmA", year: "2nd", rate: 95,  status: "present" },
-  { name: "Ben Cruz",      id: "2026-002", section: "PharmA", year: "2nd", rate: 87,  status: "present" },
-  { name: "Clara Tan",     id: "2026-003", section: "PharmB", year: "2nd", rate: 72,  status: "absent"  },
-  { name: "Diego Lim",     id: "2026-004", section: "PharmA", year: "2nd", rate: 81,  status: "late"    },
-  { name: "Eva Reyes",     id: "2026-005", section: "PharmB", year: "2nd", rate: 100, status: "present" },
-  { name: "Felix Go",      id: "2026-006", section: "PharmC", year: "3rd", rate: 65,  status: "absent"  },
-  { name: "Grace Yu",      id: "2026-007", section: "PharmA", year: "2nd", rate: 93,  status: "present" },
-  { name: "Henry Park",    id: "2026-008", section: "PharmB", year: "2nd", rate: 78,  status: "present" },
-  { name: "Iris Mendoza",  id: "2026-009", section: "PharmC", year: "3rd", rate: 88,  status: "present" },
-  { name: "Jake Torres",   id: "2026-010", section: "PharmA", year: "2nd", rate: 91,  status: "present" },
-];
-
-const SECTIONS = ["All", "PharmA", "PharmB", "PharmC"];
 
 function initials(name: string) {
   return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
-const statusConfig: Record<string, { color: string; bg: string; border: string; label: string }> = {
-  present: { color: "#4ade80", bg: "rgba(74,222,128,0.1)",  border: "rgba(74,222,128,0.25)",  label: "Present" },
-  absent:  { color: "#f87171", bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)", label: "Absent"  },
-  late:    { color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  border: "rgba(251,191,36,0.25)",  label: "Late"    },
+const statusColors: Record<string, { color: string; bg: string; border: string; label: string }> = {
+  present: { color: "#16a34a", bg: "rgba(22,163,74,0.08)",  border: "rgba(22,163,74,0.15)",  label: "Present" },
+  absent:  { color: "#dc2626", bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.15)",  label: "Absent"  },
+  late:    { color: "#d97706", bg: "rgba(217,119,6,0.08)",  border: "rgba(217,119,6,0.15)",  label: "Late"    },
+  incomplete: { color: "#6b7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.15)", label: "Incomplete" },
 };
 
-export default function StudentsPage() {
-  const [search, setSearch]               = useState("");
-  const [sectionFilter, setSectionFilter] = useState("All");
-  const [selected, setSelected]           = useState<string | null>(null);
+function StatusBadge({ status }: { status: string }) {
+  const cfg = statusColors[status] ?? statusColors.present;
+  return (
+    <span style={{
+      padding: "3px 9px",
+      background: cfg.bg,
+      border: `1px solid ${cfg.border}`,
+      color: cfg.color,
+      borderRadius: 5,
+      fontSize: 11,
+      fontWeight: 600,
+      letterSpacing: "0.04em",
+      whiteSpace: "nowrap",
+    }}>
+      {cfg.label.toUpperCase()}
+    </span>
+  );
+}
 
-  const filtered = allStudents.filter(s =>
+function getRateColor(rate: number) {
+  if (rate >= 85) return { color: "#16a34a", bg: "rgba(22,163,74,0.08)",  border: "rgba(22,163,74,0.15)"  };
+  if (rate >= 75) return { color: "#d97706", bg: "rgba(217,119,6,0.08)",  border: "rgba(217,119,6,0.15)"  };
+  return           { color: "#dc2626", bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.15)"  };
+}
+
+export default function StudentsPage() {
+  const [students, setStudents] = useState<any[]>([]);
+  const [sections, setSections] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [sectionFilter, setSectionFilter] = useState("All");
+  const [selected, setSelected] = useState<string | null>(null);
+
+  // Detail panel state
+  const [detailStudent, setDetailStudent] = useState<any>(null);
+  const [detailRecords, setDetailRecords] = useState<any[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Today's range for status calculation
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+
+  useEffect(() => {
+    async function fetchStudents() {
+      try {
+        setLoading(true);
+
+        // 1. Fetch full student summary (attendance rates, counts, etc.)
+        const { data: summary, error: sErr } = await supabase
+          .from("student_attendance_summary")
+          .select("*");
+        if (sErr) throw sErr;
+
+        // 2. Fetch today's attendance records for "Today" status column
+        const { data: todayRecs, error: tErr } = await supabase
+          .from("attendance_records")
+          .select("student_id, status")
+          .gte("created_at", todayStart.toISOString())
+          .lte("created_at", todayEnd.toISOString());
+        if (tErr) throw tErr;
+
+        // Map student_id → latest status today
+        const todayStatusMap: Record<string, string> = {};
+        (todayRecs || []).forEach((r: any) => {
+          todayStatusMap[r.student_id] = r.status;
+        });
+
+        const parsed = (summary || []).map((s: any) => ({
+          userId:       s.student_id,
+          id:           s.student_id_number || "N/A",
+          name:         s.full_name || "Unknown",
+          section:      s.section   || "N/A",
+          year:         s.current_year || "N/A",
+          rate:         Number(s.attendance_rate) || 0,
+          totalRecords: s.total_records    || 0,
+          presentCount: s.present_count   || 0,
+          lateCount:    s.late_count      || 0,
+          absentCount:  s.absent_count    || 0,
+          todayStatus:  todayStatusMap[s.student_id] || null,
+        }));
+
+        parsed.sort((a, b) => a.name.localeCompare(b.name));
+        setStudents(parsed);
+
+        const uniqueSections = Array.from(new Set(parsed.map(s => s.section))).filter(Boolean).sort() as string[];
+        setSections(uniqueSections);
+
+      } catch (err) {
+        console.error("Error loading students:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStudents();
+  }, []);
+
+  // Fetch individual student's recent attendance records when they click View
+  async function loadStudentDetail(student: any) {
+    setDetailStudent(student);
+    setDetailRecords([]);
+    setDetailLoading(true);
+    setSelected(student.userId);
+
+    try {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select(`
+          id,
+          status,
+          time_in,
+          created_at,
+          events ( name, date, location )
+        `)
+        .eq("student_id", student.userId)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setDetailRecords(data || []);
+    } catch (err) {
+      console.error("Error loading student detail:", err);
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  const filtered = students.filter(s =>
     (sectionFilter === "All" || s.section === sectionFilter) &&
-    (s.name.toLowerCase().includes(search.toLowerCase()) || s.id.includes(search))
+    (s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const selectedStudent = allStudents.find(s => s.id === selected) ?? null;
+  const presentToday = students.filter(s => s.todayStatus === "present").length;
+  const absentToday  = students.filter(s => s.todayStatus === "absent").length;
+  const lateToday    = students.filter(s => s.todayStatus === "late").length;
 
-  const card: React.CSSProperties = {
-    background: "var(--card, #13152a)",
-    border: "1px solid var(--border, rgba(255,255,255,0.07))",
-    borderRadius: 12,
-    overflow: "hidden",
-  };
-
-  const StatusBadge = ({ status }: { status: string }) => {
-    const cfg = statusConfig[status] ?? statusConfig.present;
+  if (loading) {
     return (
-      <span style={{
-        padding: "3px 10px",
-        background: cfg.bg,
-        border: `1px solid ${cfg.border}`,
-        color: cfg.color,
-        borderRadius: 6,
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: "0.04em",
-      }}>
-        {cfg.label.toUpperCase()}
-      </span>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "70vh" }}>
+        <Loader2 size={24} color="#4f46e5" className="animate-spin" />
+      </div>
     );
-  };
+  }
 
   return (
-    <>
-      {/* ── Page Header ── */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
-          Facilitator › Students
+    <div className="fade-in students-page">
+      {/* PAGE HEADER */}
+      <header className="sd-header">
+        <div>
+          <p className="sd-header-eyebrow">Facilitator › Students</p>
+          <h1 className="sd-header-title">Student Management</h1>
+          <p className="sd-header-sub">{students.length} students enrolled · Real-time attendance data</p>
         </div>
-        <h2 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px" }}>Student Management</h2>
-        <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>{allStudents.length} students enrolled this semester</p>
-      </div>
+      </header>
 
-      {/* ── Summary strip ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
-        {[
-          { icon: <CheckCircle size={16} />, label: "Present Today",   value: allStudents.filter(s => s.status === "present").length, color: "#4ade80", bg: "rgba(74,222,128,0.08)",  border: "rgba(74,222,128,0.18)"  },
-          { icon: <XCircle    size={16} />, label: "Absent Today",    value: allStudents.filter(s => s.status === "absent").length,  color: "#f87171", bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.18)" },
-          { icon: <Clock      size={16} />, label: "Late Today",      value: allStudents.filter(s => s.status === "late").length,    color: "#fbbf24", bg: "rgba(251,191,36,0.08)",  border: "rgba(251,191,36,0.18)"  },
-        ].map(s => (
-          <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ color: s.color, opacity: 0.85 }}>{s.icon}</div>
-            <div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>{s.label}</div>
-            </div>
+      {/* TODAY SUMMARY STRIP */}
+      <div className="summary-strip">
+        <div className="summary-tile tile-green">
+          <div className="tile-icon"><CheckCircle size={16} /></div>
+          <div>
+            <div className="tile-val">{presentToday}</div>
+            <div className="tile-lbl">Present Today</div>
           </div>
-        ))}
+        </div>
+        <div className="summary-tile tile-red">
+          <div className="tile-icon"><XCircle size={16} /></div>
+          <div>
+            <div className="tile-val">{absentToday}</div>
+            <div className="tile-lbl">Absent Today</div>
+          </div>
+        </div>
+        <div className="summary-tile tile-amber">
+          <div className="tile-icon"><Clock size={16} /></div>
+          <div>
+            <div className="tile-val">{lateToday}</div>
+            <div className="tile-lbl">Late Today</div>
+          </div>
+        </div>
+        <div className="summary-tile tile-indigo">
+          <div className="tile-icon"><Users size={16} /></div>
+          <div>
+            <div className="tile-val">{students.length}</div>
+            <div className="tile-lbl">Total Students</div>
+          </div>
+        </div>
       </div>
 
-      {/* ── Search + Section filters ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ position: "relative", flex: "0 0 240px" }}>
-          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
+      {/* SEARCH & FILTER */}
+      <div className="filter-bar">
+        <div className="search-wrap">
+          <Search size={14} className="search-icon" />
           <input
-            placeholder="Search name or ID..."
+            type="text"
+            placeholder="Search by name or student ID…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "9px 14px 9px 34px",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: 8,
-              color: "var(--foreground, #fff)",
-              fontSize: 13,
-              outline: "none",
-            }}
+            className="search-input"
           />
         </div>
-
-        <div style={{ display: "flex", gap: 6 }}>
-          {SECTIONS.map(s => (
+        <div className="section-filters">
+          {["All", ...sections].map(s => (
             <button
               key={s}
               onClick={() => setSectionFilter(s)}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                border: "1px solid",
-                transition: "background 0.15s, color 0.15s, border-color 0.15s",
-                background: sectionFilter === s ? "var(--gold, #f0c040)" : "transparent",
-                borderColor: sectionFilter === s ? "var(--gold, #f0c040)" : "rgba(255,255,255,0.12)",
-                color: sectionFilter === s ? "#000" : "rgba(255,255,255,0.6)",
-              }}
+              className={`filter-chip ${sectionFilter === s ? "active" : ""}`}
             >
               {s}
             </button>
@@ -140,217 +229,443 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* ── Main grid: table + detail panel ── */}
-      <div style={{ display: "grid", gridTemplateColumns: selected ? "1.3fr 1fr" : "1fr", gap: 16, alignItems: "start" }}>
+      {/* MAIN GRID: TABLE + DETAIL PANEL */}
+      <div className="students-grid" style={{ gridTemplateColumns: selected ? "1.3fr 1fr" : "1fr" }}>
 
-        {/* ── Students Table ── */}
-        <div style={card}>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Users size={15} color="var(--gold, #f0c040)" />
-              <span style={{ fontSize: 13, fontWeight: 600 }}>All Students</span>
+        {/* STUDENTS TABLE CARD */}
+        <div className="students-card">
+          <div className="card-header">
+            <div className="card-header-left">
+              <Users size={15} color="#4f46e5" />
+              <span>All Students</span>
             </div>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+            <span className="result-count">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
           </div>
 
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))" }}>
-                {["Name", "ID", "Section", "Year", "Rate", "Today", ""].map(h => (
-                  <th key={h} style={{ padding: "10px 20px", textAlign: "left", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(s => (
-                <tr
-                  key={s.id}
-                  onClick={() => setSelected(selected === s.id ? null : s.id)}
-                  style={{
-                    borderBottom: "1px solid var(--border, rgba(255,255,255,0.04))",
-                    background: selected === s.id ? "rgba(240,192,64,0.05)" : "transparent",
-                    cursor: "pointer",
-                    transition: "background 0.15s",
-                  }}
-                  onMouseEnter={e => { if (selected !== s.id) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = selected === s.id ? "rgba(240,192,64,0.05)" : "transparent"; }}
-                >
-                  <td style={{ padding: "12px 20px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: "50%",
-                        background: "rgba(240,192,64,0.12)",
-                        border: "1px solid rgba(240,192,64,0.2)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 11, fontWeight: 700, color: "var(--gold, #f0c040)",
-                        flexShrink: 0,
-                      }}>
-                        {initials(s.name)}
-                      </div>
-                      <span style={{ fontWeight: 500 }}>{s.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: "12px 20px", fontFamily: "monospace", fontSize: 11, color: "var(--muted)" }}>{s.id}</td>
-                  <td style={{ padding: "12px 20px" }}>
-                    <span style={{ padding: "3px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 6, fontSize: 11, fontWeight: 500 }}>{s.section}</span>
-                  </td>
-                  <td style={{ padding: "12px 20px", color: "var(--muted)", fontSize: 12 }}>{s.year}</td>
-                  <td style={{ padding: "12px 20px" }}>
-                    <span style={{
-                      padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-                      background: s.rate >= 85 ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)",
-                      color: s.rate >= 85 ? "#4ade80" : "#f87171",
-                    }}>{s.rate}%</span>
-                  </td>
-                  <td style={{ padding: "12px 20px" }}>
-                    <StatusBadge status={s.status} />
-                  </td>
-                  <td style={{ padding: "12px 20px" }}>
-                    <button
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 4,
-                        padding: "5px 12px",
-                        background: selected === s.id ? "rgba(240,192,64,0.12)" : "transparent",
-                        border: `1px solid ${selected === s.id ? "rgba(240,192,64,0.3)" : "rgba(255,255,255,0.1)"}`,
-                        borderRadius: 6,
-                        color: selected === s.id ? "var(--gold, #f0c040)" : "rgba(255,255,255,0.5)",
-                        fontSize: 11, fontWeight: 500, cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
-                    >
-                      {selected === s.id ? <><X size={11} /> Close</> : <>View <ChevronRight size={11} /></>}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
+          <div className="table-wrap">
+            <table className="students-table">
+              <thead>
                 <tr>
-                  <td colSpan={7} style={{ padding: "40px 20px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
-                    No students match your search.
-                  </td>
+                  <th style={{ paddingLeft: "20px" }}>Student</th>
+                  <th>Student ID</th>
+                  <th>Section</th>
+                  <th>Year</th>
+                  <th>Overall Rate</th>
+                  <th>Today</th>
+                  <th></th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map(s => {
+                  const rc = getRateColor(s.rate);
+                  const isSelected = selected === s.userId;
+                  return (
+                    <tr
+                      key={s.userId}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelected(null);
+                          setDetailStudent(null);
+                        } else {
+                          loadStudentDetail(s);
+                        }
+                      }}
+                      className={`student-row ${isSelected ? "selected" : ""}`}
+                    >
+                      <td style={{ paddingLeft: "20px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div className="student-avatar">
+                            {initials(s.name)}
+                          </div>
+                          <span style={{ fontWeight: 600, color: "#111827" }}>{s.name}</span>
+                        </div>
+                      </td>
+                      <td style={{ fontFamily: "monospace", fontSize: 12, color: "#4b5563" }}>{s.id}</td>
+                      <td>
+                        <span className="section-badge">{s.section}</span>
+                      </td>
+                      <td style={{ color: "#6b7280", fontSize: 12.5 }}>{s.year}</td>
+                      <td>
+                        <span className="rate-capsule" style={{ background: rc.bg, color: rc.color, border: `1px solid ${rc.border}` }}>
+                          {s.rate}%
+                        </span>
+                      </td>
+                      <td>
+                        {s.todayStatus ? (
+                          <StatusBadge status={s.todayStatus} />
+                        ) : (
+                          <span style={{ fontSize: 11, color: "#9ca3af" }}>—</span>
+                        )}
+                      </td>
+                      <td>
+                        <button className={`view-btn ${isSelected ? "active" : ""}`}>
+                          {isSelected ? <><X size={11} /> Close</> : <>View <ChevronRight size={11} /></>}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ padding: "48px 20px", textAlign: "center", color: "#6b7280", fontSize: 13 }}>
+                      No students match your search.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* ── Student Detail Panel ── */}
-        {selectedStudent && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* STUDENT DETAIL PANEL */}
+        {detailStudent && (
+          <div className="detail-col">
 
-            <div style={{ ...card, padding: "24px 20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: "50%",
-                  background: "rgba(240,192,64,0.12)",
-                  border: "1.5px solid rgba(240,192,64,0.3)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 16, fontWeight: 700, color: "var(--gold, #f0c040)", flexShrink: 0,
-                }}>
-                  {initials(selectedStudent.name)}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 3 }}>{selectedStudent.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted)", fontFamily: "monospace" }}>{selectedStudent.id}</div>
-                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    <span style={{ padding: "2px 8px", background: "rgba(255,255,255,0.06)", borderRadius: 5, fontSize: 11 }}>{selectedStudent.section}</span>
-                    <span style={{ padding: "2px 8px", background: "rgba(255,255,255,0.06)", borderRadius: 5, fontSize: 11 }}>{selectedStudent.year} Year</span>
+            {/* Profile Card */}
+            <div className="detail-card">
+              <div className="detail-profile-header">
+                <div className="detail-avatar">{initials(detailStudent.name)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="detail-name">{detailStudent.name}</div>
+                  <div className="detail-id">{detailStudent.id}</div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                    <span className="detail-tag">{detailStudent.section}</span>
+                    <span className="detail-tag">{detailStudent.year} Year</span>
                   </div>
                 </div>
-                <StatusBadge status={selectedStudent.status} />
+                {detailStudent.todayStatus && <StatusBadge status={detailStudent.todayStatus} />}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 18 }}>
-                {[
-                  { label: "Present", value: "43", color: "#4ade80", bg: "rgba(74,222,128,0.08)",  border: "rgba(74,222,128,0.18)"  },
-                  { label: "Absent",  value: "3",  color: "#f87171", bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.18)" },
-                  { label: "Late",    value: "2",  color: "#fbbf24", bg: "rgba(251,191,36,0.08)",  border: "rgba(251,191,36,0.18)"  },
-                ].map(m => (
-                  <div key={m.label} style={{ background: m.bg, border: `1px solid ${m.border}`, borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: m.color, lineHeight: 1 }}>{m.value}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>{m.label}</div>
-                  </div>
-                ))}
+              {/* Attendance Counts */}
+              <div className="counts-grid">
+                <div className="count-box" style={{ background: "rgba(22,163,74,0.06)", border: "1px solid rgba(22,163,74,0.12)" }}>
+                  <div className="count-val" style={{ color: "#16a34a" }}>{detailStudent.presentCount}</div>
+                  <div className="count-lbl">Present</div>
+                </div>
+                <div className="count-box" style={{ background: "rgba(217,119,6,0.06)", border: "1px solid rgba(217,119,6,0.12)" }}>
+                  <div className="count-val" style={{ color: "#d97706" }}>{detailStudent.lateCount}</div>
+                  <div className="count-lbl">Late</div>
+                </div>
+                <div className="count-box" style={{ background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.12)" }}>
+                  <div className="count-val" style={{ color: "#dc2626" }}>{detailStudent.absentCount}</div>
+                  <div className="count-lbl">Absent</div>
+                </div>
               </div>
 
+              {/* Attendance Rate Progress Bar */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TrendingUp size={12} /> Attendance Rate</span>
-                  <strong style={{ color: selectedStudent.rate >= 85 ? "#4ade80" : "#f87171" }}>{selectedStudent.rate}%</strong>
+                <div className="rate-row">
+                  <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#6b7280" }}>
+                    <TrendingUp size={13} /> Attendance Rate
+                  </span>
+                  <strong style={{ color: getRateColor(detailStudent.rate).color, fontSize: 13 }}>
+                    {detailStudent.rate}%
+                  </strong>
                 </div>
-                <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 99, height: 6, overflow: "hidden" }}>
-                  <div style={{
-                    width: `${selectedStudent.rate}%`, height: "100%", borderRadius: 99,
-                    background: selectedStudent.rate >= 85 ? "linear-gradient(90deg, #4ade80, var(--gold, #f0c040))" : "#f87171",
-                    transition: "width 0.6s ease",
-                  }} />
+                <div className="rate-bar-bg">
+                  <div
+                    className="rate-bar-fill"
+                    style={{
+                      width: `${detailStudent.rate}%`,
+                      background: getRateColor(detailStudent.rate).color,
+                    }}
+                  />
                 </div>
-                {selectedStudent.rate < 75 && (
-                  <div style={{ marginTop: 10, padding: "9px 12px", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 8, fontSize: 12, color: "#f87171", display: "flex", alignItems: "center", gap: 7 }}>
-                    <AlertTriangle size={13} /> At-risk: Below 75% attendance threshold
+                {detailStudent.rate < 75 && (
+                  <div className="risk-alert">
+                    <AlertTriangle size={13} />
+                    At-risk: Below 75% attendance threshold
                   </div>
                 )}
               </div>
             </div>
 
-            <div style={card}>
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "14px 20px",
-                borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                  <BookOpen size={14} color="var(--gold, #f0c040)" />
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>Recent Records</span>
+            {/* Recent Attendance Records */}
+            <div className="detail-card" style={{ padding: 0, overflow: "hidden" }}>
+              <div className="detail-records-header">
+                <FileText size={14} color="#4f46e5" />
+                <span>Recent Attendance Records</span>
+              </div>
+
+              {detailLoading ? (
+                <div style={{ padding: "28px", display: "flex", justifyContent: "center" }}>
+                  <Loader2 size={20} color="#4f46e5" className="animate-spin" />
                 </div>
-              </div>
-
-              <div style={{ padding: "4px 0" }}>
-                {[
-                  ["Mar 22", "Pharmacology 301",    "present"],
-                  ["Mar 22", "Pharmacognosy",       "present"],
-                  ["Mar 21", "Clinical Pharmacy",   "absent" ],
-                  ["Mar 20", "Pharmaceutical Chem", "late"   ],
-                ].map(([date, subject, st]) => (
-                  <div key={date + subject} style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "11px 20px",
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                  }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{subject}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{date}</div>
-                    </div>
-                    <StatusBadge status={st} />
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ padding: "14px 20px" }}>
-                <button style={{
-                  width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  padding: "9px 0",
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 8,
-                  color: "rgba(255,255,255,0.6)",
-                  fontSize: 12, fontWeight: 500, cursor: "pointer",
-                  transition: "background 0.15s, border-color 0.15s",
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
-                >
-                  <FileText size={13} /> Full Record
-                </button>
-              </div>
+              ) : detailRecords.length === 0 ? (
+                <div style={{ padding: "28px 20px", textAlign: "center", color: "#6b7280", fontSize: 13 }}>
+                  No attendance records found for this student.
+                </div>
+              ) : (
+                <div>
+                  {detailRecords.map((r: any, idx: number) => {
+                    const evt = r.events;
+                    const date = evt?.date
+                      ? new Date(evt.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                      : new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    return (
+                      <div key={r.id} className="record-row" style={{ borderBottom: idx < detailRecords.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="record-event-name">{evt?.name || "Event"}</div>
+                          <div className="record-meta">
+                            <Calendar size={10} />
+                            <span>{date}</span>
+                            {evt?.location && (
+                              <>
+                                <span>·</span>
+                                <MapPin size={10} />
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }}>
+                                  {evt.location}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <StatusBadge status={r.status} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
           </div>
         )}
       </div>
-    </>
+
+      {/* SCOPED STYLES */}
+      <style>{`
+        .students-page { width: 100%; }
+
+        /* Header */
+        .students-page .sd-header {
+          margin-bottom: 24px;
+          padding-bottom: 18px;
+          border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        .students-page .sd-header-eyebrow {
+          font-size: 11px; font-weight: 600; color: #6b7280 !important;
+          text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;
+        }
+        .students-page .sd-header-title {
+          font-size: 22px; font-weight: 700; color: #111827 !important;
+          letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 4px;
+        }
+        .students-page .sd-header-sub {
+          font-size: 13px; color: #4b5563 !important; margin: 0;
+        }
+
+        /* Summary strip */
+        .students-page .summary-strip {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 14px;
+          margin-bottom: 22px;
+        }
+        @media (max-width: 900px) {
+          .students-page .summary-strip { grid-template-columns: repeat(2, 1fr); }
+        }
+        .students-page .summary-tile {
+          background: #ffffff !important;
+          border: 1px solid rgba(79,70,229,0.10) !important;
+          border-radius: 10px !important;
+          padding: 14px 18px !important;
+          display: flex; align-items: center; gap: 14px;
+        }
+        .students-page .tile-icon {
+          width: 34px; height: 34px; border-radius: 8px;
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .students-page .tile-green .tile-icon { background: rgba(22,163,74,0.08); color: #16a34a; }
+        .students-page .tile-red   .tile-icon { background: rgba(220,38,38,0.08);  color: #dc2626; }
+        .students-page .tile-amber .tile-icon { background: rgba(217,119,6,0.08);  color: #d97706; }
+        .students-page .tile-indigo .tile-icon { background: rgba(79,70,229,0.08); color: #4f46e5; }
+        .students-page .tile-val {
+          font-size: 22px; font-weight: 800; color: #111827 !important; line-height: 1;
+        }
+        .students-page .tile-lbl {
+          font-size: 11px; color: #6b7280 !important; text-transform: uppercase;
+          letter-spacing: 0.05em; font-weight: 600; margin-top: 3px;
+        }
+
+        /* Filter bar */
+        .students-page .filter-bar {
+          display: flex; align-items: center; gap: 12px;
+          margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .students-page .search-wrap {
+          position: relative; flex: 0 0 260px;
+        }
+        .students-page .search-icon {
+          position: absolute; left: 12px; top: 50%;
+          transform: translateY(-50%); color: #6b7280; pointer-events: none;
+        }
+        .students-page .search-input {
+          width: 100%; padding: 9px 14px 9px 34px;
+          background: #ffffff; border: 1px solid #d1d5db;
+          border-radius: 7px; color: #111827; font-size: 13px; outline: none;
+          box-sizing: border-box;
+        }
+        .students-page .search-input:focus { border-color: #4f46e5; }
+        .students-page .section-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+        .students-page .filter-chip {
+          padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600;
+          cursor: pointer; border: 1px solid #d1d5db; background: #ffffff;
+          color: #374151; transition: all 0.15s ease;
+        }
+        .students-page .filter-chip:hover { border-color: #4f46e5; color: #4f46e5; }
+        .students-page .filter-chip.active {
+          background: #4f46e5 !important; border-color: #4f46e5 !important;
+          color: #ffffff !important;
+        }
+
+        /* Grid */
+        .students-page .students-grid {
+          display: grid; gap: 16px; align-items: start;
+        }
+
+        /* Students card */
+        .students-page .students-card {
+          background: #ffffff !important;
+          border: 1px solid rgba(79,70,229,0.10) !important;
+          border-radius: 10px !important; overflow: hidden;
+        }
+        .students-page .card-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 14px 20px;
+          border-bottom: 1px solid rgba(0,0,0,0.08);
+          background: rgba(79,70,229,0.03);
+        }
+        .students-page .card-header-left {
+          display: flex; align-items: center; gap: 8px;
+          font-size: 13.5px; font-weight: 600; color: #111827 !important;
+        }
+        .students-page .result-count {
+          font-size: 12px; color: #6b7280 !important;
+        }
+        .students-page .table-wrap { overflow-x: auto; }
+        .students-page .students-table {
+          width: 100%; border-collapse: collapse; font-size: 13px;
+        }
+        .students-page .students-table th {
+          padding: 10px 14px; text-align: left;
+          font-size: 10.5px; color: #6b7280 !important;
+          text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;
+          background: #f9fafb; border-bottom: 1.5px solid rgba(0,0,0,0.08);
+        }
+        .students-page .students-table td {
+          padding: 13px 14px; border-bottom: 1px solid rgba(0,0,0,0.04);
+          color: #374151 !important;
+        }
+        .students-page .student-row { cursor: pointer; transition: background 0.12s; }
+        .students-page .student-row:hover { background: rgba(79,70,229,0.02) !important; }
+        .students-page .student-row.selected { background: rgba(79,70,229,0.04) !important; }
+
+        .students-page .student-avatar {
+          width: 30px; height: 30px; border-radius: 50%;
+          background: rgba(79,70,229,0.08); border: 1px solid rgba(79,70,229,0.15);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 11px; font-weight: 700; color: #4f46e5; flex-shrink: 0;
+        }
+
+        .students-page .section-badge {
+          padding: 2px 8px; background: rgba(79,70,229,0.06);
+          border: 1px solid rgba(79,70,229,0.12); color: #4f46e5 !important;
+          border-radius: 4px; font-size: 11px; font-weight: 600;
+        }
+
+        .students-page .rate-capsule {
+          display: inline-block; padding: 2px 8px; border-radius: 5px;
+          font-size: 11px; font-weight: 700; font-family: monospace;
+          min-width: 40px; text-align: center;
+        }
+
+        .students-page .view-btn {
+          display: inline-flex; align-items: center; gap: 4px;
+          padding: 5px 10px;
+          background: transparent; border: 1px solid #d1d5db;
+          border-radius: 5px; color: #4b5563; font-size: 11px; font-weight: 500;
+          cursor: pointer; transition: all 0.15s;
+        }
+        .students-page .view-btn:hover { border-color: #4f46e5; color: #4f46e5; }
+        .students-page .view-btn.active {
+          background: rgba(220,38,38,0.05); border-color: rgba(220,38,38,0.2); color: #dc2626;
+        }
+
+        /* Detail Panel */
+        .students-page .detail-col { display: flex; flex-direction: column; gap: 14px; }
+        .students-page .detail-card {
+          background: #ffffff !important;
+          border: 1px solid rgba(79,70,229,0.10) !important;
+          border-radius: 10px; padding: 20px;
+        }
+        .students-page .detail-profile-header {
+          display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px;
+        }
+        .students-page .detail-avatar {
+          width: 50px; height: 50px; border-radius: 50%;
+          background: rgba(79,70,229,0.08); border: 1.5px solid rgba(79,70,229,0.2);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 15px; font-weight: 700; color: #4f46e5; flex-shrink: 0;
+        }
+        .students-page .detail-name {
+          font-size: 15px; font-weight: 700; color: #111827 !important; margin-bottom: 2px;
+        }
+        .students-page .detail-id {
+          font-size: 12px; color: #6b7280 !important; font-family: monospace;
+        }
+        .students-page .detail-tag {
+          padding: 2px 8px; background: #f3f4f6; border: 1px solid #e5e7eb;
+          border-radius: 5px; font-size: 11px; color: #4b5563 !important;
+        }
+        .students-page .counts-grid {
+          display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 18px;
+        }
+        .students-page .count-box {
+          border-radius: 8px; padding: 10px 12px; text-align: center;
+        }
+        .students-page .count-val {
+          font-size: 22px; font-weight: 800; line-height: 1;
+        }
+        .students-page .count-lbl {
+          font-size: 10px; color: #6b7280 !important;
+          text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; font-weight: 600;
+        }
+        .students-page .rate-row {
+          display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;
+        }
+        .students-page .rate-bar-bg {
+          background: #f3f4f6; border-radius: 99px; height: 7px; overflow: hidden;
+        }
+        .students-page .rate-bar-fill {
+          height: 100%; border-radius: 99px; transition: width 0.5s ease;
+        }
+        .students-page .risk-alert {
+          margin-top: 10px; padding: 9px 12px;
+          background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.15);
+          border-radius: 7px; font-size: 12px; color: #dc2626 !important;
+          display: flex; align-items: center; gap: 7px;
+        }
+        .students-page .detail-records-header {
+          display: flex; align-items: center; gap: 8px;
+          padding: 13px 18px; border-bottom: 1px solid rgba(0,0,0,0.08);
+          font-size: 13px; font-weight: 600; color: #111827 !important;
+          background: rgba(79,70,229,0.03);
+        }
+        .students-page .record-row {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 12px; padding: 12px 18px;
+        }
+        .students-page .record-event-name {
+          font-size: 13px; font-weight: 600; color: #111827 !important; margin-bottom: 3px;
+        }
+        .students-page .record-meta {
+          display: flex; align-items: center; gap: 4px;
+          font-size: 11px; color: #6b7280 !important;
+        }
+
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
   );
 }
