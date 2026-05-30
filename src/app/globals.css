@@ -2996,6 +2996,7 @@ html {
   padding-bottom: 20px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
+  width: 100%;
 }
 
 .sd-header-eyebrow {
@@ -3680,8 +3681,10 @@ html {
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  max-width: 600px;
+  width: 100%;
+  max-width: 580px;
   margin: 0 auto;
+  padding: 48px 20px 64px 20px;
 }
 .sp-back-btn {
   display: flex;
@@ -3690,22 +3693,30 @@ html {
   background: transparent;
   border: none;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.15s ease;
-  margin-top: 8px;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 .sp-back-btn:hover {
   color: var(--white);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateX(-2px);
 }
 .sp-mode-toggle {
   display: flex;
-  background: var(--surface);
+  background: rgba(22, 22, 29, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border);
-  padding: 6px;
-  border-radius: 12px;
-  gap: 6px;
+  padding: 4px;
+  border-radius: 14px;
+  gap: 4px;
   width: 100%;
 }
 .sp-mode-btn {
@@ -3714,43 +3725,46 @@ html {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px;
+  padding: 10px 16px;
   background: transparent;
   border: none;
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  outline: none;
 }
 .sp-mode-btn:hover {
   color: var(--white-shade);
-  background: var(--surface2);
+  background: rgba(255, 255, 255, 0.04);
 }
 .sp-mode-btn.active {
   background: var(--gold);
-  color: #000;
+  color: #0F0F13;
+  box-shadow: 0 4px 12px rgba(232, 184, 75, 0.25);
 }
 .sp-main-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  background: rgba(22, 22, 29, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
   width: 100%;
-  padding: 32px;
+  padding: 44px 32px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.35);
 }
 .sp-card-glow {
   position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 200px;
-  height: 200px;
-  background: var(--gold);
-  filter: blur(100px);
-  opacity: 0.08;
+  top: -100px;
+  right: -100px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(232, 184, 75, 0.12) 0%, rgba(232, 184, 75, 0) 70%);
+  filter: blur(40px);
   pointer-events: none;
 }
 .sp-present-panel {
@@ -3759,32 +3773,53 @@ html {
   align-items: center;
   text-align: center;
 }
+@keyframes scaleIn {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
 .sp-qr-wrapper {
   background: #fff;
   padding: 24px;
-  border-radius: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 10px 30px rgba(232,184,75,0.15);
+  border-radius: 20px;
+  margin-bottom: 28px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3), 0 0 24px rgba(232, 184, 75, 0.1);
+  animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .sp-qr-code-label {
-  font-family: monospace;
-  font-size: 18px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: 5px;
   color: var(--gold);
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  text-shadow: 0 0 12px rgba(232, 184, 75, 0.25);
 }
 .sp-qr-instruction {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--white-shade);
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  max-width: 320px;
+  line-height: 1.45;
 }
 .sp-qr-hint-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dimmed);
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 .sp-qr-error-state {
   display: flex;
@@ -3910,16 +3945,23 @@ html {
 .sp-footer-link {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: transparent;
   border: none;
   color: var(--muted);
   font-size: 13px;
   cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.2s ease;
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid transparent;
 }
 .sp-footer-link:hover {
   color: var(--white);
-  text-decoration: underline;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
 }
 
 /* ── Records Page ── */
