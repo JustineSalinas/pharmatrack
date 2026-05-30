@@ -23,8 +23,20 @@ export default function AdminUsers() {
     try {
       setLoading(true);
       const u = await getCurrentUser() as any;
-      if (!u || u.account_type !== "admin") {
-        router.push("/dashboard");
+
+      if (!u) {
+        // No session at all — send to login
+        router.push("/login");
+        return;
+      }
+
+      if (u.account_type !== "admin") {
+        // Authenticated but wrong role — send to their own dashboard
+        if (u.account_type === "facilitator") {
+          router.push("/dashboard/facilitator");
+        } else {
+          router.push("/dashboard");
+        }
         return;
       }
 
