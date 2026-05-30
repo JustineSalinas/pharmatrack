@@ -29,7 +29,7 @@
   /* Sizing */
   --radius: 8px;
   --radius-sm: 6px;
-  --sidebar-width: 200px;
+  --sidebar-width: 240px;
 
   /* Font */
   --font-sans: var(--font-inter, "Inter", system-ui, -apple-system, sans-serif);
@@ -1652,6 +1652,7 @@ html { scrollbar-width: thin; scrollbar-color: #2a2a35 var(--bg); }
   transition: color 0.15s ease, background 0.15s ease;
   position: relative;
   border-left: 2px solid transparent;
+  white-space: nowrap;
 }
 
 .sidebar .nav-item:hover {
@@ -2577,17 +2578,16 @@ html {
 
 .sidebar {
   width: var(--sidebar-width);
-  min-height: 100vh;
+  height: 100vh;
   background: #F3F4F6; /* Light gray sidebar background */
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
   position: fixed;
   top: 0;
   left: 0;
   z-index: 100;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .sidebar-logo {
@@ -2649,6 +2649,7 @@ html {
   cursor: pointer;
   border: 1px solid transparent;
   margin-bottom: 4px;
+  white-space: nowrap;
 }
 
 .nav-item:hover {

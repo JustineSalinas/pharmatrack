@@ -89,58 +89,61 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
 
   return (
     <aside className="sidebar">
-      {/* Brand Logo & Name */}
-      <div className="sidebar-logo">
-        <div style={{ 
-          width: "36px", 
-          height: "36px", 
-          borderRadius: "50%", 
-          background: "var(--gold-dim)", 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center", 
-          flexShrink: 0,
-          border: "1px solid rgba(180, 83, 9, 0.15)"
-        }}>
-          <img 
-            src="/pham-logo.png" 
-            alt="PharmaTrack Logo" 
-            style={{ width: "20px", height: "20px", objectFit: "contain" }} 
-          />
+      {/* Scrollable Nav Area */}
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", padding: "24px 16px 16px 16px" }}>
+        {/* Brand Logo & Name */}
+        <div className="sidebar-logo">
+          <div style={{ 
+            width: "36px", 
+            height: "36px", 
+            borderRadius: "50%", 
+            background: "var(--gold-dim)", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            flexShrink: 0,
+            border: "1px solid rgba(180, 83, 9, 0.15)"
+          }}>
+            <img 
+              src="/pham-logo.png" 
+              alt="PharmaTrack Logo" 
+              style={{ width: "20px", height: "20px", objectFit: "contain" }} 
+            />
+          </div>
+          <div
+            onClick={() => window.location.reload()}
+            style={{ cursor: "pointer", display: "flex", flexDirection: "column" }}
+            role="button"
+          >
+            <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--white)", letterSpacing: "-0.015em" }}>
+              PharmaTrack
+            </span>
+          </div>
         </div>
-        <div
-          onClick={() => window.location.reload()}
-          style={{ cursor: "pointer", display: "flex", flexDirection: "column" }}
-          role="button"
-        >
-          <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--white)", letterSpacing: "-0.015em" }}>
-            PharmaTrack
-          </span>
-        </div>
+
+        {/* Nav Menu Sections */}
+        {(navByRole[role] ?? navByRole.student).map((group) => (
+          <div className="nav-section" key={group.section}>
+            <div className="nav-section-label">
+              {group.section === "Main" ? "MAIN MENU" : group.section.toUpperCase()}
+            </div>
+            {group.items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href as any}
+                className={`nav-item ${pathname === item.href ? "active" : ""}`}
+              >
+                <span className="ni-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        ))}
       </div>
 
-      {/* Nav Menu Sections */}
-      {(navByRole[role] ?? navByRole.student).map((group) => (
-        <div className="nav-section" key={group.section}>
-          <div className="nav-section-label">
-            {group.section === "Main" ? "MAIN MENU" : group.section.toUpperCase()}
-          </div>
-          {group.items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href as any}
-              className={`nav-item ${pathname === item.href ? "active" : ""}`}
-            >
-              <span className="ni-icon">{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      ))}
-
       {/* User Dropdown Card (Logout trigger) placed at the bottom */}
-      <div className="sidebar-footer">
-        <div className="sidebar-user-card" onClick={handleLogout} role="button" title="Click to log out" style={{ margin: "0 4px" }}>
+      <div className="sidebar-footer" style={{ flexShrink: 0, padding: "16px" }}>
+        <div className="sidebar-user-card" onClick={handleLogout} role="button" title="Click to log out" style={{ margin: 0 }}>
           <div className="avatar" style={{ 
             width: "32px", 
             height: "32px", 
