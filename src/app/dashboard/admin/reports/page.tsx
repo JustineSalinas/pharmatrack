@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { FileText, Download, TrendingUp, AlertTriangle, Calendar, Loader2, Award } from "lucide-react";
+import * as XLSX from "xlsx";
+import { FileText, Download, Table, TrendingUp, AlertTriangle, Calendar, Loader2, Award } from "lucide-react";
 
 const TrendChart = ({ data }: { data: { month: string, rate: number }[] }) => {
   const width = 600;
@@ -86,7 +87,7 @@ export default function AdminReports() {
     riskList.forEach(s => {
       csv += `"${s.id}","${s.name}","${s.section}","${s.rate}%"\n`;
     });
-    
+
     csv += "\nSection,Attendance Rate,Student Count\n";
     sectionData.forEach(s => {
       csv += `"${s.name}","${s.rate}%","${s.count}"\n`;
@@ -99,6 +100,39 @@ export default function AdminReports() {
     a.download = "PharmaTrack_Analytics.csv";
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleExportExcel = () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet([
+        { Metric: "Avg Attendance Rate (%)", Value: metrics.avgRate },
+        { Metric: "Total Sessions Logged",   Value: metrics.totalSessions },
+        { Metric: "Perfect Attendance",      Value: metrics.perfectRecords },
+        { Metric: "Flagged / At-Risk",       Value: metrics.flaggedStudents },
+        { Metric: "Generated",               Value: new Date().toLocaleString() },
+      ]),
+      "Summary"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(monthlyData.map(m => ({ Month: m.month, "Attendance Rate (%)": m.rate }))),
+      "Monthly Trend"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(sectionData.map(s => ({ Section: s.name, "Avg Rate (%)": s.rate, "Student Count": s.count }))),
+      "Sections"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(riskList.map((s: any) => ({
+        "Student ID": s.id, Name: s.name, Section: s.section, "Attendance Rate (%)": s.rate,
+      }))),
+      "At-Risk Students"
+    );
+    XLSX.writeFile(wb, `PharmaTrack_Analytics_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const handleNotifyStudent = (name: string) => {
@@ -251,6 +285,9 @@ export default function AdminReports() {
         <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
            <button onClick={handleExportCSV} className="btn-ghost" style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}>
              <Download size={14} /> Export CSV
+           </button>
+           <button onClick={handleExportExcel} className="btn-ghost" style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid rgba(74,222,128,0.3)", background: "rgba(74,222,128,0.06)", color: "var(--success)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}>
+             <Table size={14} /> Export Excel
            </button>
            <button onClick={() => window.print()} className="btn-ghost" style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}>
              <FileText size={14} /> Export PDF

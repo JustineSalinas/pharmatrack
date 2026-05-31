@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import {
   Bell, Mail, Clock, Calendar, Timer, BarChart2,
   Shield, Save, AlertTriangle, Loader2, CheckCircle,
-  UserCheck, Lock, Database
+  UserCheck, Lock, Database, RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { backfillEventStatuses } from "@/lib/attendance";
 
 // ─── Types ────────────────────────────────────────────────
 type ConfigKey =
@@ -229,6 +230,26 @@ export default function AdminSettings() {
     else alert("All attendance records deleted.");
   };
 
+  const [recomputing, setRecomputing] = useState(false);
+  const handleRecompute = async () => {
+    if (!confirm("Scan past events and auto-mark missing scans as 'Absent' (and stale time-ins as 'Incomplete')? Safe to re-run.")) return;
+    setRecomputing(true);
+    try {
+      const r = await backfillEventStatuses();
+      const lines = [
+        `Events processed: ${r.eventsProcessed}`,
+        `Absent records inserted: ${r.absentInserted}`,
+        `Incomplete records updated: ${r.incompleteUpdated}`,
+      ];
+      if (r.errors.length) lines.push("", "Errors:", ...r.errors.slice(0, 5));
+      alert(lines.join("\n"));
+    } catch (err: any) {
+      alert("Recompute failed: " + (err?.message ?? err));
+    } finally {
+      setRecomputing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div
@@ -446,6 +467,50 @@ export default function AdminSettings() {
             >
               <AlertTriangle size={12} /> Danger Zone
             </h3>
+
+            {/* Recompute attendance statuses (non-destructive maintenance) */}
+            <div
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+                padding: "20px",
+                marginBottom: "12px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "24px",
+              }}
+            >
+              <div>
+                <strong style={{ fontSize: "14px", fontWeight: 500, color: "var(--white)" }}>
+                  Recompute Attendance Statuses
+                </strong>
+                <p style={{ fontSize: "13px", color: "var(--dimmed)", margin: "4px 0 0 0", lineHeight: 1.5 }}>
+                  Scans completed events and auto-marks missing scans as <strong>Absent</strong>,
+                  and time-ins without a time-out as <strong>Incomplete</strong>. Idempotent —
+                  safe to re-run.
+                </p>
+              </div>
+              <button
+                onClick={handleRecompute}
+                disabled={recomputing}
+                style={{
+                  whiteSpace: "nowrap", padding: "0 16px", height: "36px",
+                  fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--gold)", background: "rgba(232,184,75,0.08)",
+                  color: "var(--gold)", cursor: recomputing ? "wait" : "pointer",
+                  display: "flex", alignItems: "center", gap: "8px",
+                  fontFamily: "var(--font-sans)",
+                  opacity: recomputing ? 0.6 : 1,
+                }}
+              >
+                {recomputing
+                  ? <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Working…</>
+                  : <><RefreshCw size={13} /> Recompute</>}
+              </button>
+            </div>
+
             <div
               style={{
                 background:

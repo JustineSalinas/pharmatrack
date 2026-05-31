@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { downloadQRPng } from "@/lib/downloadQR";
 import {
   Activity,
   CheckCircle,
   Clock,
   AlertCircle,
-  Download,
+  Download as DownloadIcon,
   Maximize2,
   Calendar,
   ClipboardList,
@@ -37,6 +38,7 @@ export default function StudentDashboard() {
   const [stats, setStats] = useState<AttendanceSummary | null>(null);
   const [upcomingEvent, setUpcomingEvent] = useState<Event | null>(null);
   const [isRepairing, setIsRepairing] = useState(false);
+  const qrWrapRef = useRef<HTMLDivElement>(null);
   const [showRepairModal, setShowRepairModal] = useState(false);
   const [repairStudentId, setRepairStudentId] = useState("");
   const [repairYear, setRepairYear] = useState("");
@@ -293,9 +295,16 @@ export default function StudentDashboard() {
                     <span className="sd-idcard-org-sub">College of Pharmacy</span>
                   </div>
                 </div>
-                <div className="sd-qr-code-wrap">
+                <div className="sd-qr-code-wrap" ref={qrWrapRef}>
                   <QRCodeSVG value={qrCodeValue} size={148} level="H" includeMargin={false} />
                 </div>
+                <button
+                  type="button"
+                  className="sd-qr-download-btn"
+                  onClick={() => downloadQRPng(qrWrapRef.current, `PharmaTrack_${qrCodeValue}.png`).catch((e) => alert("Download failed: " + e.message))}
+                >
+                  <DownloadIcon size={12} /> Download QR
+                </button>
                 <h3 className="sd-idcard-name">{user?.full_name || firstName}</h3>
                 <div className="sd-idcard-meta">
                   <div className="sd-idcard-meta-item">

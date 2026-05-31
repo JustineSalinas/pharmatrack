@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
+import { backfillEventStatuses, runIfDue } from "@/lib/attendance";
 import {
   Loader2,
   Users,
@@ -35,6 +36,10 @@ export default function FacilitatorOverview() {
       try {
         const u = await getCurrentUser();
         setUser(u);
+
+        // Silently auto-mark Absent / Incomplete for past events (throttled
+        // to once per hour per browser so it doesn't run on every page load).
+        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatuses).catch(() => {});
 
         // 1. Total Students
         const { count: studentCount } = await supabase

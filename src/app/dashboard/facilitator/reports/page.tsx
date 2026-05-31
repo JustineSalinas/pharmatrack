@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { 
-  TrendingUp, 
-  CalendarCheck, 
-  Star, 
-  AlertTriangle, 
-  Download, 
-  FileDown, 
-  Table, 
-  Search, 
-  Loader2, 
+import * as XLSX from "xlsx";
+import {
+  TrendingUp,
+  CalendarCheck,
+  Star,
+  AlertTriangle,
+  Download,
+  FileDown,
+  Table,
+  Search,
+  Loader2,
   Award,
   ChevronRight,
   MapPin,
@@ -272,6 +273,56 @@ export default function FacultyReports() {
     URL.revokeObjectURL(url);
   }
 
+  function exportExcel() {
+    // Per-student sheet
+    const studentRows = allStudents.map(s => ({
+      "Student Name": s.name,
+      "Student ID": s.id,
+      "Section": s.section,
+      "Present": s.present_count,
+      "Late": s.late_count,
+      "Absent": s.absent_count,
+      "Incomplete": s.incomplete_count,
+      "Total Sessions": s.total_records,
+      "Attendance Rate (%)": s.rate,
+    }));
+
+    // Most-attended-events sheet
+    const eventRows = topEvents.map((e, i) => ({
+      "Rank": i + 1,
+      "Event": e.name,
+      "Location": e.location,
+      "Date": e.date,
+      "Attended": e.attended,
+      "Total Records": e.total,
+      "Attendance Rate (%)": e.rate,
+    }));
+
+    // Section breakdown sheet
+    const sectionRows = sectionBreakdown.map(s => ({
+      "Section": s.name,
+      "Student Count": s.count,
+      "Avg Attendance Rate (%)": s.rate,
+    }));
+
+    // Summary sheet
+    const summary = [
+      { Metric: "Avg Attendance Rate (%)", Value: avgAttendanceRate },
+      { Metric: "Total Events", Value: totalEvents },
+      { Metric: "Perfect Attendance", Value: perfectCount },
+      { Metric: "At-Risk Students", Value: atRisk.length },
+      { Metric: "Report Generated", Value: new Date().toLocaleString() },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Summary");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(studentRows), "Per Student");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(eventRows), "Top Events");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sectionRows), "Sections");
+
+    XLSX.writeFile(wb, `PharmaTrack_Facilitator_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
   function exportPDF() {
     const win = window.open("", "_blank");
     if (!win) return;
@@ -413,7 +464,7 @@ export default function FacultyReports() {
             <Download size={13} />
             <span>CSV</span>
           </button>
-          <button onClick={exportCSV} className="btn-export success-btn">
+          <button onClick={exportExcel} className="btn-export success-btn">
             <Table size={13} />
             <span>Excel</span>
           </button>

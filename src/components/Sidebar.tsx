@@ -38,6 +38,7 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
         { href: "/dashboard", label: "Overview", icon: <Home size={18} /> },
         { href: "/check-in", label: "Check-In", icon: <Camera size={18} /> },
         { href: "/dashboard/records", label: "My Records", icon: <ClipboardList size={18} /> },
+        { href: "/dashboard/calendar", label: "Calendar", icon: <Calendar size={18} /> },
         { href: "/dashboard/schedule", label: "Schedule", icon: <Calendar size={18} /> },
       ],
     },
@@ -72,6 +73,7 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
       items: [
         { href: "/dashboard/admin", label: "Dashboard", icon: <Home size={18} /> },
         { href: "/dashboard/admin/users", label: "User Management", icon: <Users size={18} /> },
+        { href: "/dashboard/admin/events", label: "Manage Events", icon: <Calendar size={18} /> },
         { href: "/dashboard/admin/attendance", label: "Attendance Logs", icon: <ClipboardList size={18} /> },
         { href: "/dashboard/admin/scanner", label: "QR Scanner", icon: <QrCode size={18} /> },
         { href: "/dashboard/admin/reports", label: "Analytics", icon: <BarChart size={18} /> },

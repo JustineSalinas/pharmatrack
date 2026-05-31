@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import {
   Loader2, QrCode, AlertCircle, Scan, History,
-  Info, CheckCircle2, ArrowLeft, Maximize2,
+  Info, CheckCircle2, ArrowLeft, Maximize2, Download,
 } from "lucide-react";
 import Scanner from "@/components/Scanner";
+import { downloadQRPng } from "@/lib/downloadQR";
 
 export default function CheckInPage() {
   const [user, setUser] = useState<any>(null);
@@ -19,6 +20,7 @@ export default function CheckInPage() {
   const [mode, setMode] = useState<"present" | "scan">("present");
   const [scanSuccess, setScanSuccess] = useState(false);
   const [checkInTime, setCheckInTime] = useState("");
+  const qrWrapRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -149,13 +151,20 @@ export default function CheckInPage() {
           <div className="sp-present-panel">
             {qrCodeId ? (
               <>
-                <div className="sp-qr-wrapper">
+                <div className="sp-qr-wrapper" ref={qrWrapRef}>
                   <QRCodeSVG value={qrCodeId} size={220} level="H" includeMargin={false} />
                 </div>
                 <p className="sp-qr-code-label">{qrCodeId}</p>
                 <p className="sp-qr-instruction">
                   Present this to a Council Admin or Facilitator for scanning
                 </p>
+                <button
+                  type="button"
+                  className="sp-qr-download-btn"
+                  onClick={() => downloadQRPng(qrWrapRef.current, `PharmaTrack_${qrCodeId}.png`).catch((e) => alert("Download failed: " + e.message))}
+                >
+                  <Download size={14} /> Download QR
+                </button>
                 <div className="sp-qr-hint-row">
                   <Info size={12} />
                   Keep screen brightness high for best scan results
