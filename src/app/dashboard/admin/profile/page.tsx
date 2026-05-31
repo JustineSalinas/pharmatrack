@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
   Loader2, User, Mail, Save, CheckCircle2,
-  AlertCircle, Crown,
+  AlertCircle, Crown, Calendar, Clock,
 } from "lucide-react";
 
 export default function AdminProfilePage() {
@@ -15,6 +15,12 @@ export default function AdminProfilePage() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const formatDate = (dateStr: string | undefined | null) => {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  };
 
   useEffect(() => {
     async function load() {
@@ -92,10 +98,35 @@ export default function AdminProfilePage() {
               <p className="sp-input-hint">Email is managed by the institution and cannot be changed.</p>
             </div>
 
-            <button className="sp-save-btn" onClick={handleSaveProfile} disabled={saving}>
-              {saving ? <><Loader2 size={15} className="sp-spinner-sm" /> Saving…</> : saved ? <><CheckCircle2 size={15} /> Saved!</> : <><Save size={15} /> Save Changes</>}
-            </button>
-          </div>
+            <button className="sp-save-btn" onClick={handleSaveProfile} disabled={saving} style={{ color: "#ffffff" }}>
+              {saving ? (
+                <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                  <Loader2 size={15} className="sp-spinner-sm" /> Saving…
+                </span>
+              ) : saved ? (
+                <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                  <CheckCircle2 size={15} /> Saved!
+                </span>
+              ) : (
+                <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                  <Save size={15} style={{ stroke: "#ffffff" }} /> Save Changes
+                </span>
+              )}
+             </button>
+
+             <div className="sp-date-info-row">
+               <div className="sp-date-info-item">
+                 <Calendar size={13} className="sp-date-info-icon" />
+                 <span className="sp-date-info-label">Account Created:</span>
+                 <span className="sp-date-info-value">{formatDate(user?.created_at)}</span>
+               </div>
+               <div className="sp-date-info-item">
+                 <Clock size={13} className="sp-date-info-icon" />
+                 <span className="sp-date-info-label">Last Updated:</span>
+                 <span className="sp-date-info-value">{formatDate(user?.updated_at)}</span>
+               </div>
+             </div>
+           </div>
         </div>
       </div>
     </div>

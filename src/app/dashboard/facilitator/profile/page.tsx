@@ -1,51 +1,39 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
-  Loader2, User, Mail, Building2, Save, CheckCircle2,
-  ShieldCheck, AlertCircle,
+  Loader2, User, Mail, Building2,
+  ShieldCheck, Calendar, Clock,
 } from "lucide-react";
 import ChangePassword from "@/components/ChangePassword";
 
 export default function FacilitatorProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [fullName, setFullName] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
   const [tab, setTab] = useState<"profile" | "security">("profile");
 
   useEffect(() => {
     async function load() {
       try {
         const u = await getCurrentUser();
-        if (u) {
-          setUser(u);
-          setFullName(u.full_name || "");
-        }
+        if (u) setUser(u);
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     }
     load();
   }, []);
 
-  const handleSaveProfile = async () => {
-    setSaving(true); setError("");
-    try {
-      if (!user) return;
-      const { error: e1 } = await supabase.from("users").update({ full_name: fullName }).eq("id", user.id);
-      if (e1) throw e1;
-      setSaved(true); setTimeout(() => setSaved(false), 2500);
-    } catch (err: any) { setError(err.message || "Failed to save changes"); }
-    finally { setSaving(false); }
+  const formatDate = (dateStr: string | undefined | null) => {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
   };
 
   if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
 
-  const initials = fullName.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase() || "F";
+  const fullName = user?.full_name || "—";
+  const initials = fullName.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() || "F";
   const department = user?.facilitator_profiles?.department || "Pharmacy";
 
   return (
@@ -69,20 +57,21 @@ export default function FacilitatorProfilePage() {
       <div className="sp-profile-grid">
         <div className="sp-avatar-panel">
           <div className="sp-avatar-circle">{initials}</div>
-          <h2 className="sp-avatar-name">{fullName || "—"}</h2>
+          <h2 className="sp-avatar-name">{fullName}</h2>
           <p className="sp-avatar-email">{user?.email}</p>
           <div className="sp-avatar-tags">
             <span className="sp-avatar-tag sp-tag-gold">Facilitator</span>
-            <span className="sp-avatar-tag">{department}</span>
+            <span className="sp-avatar-tag sp-tag-active">
+              <span className="sp-active-dot"></span>
+              Active
+            </span>
+            <span className="sp-avatar-tag sp-tag-purple">{department}</span>
           </div>
         </div>
 
         <div className="sp-form-panel">
           {tab === "profile" ? (
             <div className="sp-form-body">
-              {error && <div className="sp-form-error"><AlertCircle size={15} /> {error}</div>}
-              {saved && <div className="sp-form-success"><CheckCircle2 size={15} /> Profile saved successfully!</div>}
-
               <div className="sp-form-section-title">
                 <User size={15} color="var(--gold)" /> Account Details
               </div>
@@ -91,7 +80,7 @@ export default function FacilitatorProfilePage() {
                 <label className="sp-input-label">Full Display Name</label>
                 <div className="sp-input-wrap">
                   <User size={15} className="sp-input-icon" />
-                  <input className="sp-input" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Enter your full name" />
+                  <input className="sp-input" value={fullName} disabled style={{ opacity: 0.5 }} />
                 </div>
               </div>
 
@@ -112,9 +101,18 @@ export default function FacilitatorProfilePage() {
                 </div>
               </div>
 
-              <button className="sp-save-btn" onClick={handleSaveProfile} disabled={saving}>
-                {saving ? <><Loader2 size={15} className="sp-spinner-sm" /> Saving…</> : saved ? <><CheckCircle2 size={15} /> Saved!</> : <><Save size={15} /> Save Changes</>}
-              </button>
+              <div className="sp-date-info-row">
+                <div className="sp-date-info-item">
+                  <Calendar size={13} className="sp-date-info-icon" />
+                  <span className="sp-date-info-label">Account Created:</span>
+                  <span className="sp-date-info-value">{formatDate(user?.created_at)}</span>
+                </div>
+                <div className="sp-date-info-item">
+                  <Clock size={13} className="sp-date-info-icon" />
+                  <span className="sp-date-info-label">Last Updated:</span>
+                  <span className="sp-date-info-value">{formatDate(user?.updated_at)}</span>
+                </div>
+              </div>
             </div>
           ) : (
             <ChangePassword />

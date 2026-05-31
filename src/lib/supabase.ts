@@ -8,9 +8,9 @@ export type Database = {
   public: {
     Tables: {
       users: {
-        Row: { id: string; email: string; full_name: string; account_type: string; status: string; created_at: string };
+        Row: { id: string; email: string; full_name: string; account_type: string; status: string; created_at: string; updated_at?: string };
         Insert: { id: string; email: string; full_name: string; account_type: string; status?: string; created_at?: string };
-        Update: { id?: string; email?: string; full_name?: string; account_type?: string; status?: string };
+        Update: { id?: string; email?: string; full_name?: string; account_type?: string; status?: string; updated_at?: string };
       };
       student_profiles: {
         Row: { user_id: string; student_id_number: string; section: string; current_year: string; qr_code_id?: any; created_at: string };
