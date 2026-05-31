@@ -63,7 +63,7 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
     },
     {
       section: "Account",
-      items: [{ href: "/dashboard/profile", label: "Profile", icon: <User size={18} /> }],
+      items: [{ href: "/dashboard/facilitator/profile", label: "Profile", icon: <User size={18} /> }],
     },
   ],
   admin: [
@@ -77,6 +77,10 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
         { href: "/dashboard/admin/reports", label: "Analytics", icon: <BarChart size={18} /> },
         { href: "/dashboard/admin/settings", label: "Settings", icon: <Settings size={18} /> },
       ],
+    },
+    {
+      section: "Account",
+      items: [{ href: "/dashboard/admin/profile", label: "Profile", icon: <User size={18} /> }],
     },
   ],
 };
