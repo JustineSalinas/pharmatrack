@@ -1619,7 +1619,6 @@ html { scrollbar-width: thin; scrollbar-color: #2a2a35 var(--bg); }
   width: var(--sidebar-width);
   flex-shrink: 0;
   height: 100vh;
-  z-index: 50;
   transition: all 0.3s ease;
 }
 
@@ -4866,34 +4865,54 @@ html {
 
 .action-btn-hover {
   background: transparent;
-  border: 1px solid transparent;
-  color: var(--dimmed);
   cursor: pointer;
   padding: 6px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  opacity: 1; /* Always fully visible */
   transition: all 0.15s ease;
   font-size: 11px;
   font-family: var(--font-sans);
   font-weight: 500;
 }
-.user-row:hover .action-btn-hover {
-  opacity: 1;
+
+.approve-btn, .restore-btn {
+  color: var(--success);
+  background: rgba(74, 222, 128, 0.06);
+  border: 1px solid rgba(74, 222, 128, 0.15);
+}
+.restore-btn {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.approve-btn:hover, .restore-btn:hover {
+  color: var(--success);
+  background: rgba(74, 222, 128, 0.15);
+  border-color: rgba(74, 222, 128, 0.3);
 }
 
-/* Always show if it's pending so admin doesn't miss it */
-.user-row .approve-btn, .user-row .reject-btn {
-   opacity: 1;
-   border: 1px solid var(--border);
+.suspend-btn, .reject-btn {
+  color: var(--danger);
+  background: rgba(248, 113, 113, 0.06);
+  border: 1px solid rgba(248, 113, 113, 0.15);
 }
-
 .suspend-btn:hover, .reject-btn:hover {
   color: var(--danger);
-  background: rgba(220, 38, 38, 0.08);
-  border-color: rgba(220, 38, 38, 0.15);
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.reset-btn {
+  color: var(--gold);
+  background: rgba(232, 184, 75, 0.06);
+  border: 1px solid rgba(232, 184, 75, 0.15);
+}
+.reset-btn:hover {
+  color: var(--gold);
+  background: rgba(232, 184, 75, 0.15);
+  border-color: rgba(232, 184, 75, 0.3);
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -5303,15 +5322,15 @@ html {
 }
 .cal-cell.out { opacity: 0.45; }
 .cal-cell.today {
-  border-color: var(--gold);
-  background: rgba(232, 184, 75, 0.08);
+  border-color: #b45309;
+  background: rgba(217, 119, 6, 0.05);
 }
 .cal-cell.selected {
   border-color: var(--teal);
   box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.25);
 }
 .cal-cell.has-events .cal-cell-num {
-  color: var(--gold);
+  color: #b45309;
   font-weight: 800;
 }
 .cal-cell-num {
@@ -5328,8 +5347,9 @@ html {
   display: block;
   font-size: 10.5px;
   font-weight: 600;
-  background: rgba(232, 184, 75, 0.15);
-  color: var(--gold);
+  background: rgba(217, 119, 6, 0.08);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.15);
   border-radius: 4px;
   padding: 2px 6px;
   white-space: nowrap;

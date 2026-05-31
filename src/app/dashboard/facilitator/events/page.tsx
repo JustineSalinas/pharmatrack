@@ -141,7 +141,7 @@ export default function EventsManagement() {
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
             Facilitator
           </div>
-          <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Manage Events</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: "var(--white)" }}>Manage Events</h2>
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>Create and schedule pharmacy council activities.</p>
         </div>
         <button className="btn-create-event" onClick={() => { resetForm(); setShowModal(true); }}>
@@ -398,27 +398,37 @@ export default function EventsManagement() {
         }
         .action-btn-hover {
           background: transparent;
-          border: none;
-          color: var(--dimmed);
           cursor: pointer;
-          opacity: 0.5;
-          transition: all 0.15s ease;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 8px;
-          border-radius: 8px;
+          border-radius: var(--radius-sm);
+          opacity: 0.85;
+          transition: all 0.15s ease;
         }
         .event-row:hover .action-btn-hover {
           opacity: 1;
         }
-        .delete-btn-hover:hover {
-          background: rgba(248, 113, 113, 0.1);
-          color: var(--danger);
+        .edit-btn-hover {
+          color: var(--gold);
+          background: rgba(232, 184, 75, 0.06);
+          border: 1px solid rgba(232, 184, 75, 0.15);
         }
         .edit-btn-hover:hover {
-          background: rgba(232, 184, 75, 0.1);
-          color: var(--gold);
+          background: rgba(232, 184, 75, 0.15) !important;
+          border-color: rgba(232, 184, 75, 0.3) !important;
+          color: var(--gold) !important;
+        }
+        .delete-btn-hover {
+          color: var(--danger);
+          background: rgba(248, 113, 113, 0.06);
+          border: 1px solid rgba(248, 113, 113, 0.15);
+        }
+        .delete-btn-hover:hover {
+          background: rgba(248, 113, 113, 0.15) !important;
+          border-color: rgba(248, 113, 113, 0.3) !important;
+          color: var(--danger) !important;
         }
       `}</style>
     </>

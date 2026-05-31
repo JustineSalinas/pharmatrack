@@ -104,7 +104,7 @@ export default function FacilitatorAttendance() {
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
             Facilitator
           </div>
-          <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Attendance Logs</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: "var(--white)" }}>Attendance Logs</h2>
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4, margin: 0 }}>Master database of all recorded participation</p>
         </div>
         <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
@@ -134,13 +134,12 @@ export default function FacilitatorAttendance() {
           { label: "Late", count: late, color: "var(--gold)" },
           { label: "Absent", count: absent, color: "#f87171" },
           { label: "Total Filtered", count: filtered.length, color: "var(--foreground, #fff)" }
-        ].map((item, i, arr) => (
+        ].map((item) => (
           <div key={item.label} style={{ display: "flex", alignItems: "center", flex: 1 }}>
              <div style={{ flex: 1 }}>
                <div style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>{item.label}</div>
                <div style={{ fontSize: "28px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em" }}>{item.count}</div>
              </div>
-             {i < arr.length - 1 && <div style={{ height: "40px", width: "1px", background: "var(--border, rgba(255,255,255,0.07))", margin: "0 auto" }} />}
           </div>
         ))}
       </div>

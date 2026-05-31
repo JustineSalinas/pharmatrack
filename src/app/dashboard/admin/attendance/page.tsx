@@ -142,13 +142,12 @@ export default function AdminAttendance() {
           { label: "Late", count: late, color: "var(--gold)" },
           { label: "Absent", count: absent, color: "var(--danger)" },
           { label: "Total Filtered", count: filtered.length, color: "var(--white)" }
-        ].map((item, i, arr) => (
+        ].map((item) => (
           <div key={item.label} style={{ display: "flex", alignItems: "center", flex: 1 }}>
              <div style={{ flex: 1 }}>
                <div style={{ fontSize: "11px", color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>{item.label}</div>
                <div style={{ fontSize: "28px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em" }}>{item.count}</div>
              </div>
-             {i < arr.length - 1 && <div style={{ height: "40px", width: "1px", background: "var(--border)", margin: "0 auto" }} />}
           </div>
         ))}
       </div>
@@ -296,25 +295,22 @@ export default function AdminAttendance() {
         }
 
         .action-btn-hover {
-          background: transparent;
-          border: 1px solid transparent;
-          color: var(--dimmed);
+          background: var(--surface2);
+          border: 1px solid var(--border);
+          color: var(--white-shade);
           cursor: pointer;
           border-radius: var(--radius-sm);
-          opacity: 0;
+          opacity: 1;
           transition: all 0.15s ease;
           font-size: 11px;
           font-family: var(--font-sans);
           font-weight: 500;
-        }
-        .user-row:hover .action-btn-hover {
-          opacity: 1;
-          border-color: var(--border);
-          background: var(--surface);
+          padding: 6px 12px;
         }
         .action-btn-hover:hover {
           color: var(--white);
-          background: var(--surface2) !important;
+          background: var(--surface) !important;
+          border-color: rgba(232, 184, 75, 0.3);
         }
       `}</style>
     </div>
