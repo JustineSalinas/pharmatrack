@@ -48,7 +48,7 @@ function dateOnly(daysAgo) {
 
 async function main() {
   const studentId = await findUserId("student.demo@usa.edu.ph");
-  const adminId = await findUserId("admin.demo@usa.edu.ph");
+  const adminId = await findUserId("admin@usa.edu.ph");
   if (!studentId) throw new Error("Demo student not found — run seed-test-accounts.mjs first");
   const creator = adminId || studentId;
 

@@ -5,9 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
   Loader2, User, Mail, Save, CheckCircle2,
-  ShieldCheck, AlertCircle, Crown,
+  AlertCircle, Crown,
 } from "lucide-react";
-import ChangePassword from "@/components/ChangePassword";
 
 export default function AdminProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -16,7 +15,6 @@ export default function AdminProfilePage() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"profile" | "security">("profile");
 
   useEffect(() => {
     async function load() {
@@ -56,14 +54,7 @@ export default function AdminProfilePage() {
         </div>
       </header>
 
-      <div className="sp-tab-bar">
-        <button className={`sp-tab-btn ${tab === "profile" ? "active" : ""}`} onClick={() => setTab("profile")}>
-          <User size={14} /> Account Details
-        </button>
-        <button className={`sp-tab-btn ${tab === "security" ? "active" : ""}`} onClick={() => setTab("security")}>
-          <ShieldCheck size={14} /> Security
-        </button>
-      </div>
+
 
       <div className="sp-profile-grid">
         <div className="sp-avatar-panel">
@@ -76,39 +67,35 @@ export default function AdminProfilePage() {
         </div>
 
         <div className="sp-form-panel">
-          {tab === "profile" ? (
-            <div className="sp-form-body">
-              {error && <div className="sp-form-error"><AlertCircle size={15} /> {error}</div>}
-              {saved && <div className="sp-form-success"><CheckCircle2 size={15} /> Profile saved successfully!</div>}
+          <div className="sp-form-body">
+            {error && <div className="sp-form-error"><AlertCircle size={15} /> {error}</div>}
+            {saved && <div className="sp-form-success"><CheckCircle2 size={15} /> Profile saved successfully!</div>}
 
-              <div className="sp-form-section-title">
-                <User size={15} color="var(--gold)" /> Account Details
-              </div>
-
-              <div className="sp-input-group">
-                <label className="sp-input-label">Full Display Name</label>
-                <div className="sp-input-wrap">
-                  <User size={15} className="sp-input-icon" />
-                  <input className="sp-input" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Enter your full name" />
-                </div>
-              </div>
-
-              <div className="sp-input-group">
-                <label className="sp-input-label">Institutional Email</label>
-                <div className="sp-input-wrap">
-                  <Mail size={15} className="sp-input-icon" />
-                  <input className="sp-input" type="email" value={user?.email || ""} disabled style={{ opacity: 0.5 }} />
-                </div>
-                <p className="sp-input-hint">Email is managed by the institution and cannot be changed.</p>
-              </div>
-
-              <button className="sp-save-btn" onClick={handleSaveProfile} disabled={saving}>
-                {saving ? <><Loader2 size={15} className="sp-spinner-sm" /> Saving…</> : saved ? <><CheckCircle2 size={15} /> Saved!</> : <><Save size={15} /> Save Changes</>}
-              </button>
+            <div className="sp-form-section-title">
+              <User size={15} color="var(--gold)" /> Account Details
             </div>
-          ) : (
-            <ChangePassword />
-          )}
+
+            <div className="sp-input-group">
+              <label className="sp-input-label">Full Display Name</label>
+              <div className="sp-input-wrap">
+                <User size={15} className="sp-input-icon" />
+                <input className="sp-input" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Enter your full name" />
+              </div>
+            </div>
+
+            <div className="sp-input-group">
+              <label className="sp-input-label">Institutional Email</label>
+              <div className="sp-input-wrap">
+                <Mail size={15} className="sp-input-icon" />
+                <input className="sp-input" type="email" value={user?.email || ""} disabled style={{ opacity: 0.5 }} />
+              </div>
+              <p className="sp-input-hint">Email is managed by the institution and cannot be changed.</p>
+            </div>
+
+            <button className="sp-save-btn" onClick={handleSaveProfile} disabled={saving}>
+              {saving ? <><Loader2 size={15} className="sp-spinner-sm" /> Saving…</> : saved ? <><CheckCircle2 size={15} /> Saved!</> : <><Save size={15} /> Save Changes</>}
+            </button>
+          </div>
         </div>
       </div>
     </div>

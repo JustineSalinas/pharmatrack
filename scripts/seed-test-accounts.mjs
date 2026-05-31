@@ -40,13 +40,6 @@ const ACCOUNTS = [
     status: "approved",
     profile: { department: "Pharmacy" },
   },
-  {
-    email: "admin.demo@usa.edu.ph",
-    full_name: "Demo Administrator",
-    account_type: "admin",
-    status: "approved",
-    profile: null,
-  },
 ];
 
 /** Pages through auth users to find one by email (listUsers is paginated). */
