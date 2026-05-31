@@ -3317,6 +3317,88 @@ html {
   max-width: 200px;
 }
 
+/* Header tagline + Student ID card (inside QR Access Pass) */
+.sd-header-tagline {
+  font-size: 13.5px;
+  color: var(--white-shade);
+  margin-top: 6px;
+  max-width: 560px;
+  line-height: 1.5;
+}
+.sd-idcard-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding-bottom: 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px dashed var(--border);
+}
+.sd-idcard-seal {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+.sd-idcard-org {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  min-width: 0;
+}
+.sd-idcard-org-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.2;
+}
+.sd-idcard-org-sub {
+  font-size: 11px;
+  color: var(--gold);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.sd-idcard-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--white);
+  margin-top: 4px;
+  text-align: center;
+}
+.sd-idcard-meta {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  margin: 2px 0;
+}
+.sd-idcard-meta-item {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sd-idcard-meta-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.sd-idcard-meta-val {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sd-qr-error {
   display: flex;
   flex-direction: column;

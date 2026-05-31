@@ -138,14 +138,16 @@ export default function StudentDashboard() {
   const attendanceRate = stats?.attendance_rate ?? 0;
   const firstName = user?.full_name?.split(" ")[0] ?? "Student";
 
-  // Standing logic
-  const getStanding = (rate: number) => {
+  // Standing logic — a student with no recorded sessions yet gets a neutral
+  // state instead of being shown as "Poor Standing" at 0%.
+  const getStanding = (rate: number, totalRecords: number) => {
+    if (totalRecords === 0) return { label: "No Records Yet", color: "var(--muted)", icon: <Clock size={13} /> };
     if (rate >= 90) return { label: "Excellent Standing", color: "var(--success)", icon: <Award size={13} /> };
     if (rate >= 75) return { label: "Good Standing", color: "var(--teal)", icon: <CheckCircle size={13} /> };
     if (rate >= 60) return { label: "At Risk", color: "var(--gold)", icon: <AlertCircle size={13} /> };
     return { label: "Poor Standing", color: "var(--danger)", icon: <AlertCircle size={13} /> };
   };
-  const standing = getStanding(attendanceRate);
+  const standing = getStanding(attendanceRate, stats?.total_records ?? 0);
 
   // Donut circle params
   const radius = 52;
@@ -165,6 +167,11 @@ export default function StudentDashboard() {
         <div>
           <p className="sd-header-eyebrow">{isStudent ? "Student Portal" : "Facilitator Portal"}</p>
           <h1 className="sd-header-title">Good {getGreeting()}, <span className="sd-header-name">{firstName}!</span></h1>
+          <p className="sd-header-tagline">
+            {stats?.total_records
+              ? `You're in ${standing.label.toLowerCase()} — ${attendanceRate}% attendance this term.`
+              : "Welcome to your Pharmacy attendance portal. Scan a QR to log your first session."}
+          </p>
         </div>
         <div className="sd-header-date">
           <Calendar size={13} />
@@ -279,11 +286,30 @@ export default function StudentDashboard() {
               </div>
             ) : (
               <>
+                <div className="sd-idcard-banner">
+                  <img src="/usa.png" alt="University of San Agustin" className="sd-idcard-seal" />
+                  <div className="sd-idcard-org">
+                    <span className="sd-idcard-org-name">University of San Agustin</span>
+                    <span className="sd-idcard-org-sub">College of Pharmacy</span>
+                  </div>
+                </div>
                 <div className="sd-qr-code-wrap">
-                  <QRCodeSVG value={qrCodeValue} size={160} level="H" includeMargin={false} />
+                  <QRCodeSVG value={qrCodeValue} size={148} level="H" includeMargin={false} />
+                </div>
+                <h3 className="sd-idcard-name">{user?.full_name || firstName}</h3>
+                <div className="sd-idcard-meta">
+                  <div className="sd-idcard-meta-item">
+                    <span className="sd-idcard-meta-label">ID Number</span>
+                    <span className="sd-idcard-meta-val">{studentProfile?.student_id_number || "—"}</span>
+                  </div>
+                  <div className="sd-idcard-meta-item">
+                    <span className="sd-idcard-meta-label">Year &amp; Section</span>
+                    <span className="sd-idcard-meta-val">
+                      {studentProfile?.current_year || "—"}{studentProfile?.section ? ` · ${studentProfile.section}` : ""}
+                    </span>
+                  </div>
                 </div>
                 <p className="sd-qr-id">{qrCodeValue}</p>
-                <p className="sd-qr-hint">Present to any Council Member for scanning</p>
               </>
             )}
           </div>

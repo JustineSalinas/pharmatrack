@@ -186,6 +186,25 @@ export async function logoutUser() {
   await supabase.auth.signOut();
 }
 
+/**
+ * Sends a password-reset email. The link returns the user to /reset-password
+ * with a short-lived recovery session, where they can set a new password.
+ */
+export async function sendPasswordReset(email: string) {
+  const redirectTo = `${window.location.origin}/reset-password`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Updates the signed-in (or recovery-session) user's password.
+ * Used by both the in-app "Change Password" settings and the reset flow.
+ */
+export async function updatePassword(newPassword: string) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(error.message);
+}
+
 export async function getCurrentUser() {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   

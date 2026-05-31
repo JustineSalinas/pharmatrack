@@ -25,9 +25,13 @@ function LoginForm() {
   useEffect(() => {
     const verified = searchParams.get("verified");
     const err = searchParams.get("error");
+    const reset = searchParams.get("reset");
 
     if (verified === "true") {
       setSuccessMsg("Email verified successfully! You can now log in.");
+    }
+    if (reset === "success") {
+      setSuccessMsg("Password updated successfully! Please log in with your new password.");
     }
     if (err === "verification_failed") {
       setError("Email verification failed. The link may have expired. Please try registering again.");
