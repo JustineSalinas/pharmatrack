@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, ShieldCheck, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { Lock, ShieldCheck, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff, Pencil, X, Save } from "lucide-react";
 import { updatePassword } from "@/lib/auth-client";
 
 /**
@@ -15,6 +15,7 @@ export default function ChangePassword() {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const handleSave = async () => {
     setError("");
@@ -26,6 +27,7 @@ export default function ChangePassword() {
       setSaved(true);
       setNewPassword("");
       setConfirmPassword("");
+      setEditing(false);
       setTimeout(() => setSaved(false), 2500);
     } catch (err: any) {
       setError(err.message || "Failed to update password");
@@ -34,10 +36,47 @@ export default function ChangePassword() {
     }
   };
 
+  const handleDiscard = () => {
+    setNewPassword("");
+    setConfirmPassword("");
+    setEditing(false);
+    setError("");
+  };
+
   return (
     <div className="sp-form-body">
-      <div className="sp-form-section-title">
-        <Lock size={15} color="var(--gold)" /> Change Password
+      <div className="sp-form-section-header">
+        <div className="sp-form-section-title">
+          <Lock size={15} color="var(--gold)" /> Change Password
+        </div>
+        <div className="sp-form-header-actions">
+          {!editing ? (
+            <button className="sp-edit-btn" onClick={() => setEditing(true)}>
+              <Pencil size={13} /> Edit
+            </button>
+          ) : (
+            <>
+              <button className="sp-discard-btn" onClick={handleDiscard} disabled={saving}>
+                <X size={13} /> Discard
+              </button>
+              <button className="sp-save-btn-sm" onClick={handleSave} disabled={saving} style={{ color: "#ffffff" }}>
+                {saving ? (
+                  <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                    <Loader2 size={13} className="sp-spinner-sm" /> Updating…
+                  </span>
+                ) : saved ? (
+                  <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                    <CheckCircle2 size={13} /> Updated!
+                  </span>
+                ) : (
+                  <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                    <Save size={13} style={{ stroke: "#ffffff" }} /> Save Changes
+                  </span>
+                )}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -61,7 +100,8 @@ export default function ChangePassword() {
             placeholder="Min. 8 characters"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            style={{ paddingRight: "40px" }}
+            disabled={!editing}
+            style={!editing ? { opacity: 0.5, paddingRight: "40px" } : { paddingRight: "40px" }}
           />
           <button type="button" onClick={() => setShow(!show)}
             style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 0, display: "flex" }}>
@@ -80,6 +120,8 @@ export default function ChangePassword() {
             placeholder="Repeat new password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={!editing}
+            style={!editing ? { opacity: 0.5 } : {}}
           />
         </div>
       </div>
@@ -88,10 +130,6 @@ export default function ChangePassword() {
         <ShieldCheck size={14} color="var(--teal)" />
         <p>Use at least 8 characters. Changing your password will sign you out of other devices.</p>
       </div>
-
-      <button className="sp-save-btn" onClick={handleSave} disabled={saving}>
-        {saving ? <><Loader2 size={15} className="sp-spinner-sm" /> Updating…</> : saved ? <><CheckCircle2 size={15} /> Updated!</> : <><Lock size={15} /> Update Password</>}
-      </button>
     </div>
   );
 }

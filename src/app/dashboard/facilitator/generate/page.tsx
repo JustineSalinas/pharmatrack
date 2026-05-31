@@ -255,10 +255,16 @@ export default function GenerateQRPage() {
             </div>
           </div>
 
-          <button type="submit" className="sp-save-btn" disabled={submitting}>
-            {submitting
-              ? <><Loader2 size={15} className="sp-spinner-sm" /> Creating…</>
-              : <><QrCode size={15} /> Generate QR Session</>}
+          <button type="submit" className="sp-save-btn" disabled={submitting} style={{ width: "100%", color: "#ffffff" }}>
+            {submitting ? (
+              <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                <Loader2 size={15} className="sp-spinner-sm" /> Creating…
+              </span>
+            ) : (
+              <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                <QrCode size={15} style={{ stroke: "#ffffff" }} /> Generate QR Session
+              </span>
+            )}
           </button>
         </form>
 
