@@ -3399,6 +3399,34 @@ html {
   text-overflow: ellipsis;
 }
 
+/* QR Download buttons (student dashboard + check-in) */
+.sd-qr-download-btn,
+.sp-qr-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--gold);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 6px;
+}
+.sp-qr-download-btn {
+  font-size: 12.5px;
+  padding: 7px 16px;
+  margin-top: 10px;
+}
+.sd-qr-download-btn:hover,
+.sp-qr-download-btn:hover {
+  border-color: var(--gold);
+  background: rgba(232, 184, 75, 0.1);
+}
+
 .sd-qr-error {
   display: flex;
   flex-direction: column;
@@ -4866,6 +4894,541 @@ html {
   color: var(--danger);
   background: rgba(220, 38, 38, 0.08);
   border-color: rgba(220, 38, 38, 0.15);
+}
+
+/* ─────────────────────────────────────────────────────────
+   Generate QR page (facilitator)
+   ───────────────────────────────────────────────────────── */
+.gqr-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .gqr-grid { grid-template-columns: 1fr; }
+}
+
+.gqr-form-card,
+.gqr-active-card,
+.gqr-empty-card,
+.gqr-recent-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px;
+}
+
+.gqr-form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.gqr-expiry-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.gqr-expiry-btn {
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--white-shade);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.gqr-expiry-btn:hover { border-color: var(--gold); color: var(--gold); }
+.gqr-expiry-btn.active {
+  background: rgba(232, 184, 75, 0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.gqr-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.gqr-active-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  background: linear-gradient(180deg, var(--surface), rgba(232, 184, 75, 0.04));
+  border-color: rgba(232, 184, 75, 0.25);
+}
+
+.gqr-active-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.gqr-active-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--white);
+  margin-top: 2px;
+}
+.gqr-active-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.gqr-close-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.gqr-close-btn:hover { color: var(--white); border-color: var(--gold); }
+
+.gqr-qr-wrap {
+  background: #fff;
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  margin-bottom: 16px;
+}
+
+.gqr-code-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.gqr-code-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.gqr-code-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: "Courier New", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--gold);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.gqr-code-pill:hover { border-color: var(--gold); }
+
+.gqr-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(45, 212, 191, 0.1);
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  color: var(--teal);
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.gqr-countdown.expired {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: var(--danger);
+}
+
+.gqr-active-hint {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 14px;
+  max-width: 320px;
+}
+
+.gqr-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 22px;
+}
+.gqr-empty-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+.gqr-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+.gqr-empty-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.gqr-recent-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.gqr-recent-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+.gqr-recent-empty {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted);
+  padding: 20px 0;
+}
+.gqr-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gqr-recent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: border-color 0.15s ease;
+}
+.gqr-recent-row:hover { border-color: rgba(232, 184, 75, 0.3); }
+.gqr-recent-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.gqr-recent-subject {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gqr-recent-meta {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.gqr-recent-code {
+  font-family: "Courier New", monospace;
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+.gqr-recent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+.gqr-recent-pill.active {
+  background: rgba(45, 212, 191, 0.1);
+  color: var(--teal);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+}
+.gqr-recent-pill.expired {
+  background: rgba(136, 136, 136, 0.1);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.gqr-recent-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.gqr-icon-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.gqr-icon-btn:hover { color: var(--white); border-color: var(--gold); }
+.gqr-icon-btn.danger:hover {
+  color: var(--danger);
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* ─────────────────────────────────────────────────────────
+   Monthly Calendar (student)
+   ───────────────────────────────────────────────────────── */
+.cal-month-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cal-month-label {
+  min-width: 150px;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.01em;
+}
+.cal-nav-btn,
+.cal-today-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  height: 32px;
+  padding: 0 12px;
+  color: var(--white-shade);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+.cal-nav-btn { width: 32px; padding: 0; color: var(--muted); }
+.cal-nav-btn:hover,
+.cal-today-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.cal-grid-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.cal-weekday-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.cal-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 6px 0;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.cal-cell {
+  min-height: 88px;
+  padding: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: left;
+  color: var(--white-shade);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+.cal-cell:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: rgba(232, 184, 75, 0.05);
+}
+.cal-cell:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.cal-cell.out { opacity: 0.45; }
+.cal-cell.today {
+  border-color: var(--gold);
+  background: rgba(232, 184, 75, 0.08);
+}
+.cal-cell.selected {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.25);
+}
+.cal-cell.has-events .cal-cell-num {
+  color: var(--gold);
+  font-weight: 800;
+}
+.cal-cell-num {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white-shade);
+}
+.cal-cell-events {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cal-cell-event-pill {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: rgba(232, 184, 75, 0.15);
+  color: var(--gold);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-cell-more {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  padding-left: 4px;
+}
+
+.cal-drawer {
+  margin-top: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.cal-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.cal-drawer-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--white);
+  margin-top: 2px;
+}
+.cal-drawer-close {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.cal-drawer-close:hover { color: var(--white); border-color: var(--gold); }
+.cal-drawer-empty {
+  text-align: center;
+  padding: 20px 0;
+  color: var(--muted);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.cal-drawer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cal-event-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 8px;
+  padding: 14px;
+}
+.cal-event-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+.cal-event-desc {
+  font-size: 12.5px;
+  color: var(--white-shade);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.cal-event-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.cal-event-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+@media (max-width: 720px) {
+  .cal-cell { min-height: 64px; padding: 6px; }
+  .cal-cell-event-pill { font-size: 9.5px; padding: 1px 4px; }
 }
 
 .approve-btn:hover, .restore-btn:hover {

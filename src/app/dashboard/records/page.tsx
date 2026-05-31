@@ -50,6 +50,26 @@ export default function StudentRecords() {
     fetchRecords();
   }, [router]);
 
+  function handleExportCSV() {
+    if (filtered.length === 0) {
+      alert("No records to export. Try clearing your filters.");
+      return;
+    }
+    const header = ["Date", "Event", "Time In", "Time Out", "Status", "Remarks"];
+    const escape = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = filtered.map((r) => [r.date, r.subject, r.timeIn, r.timeOut, r.status, r.remarks].map(escape).join(","));
+    const csv = [header.map(escape).join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `PharmaTrack_MyAttendance_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   const subjects = ["All", ...Array.from(new Set(records.map((r) => r.subject)))];
   const filtered = records.filter((r) => {
     const matchStatus = statusFilter === "All" || r.status === statusFilter.toLowerCase();
@@ -81,7 +101,7 @@ export default function StudentRecords() {
           <p className="sd-header-eyebrow">Student · My Records</p>
           <h1 className="sd-header-title">Attendance Records</h1>
         </div>
-        <button className="sp-export-btn">
+        <button className="sp-export-btn" onClick={handleExportCSV}>
           <Download size={14} /> Export CSV
         </button>
       </header>

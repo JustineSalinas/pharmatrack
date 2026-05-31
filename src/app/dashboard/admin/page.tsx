@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
+import { backfillEventStatuses, runIfDue } from "@/lib/attendance";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
@@ -47,6 +48,10 @@ export default function AdminDashboard() {
           }
           return;
         }
+
+        // Silently auto-mark Absent / Incomplete for past events (throttled
+        // to once per hour per browser so it doesn't run on every page load).
+        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatuses).catch(() => {});
 
         // Total Students
         const { count: studentCount } = await supabase
