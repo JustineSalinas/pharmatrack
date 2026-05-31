@@ -746,7 +746,7 @@ function SettingGroup({
                       borderRadius: "99px",
                       cursor: "pointer",
                       background:
-                        val === "true" ? "var(--gold)" : "var(--surface2)",
+                        val === "true" ? "var(--success)" : "var(--surface2)",
                       border: "1px solid var(--border)",
                       position: "relative",
                       transition: "background 0.2s ease",
@@ -760,7 +760,7 @@ function SettingGroup({
                         height: "14px",
                         borderRadius: "50%",
                         background:
-                          val === "true" ? "#16161D" : "var(--dimmed)",
+                          val === "true" ? "#ffffff" : "var(--dimmed)",
                         transition: "left 0.2s ease",
                         left: val === "true" ? "18px" : "2px",
                       }}

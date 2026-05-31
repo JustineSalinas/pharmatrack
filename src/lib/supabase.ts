@@ -39,4 +39,14 @@ export type Database = {
   };
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: "pkce",
+    lock: async (name, acquireTimeout, fn) => {
+      return await fn();
+    },
+  },
+});
