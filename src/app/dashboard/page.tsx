@@ -16,7 +16,15 @@ import {
   TrendingUp,
   Award,
   Zap,
+  X,
 } from "lucide-react";
+
+const SECTIONS_BY_YEAR: Record<string, string[]> = {
+  "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
+  "2nd Year": ["PH 2A", "PH 2B", "PH 2C", "PH 2D", "PH 2E"],
+  "3rd Year": ["PH 3A", "PH 3B", "PH 3C", "PH 3D"],
+  "4th Year": ["PH 4A", "PH 4B", "PH 4C", "PH 4D"],
+};
 import Link from "next/link";
 import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
 import { supabase } from "@/lib/supabase";
@@ -29,6 +37,11 @@ export default function StudentDashboard() {
   const [stats, setStats] = useState<AttendanceSummary | null>(null);
   const [upcomingEvent, setUpcomingEvent] = useState<Event | null>(null);
   const [isRepairing, setIsRepairing] = useState(false);
+  const [showRepairModal, setShowRepairModal] = useState(false);
+  const [repairStudentId, setRepairStudentId] = useState("");
+  const [repairYear, setRepairYear] = useState("");
+  const [repairSection, setRepairSection] = useState("");
+  const [repairError, setRepairError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -71,28 +84,53 @@ export default function StudentDashboard() {
     loadDashboard();
   }, [router]);
 
-  async function handleRepairQR() {
+  function openRepairModal() {
+    setRepairStudentId("");
+    setRepairYear("");
+    setRepairSection("");
+    setRepairError("");
+    setShowRepairModal(true);
+  }
+
+  function closeRepairModal() {
+    if (isRepairing) return;
+    setShowRepairModal(false);
+  }
+
+  async function submitRepair(e: React.FormEvent) {
+    e.preventDefault();
     if (!user || user.account_type !== "student") return;
+    setRepairError("");
+
+    const trimmedId = repairStudentId.trim();
+    if (!trimmedId) {
+      setRepairError("Student ID is required.");
+      return;
+    }
+    if (!repairYear) {
+      setRepairError("Please select your year level.");
+      return;
+    }
+    if (!repairSection) {
+      setRepairError("Please select your section.");
+      return;
+    }
+
     try {
       setIsRepairing(true);
-      const studentId = prompt("Please confirm your Student ID Number (e.g. USA-2026-XXXX):");
-      if (!studentId) return;
-      const year = prompt("Enter your Year Level (e.g. 1st Year):");
-      const section = prompt("Enter your Section (e.g. PH 1A):");
       await ensureStudentProfile(user.id, {
-        student_id_number: studentId,
-        year: year || "Unknown",
-        section: section || "Unknown",
+        student_id_number: trimmedId,
+        year: repairYear,
+        section: repairSection,
       } as any);
       window.location.reload();
     } catch (err: any) {
-      alert("Repair failed: " + err.message);
-    } finally {
+      setRepairError(err?.message || "Could not repair your profile. Please try again.");
       setIsRepairing(false);
     }
   }
 
-  if (loading) return null;
+  if (loading) return <DashboardSkeleton />;
 
   const isStudent = user?.account_type === "student";
   const studentProfile = user?.student_profiles ?? null;
@@ -235,8 +273,8 @@ export default function StudentDashboard() {
                 <AlertCircle color="var(--danger)" size={32} />
                 <p className="sd-qr-error-title">ID Data Missing</p>
                 <p className="sd-qr-error-sub">Your QR code could not be generated.</p>
-                <button className="sd-repair-btn" onClick={handleRepairQR} disabled={isRepairing}>
-                  {isRepairing ? "Repairing…" : "Repair QR Code"}
+                <button className="sd-repair-btn" onClick={openRepairModal} disabled={isRepairing}>
+                  Repair QR Code
                 </button>
               </div>
             ) : (
@@ -349,6 +387,115 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── REPAIR QR MODAL ────────────────────────────────────── */}
+      {showRepairModal && (
+        <div
+          className="sd-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="repair-modal-title"
+          onClick={closeRepairModal}
+        >
+          <div className="sd-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="sd-modal-close"
+              onClick={closeRepairModal}
+              disabled={isRepairing}
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="sd-modal-header">
+              <h2 id="repair-modal-title" className="sd-modal-title">Repair Your Student Profile</h2>
+              <p className="sd-modal-sub">
+                We couldn&apos;t find your student details. Confirm them below and we&apos;ll regenerate your QR code.
+              </p>
+            </div>
+
+            <form className="sd-modal-form" onSubmit={submitRepair}>
+              {repairError && (
+                <div className="sd-modal-error" role="alert">
+                  <AlertCircle size={14} />
+                  <span>{repairError}</span>
+                </div>
+              )}
+
+              <div className="input-group">
+                <label htmlFor="repair-student-id">Student ID Number</label>
+                <input
+                  id="repair-student-id"
+                  type="text"
+                  className="input-field"
+                  placeholder="USA-2026-0001"
+                  value={repairStudentId}
+                  onChange={(e) => setRepairStudentId(e.target.value)}
+                  disabled={isRepairing}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="two-col-grid">
+                <div className="input-group">
+                  <label htmlFor="repair-year">Year Level</label>
+                  <select
+                    id="repair-year"
+                    className="input-field select-field"
+                    value={repairYear}
+                    onChange={(e) => { setRepairYear(e.target.value); setRepairSection(""); }}
+                    disabled={isRepairing}
+                    required
+                    style={{ appearance: "none" }}
+                  >
+                    <option value="" disabled>Select Year</option>
+                    {Object.keys(SECTIONS_BY_YEAR).map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label htmlFor="repair-section">Section</label>
+                  <select
+                    id="repair-section"
+                    className="input-field select-field"
+                    value={repairSection}
+                    onChange={(e) => setRepairSection(e.target.value)}
+                    disabled={isRepairing || !repairYear}
+                    required
+                    style={{ appearance: "none" }}
+                  >
+                    <option value="" disabled>Select Section</option>
+                    {repairYear && SECTIONS_BY_YEAR[repairYear].map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="sd-modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-outline sd-modal-btn"
+                  onClick={closeRepairModal}
+                  disabled={isRepairing}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-gold sd-modal-btn"
+                  disabled={isRepairing}
+                >
+                  {isRepairing ? "Repairing…" : "Repair Profile"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -358,4 +505,79 @@ function getGreeting() {
   if (hour < 12) return "morning";
   if (hour < 17) return "afternoon";
   return "evening";
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="sd-root sd-skeleton" aria-busy="true" aria-label="Loading dashboard">
+      <header className="sd-header">
+        <div>
+          <div className="sk-line sk-line-sm" style={{ width: 110 }} />
+          <div className="sk-line sk-line-lg" style={{ width: 280, marginTop: 10 }} />
+        </div>
+        <div className="sk-line sk-line-md" style={{ width: 160 }} />
+      </header>
+
+      <div className="sd-top-row">
+        <div className="sd-overview-card">
+          <div className="sd-overview-ring-wrap">
+            <div className="sk-donut" />
+          </div>
+          <div className="sd-overview-info">
+            <div className="sk-line sk-line-sm" style={{ width: 150 }} />
+            <div className="sk-line sk-line-md" style={{ width: 130, marginTop: 12 }} />
+            <div className="sk-line sk-line-sm" style={{ width: 200, marginTop: 14 }} />
+          </div>
+        </div>
+
+        <div className="sd-stat-tiles">
+          {[0, 1, 2].map((i) => (
+            <div className="sd-stat-tile" key={i}>
+              <div className="sk-icon" />
+              <div className="sk-line sk-line-lg" style={{ width: 50, marginTop: 12 }} />
+              <div className="sk-line sk-line-sm" style={{ width: 70, marginTop: 8 }} />
+              <div className="sk-line sk-line-bar" style={{ marginTop: 14 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="sd-bottom-row">
+        <div className="sd-qr-panel">
+          <div className="sd-qr-panel-header">
+            <div>
+              <div className="sk-line sk-line-sm" style={{ width: 80 }} />
+              <div className="sk-line sk-line-md" style={{ width: 120, marginTop: 8 }} />
+            </div>
+          </div>
+          <div className="sd-qr-body">
+            <div className="sk-qr" />
+            <div className="sk-line sk-line-md" style={{ width: 160, marginTop: 16 }} />
+            <div className="sk-line sk-line-sm" style={{ width: 220, marginTop: 8 }} />
+          </div>
+        </div>
+
+        <div className="sd-right-col">
+          <div className="sd-event-panel">
+            <div className="sd-event-panel-header">
+              <div>
+                <div className="sk-line sk-line-sm" style={{ width: 60 }} />
+                <div className="sk-line sk-line-md" style={{ width: 150, marginTop: 8 }} />
+              </div>
+            </div>
+            <div className="sk-event-card" />
+          </div>
+
+          <div className="sd-quick-links">
+            <div className="sk-line sk-line-sm" style={{ width: 100, marginBottom: 14 }} />
+            <div className="sd-quick-grid">
+              {[0, 1, 2, 3].map((i) => (
+                <div className="sk-quick-card" key={i} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

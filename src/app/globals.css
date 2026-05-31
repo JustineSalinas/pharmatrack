@@ -53,6 +53,8 @@ body {
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   overflow-x: clip !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -75,7 +77,7 @@ html {
   overflow-x: clip !important;
   overflow-y: auto;
   position: relative;
-  background-color: var(--bg) !important;
+  background-color: transparent;
   min-height: 100vh;
   min-height: 100dvh;
   touch-action: pan-y;
@@ -216,7 +218,7 @@ html { scrollbar-width: thin; scrollbar-color: #2a2a35 var(--bg); }
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  z-index: -1;
+  z-index: 0;
   overflow: hidden;
   background-color: #1a0b36;
   pointer-events: none;
@@ -228,16 +230,22 @@ html { scrollbar-width: thin; scrollbar-color: #2a2a35 var(--bg); }
   width: 100vw;
   height: 100vh;
   background-image: url("/usa.png");
-  background-size: 85vh auto;
+  background-size: 90vh auto;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.8;
-  /* 80% as requested */
+  opacity: 0.12;
   pointer-events: none;
   z-index: 0;
-  filter: sepia(1) hue-rotate(250deg) saturate(1.8) brightness(0.8);
-  will-change: transform;
+  filter: blur(0.5px);
+  will-change: opacity;
   transform: translateZ(0);
+}
+
+/* On auth pages (login/register) the form sits center-screen and would
+   compete with the seal — drop opacity so it reads as a soft watermark. */
+.animated-bg.darker .hero-watermark {
+  opacity: 0.05;
+  filter: blur(1.5px);
 }
 
 .animated-bg::after {
@@ -1251,14 +1259,14 @@ html { scrollbar-width: thin; scrollbar-color: #2a2a35 var(--bg); }
 
   /* TYPOGRAPHY: Scale and Wrap Fixes */
   .hero h1 {
-    font-size: 9.5vw !important;
-    /* Slightly smaller to fit width */
-    padding: 0 10px;
+    font-size: 7.5vw !important;
+    padding: 0 8px;
     line-height: 1.1;
     letter-spacing: -1px;
-    white-space: normal !important;
-    word-break: normal !important;
-    /* Prevent mid-word breaks */
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal;
+    max-width: 100%;
     margin-bottom: 5px;
   }
 
@@ -2609,10 +2617,6 @@ html { scrollbar-width: thin; scrollbar-color: #2a2a35 var(--bg); }
 }
 
 @media (max-width: 768px) {
-  .hero h1 {
-    font-size: 3rem !important;
-  }
-
   .hero-cta {
     flex-direction: column;
   }
@@ -2775,7 +2779,7 @@ html {
   overflow-x: clip !important;
   width: 100% !important;
   max-width: 100% !important;
-  background-color: var(--bg) !important;
+  background-color: transparent;
   position: relative;
   touch-action: pan-y;
 }
@@ -2804,10 +2808,8 @@ html {
   }
 
   .hero-watermark {
-    width: 85vw !important;
-    height: 85vw !important;
-    max-width: 100% !important;
-    opacity: 0.03 !important;
+    background-size: 78vw auto;
+    opacity: 0.12 !important;
   }
 
   .hero {
@@ -2819,8 +2821,13 @@ html {
   }
 
   .hero-title {
-    font-size: 9vw !important;
+    font-size: 7.5vw !important;
     letter-spacing: -0.5px !important;
+    max-width: 100%;
+    word-break: keep-all;
+    overflow-wrap: normal;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 }
 
@@ -4859,6 +4866,214 @@ html {
 
 .auth-page select.input-field option:disabled {
   color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* ============================================================ */
+/* MODAL — used by student dashboard QR repair flow             */
+/* ============================================================ */
+.sd-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 4, 22, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  animation: sdModalFade 180ms ease-out;
+}
+
+.sd-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: linear-gradient(145deg, rgba(40, 22, 78, 0.95), rgba(20, 10, 42, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 36px 32px 28px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+  animation: sdModalPop 200ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.sd-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--white-shade);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.sd-modal-close:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--white);
+}
+
+.sd-modal-close:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sd-modal-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.sd-modal-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--white);
+  margin: 0 0 8px;
+}
+
+.sd-modal-sub {
+  font-size: 0.88rem;
+  color: var(--white-shade);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.sd-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sd-modal-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #fca5a5;
+  font-size: 0.85rem;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.sd-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sd-modal-btn {
+  flex: 1;
+  padding: 13px 18px !important;
+  width: auto !important;
+  font-size: 0.95rem;
+}
+
+@keyframes sdModalFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sdModalPop {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 480px) {
+  .sd-modal-card {
+    padding: 30px 22px 22px;
+    border-radius: 16px;
+  }
+  .sd-modal-actions {
+    flex-direction: column;
+  }
+}
+
+/* ============================================================ */
+/* SKELETON LOADERS — used by dashboard loading state           */
+/* ============================================================ */
+.sd-skeleton {
+  pointer-events: none;
+}
+
+.sk-line,
+.sk-icon,
+.sk-donut,
+.sk-qr,
+.sk-event-card,
+.sk-quick-card {
+  position: relative;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  animation: skShimmer 1.4s ease-in-out infinite;
+}
+
+.sk-line {
+  height: 10px;
+  width: 100%;
+  display: block;
+}
+
+.sk-line-sm  { height: 10px; }
+.sk-line-md  { height: 14px; }
+.sk-line-lg  { height: 22px; border-radius: 8px; }
+.sk-line-bar { height: 4px; border-radius: 999px; }
+
+.sk-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.sk-donut {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+}
+
+.sk-qr {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  margin: 0 auto;
+}
+
+.sk-event-card {
+  height: 110px;
+  border-radius: 14px;
+}
+
+.sk-quick-card {
+  height: 60px;
+  border-radius: 12px;
+}
+
+@keyframes skShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-line,
+  .sk-icon,
+  .sk-donut,
+  .sk-qr,
+  .sk-event-card,
+  .sk-quick-card {
+    animation: none;
+  }
 }
 
 
