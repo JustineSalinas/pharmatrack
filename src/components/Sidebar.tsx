@@ -145,7 +145,8 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
 
   function handleOpenEmail() {
     const { subject, body } = buildSupportEmail();
-    window.location.href = `mailto:cdg.solutionsph@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const mailtoUrl = `mailto:cdg.solutionsph@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoUrl, "_blank");
   }
 
   async function handleCopyMessage() {
@@ -226,14 +227,14 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
 
         {/* Footer */}
         <div className="sidebar-footer">
-          {role === "admin" && (
+          {(role === "admin" || role === "facilitator") && (
             <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", background: "rgba(0, 0, 0, 0.02)", borderRadius: "10px", border: "1px solid var(--border)", marginBottom: "8px" }}>
               <div style={{ background: "var(--surface2)", borderRadius: "50%", padding: "2px", display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", flexShrink: 0 }}>
                 <img src="/usa.png" alt="USA Logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "50%" }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--white-shade)", lineHeight: 1.2, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>Admin - USA Account</span>
-                <span style={{ fontSize: "11px", color: "var(--dimmed)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>System Administrator</span>
+                <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--white-shade)", lineHeight: 1.2, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{userName}</span>
+                <span style={{ fontSize: "11px", color: "var(--dimmed)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{userSub}</span>
               </div>
             </div>
           )}
@@ -381,6 +382,20 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
           text-align: center;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
           animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .logout-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #111827 !important;
+          margin: 0 0 8px !important;
+        }
+
+        .logout-desc {
+          font-size: 14px;
+          color: #4b5563 !important;
+          margin: 0 0 24px !important;
+          line-height: 1.5;
         }
 
         .logout-icon-wrap {

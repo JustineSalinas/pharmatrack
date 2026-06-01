@@ -91,6 +91,17 @@ export default function ProfilePage() {
 
   if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
 
+  if (!user) {
+    return (
+      <div className="sp-center-screen" style={{ flexDirection: "column", gap: "12px" }}>
+        <p style={{ color: "var(--dimmed)" }}>Failed to load profile details.</p>
+        <button className="sp-save-btn" style={{ width: "auto", padding: "8px 20px" }} onClick={() => window.location.reload()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   const initials = form.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase() || "U";
   const isStudent = user?.account_type === "student";
 
@@ -174,7 +185,7 @@ export default function ProfilePage() {
                 <label className="sp-input-label">Full Display Name</label>
                 <div className="sp-input-wrap">
                   <User size={15} className="sp-input-icon" />
-                  <input className="sp-input" value={form.full_name} onChange={setF("full_name")} placeholder="Enter your full name" />
+                  <input className="sp-input" value={form.full_name} disabled style={{ opacity: 0.5 }} />
                 </div>
               </div>
 
@@ -201,7 +212,7 @@ export default function ProfilePage() {
                       <label className="sp-input-label">Year Level</label>
                       <div className="sp-input-wrap">
                         <Layers size={15} className="sp-input-icon" />
-                        <select className="sp-input sp-select" value={form.current_year} onChange={setF("current_year")}>
+                        <select className="sp-input sp-select" value={form.current_year} disabled style={{ opacity: 0.5 }}>
                           {["1st Year", "2nd Year", "3rd Year", "4th Year"].map((y) => (
                             <option key={y} value={y}>{y}</option>
                           ))}
@@ -213,27 +224,13 @@ export default function ProfilePage() {
                     <label className="sp-input-label">Block / Section</label>
                     <div className="sp-input-wrap">
                       <BookOpen size={15} className="sp-input-icon" />
-                      <input className="sp-input" value={form.section} onChange={setF("section")} placeholder="e.g. PharmA" />
+                      <input className="sp-input" value={form.section} disabled style={{ opacity: 0.5 }} />
                     </div>
                   </div>
                 </>
               )}
 
-              <button className="sp-save-btn" onClick={handleSaveProfile} disabled={saving} style={{ color: "#ffffff" }}>
-                {saving ? (
-                  <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                    <Loader2 size={15} className="sp-spinner-sm" /> Saving…
-                  </span>
-                ) : saved ? (
-                  <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                    <CheckCircle2 size={15} /> Saved!
-                  </span>
-                ) : (
-                  <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                    <Save size={15} style={{ stroke: "#ffffff" }} /> Save Changes
-                  </span>
-                )}
-              </button>
+              {/* Profile fields are read-only; no save changes button is needed here */}
 
               <div className="sp-date-info-row">
                 <div className="sp-date-info-item">

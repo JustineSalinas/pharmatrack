@@ -52,12 +52,14 @@ export default function ChangePassword() {
         <div className="sp-form-header-actions">
           {!editing ? (
             <button className="sp-edit-btn" onClick={() => setEditing(true)}>
-              <Pencil size={13} /> Edit
+              <Pencil size={13} />
+              <span>Edit</span>
             </button>
           ) : (
             <>
               <button className="sp-discard-btn" onClick={handleDiscard} disabled={saving}>
-                <X size={13} /> Discard
+                <X size={13} />
+                <span>Discard</span>
               </button>
               <button className="sp-save-btn-sm" onClick={handleSave} disabled={saving} style={{ color: "#ffffff" }}>
                 {saving ? (

@@ -115,12 +115,12 @@ export default function FacilitatorAttendance() {
                 type="date" 
                 value={selectedDate} 
                 onChange={(e) => setSelectedDate(e.target.value)} 
-                style={{ paddingLeft: "36px", paddingRight: "12px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--card, #13152a)", color: "var(--foreground, #fff)", width: "100%", fontSize: "13px", outline: "none", cursor: "pointer", transition: "border-color 0.15s ease" }}
+                style={{ paddingLeft: "36px", paddingRight: "12px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", width: "100%", fontSize: "13px", outline: "none", cursor: "pointer", transition: "border-color 0.15s ease" }}
               />
            </div>
            <button 
              className="btn-ghost" 
-             style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--card, #13152a)", color: "rgba(255,255,255,0.85)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
+             style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
            >
              <Download size={14} /> Export
            </button>
@@ -128,12 +128,12 @@ export default function FacilitatorAttendance() {
       </div>
 
       {/* Summary Strip - Single horizontal block */}
-      <div style={{ display: "flex", alignItems: "center", background: "var(--card, #13152a)", border: "1px solid var(--border, rgba(255,255,255,0.07))", borderRadius: 12, padding: "20px 24px", marginBottom: "32px" }}>
+      <div style={{ display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px 24px", marginBottom: "32px" }}>
         {[
           { label: "Present", count: present, color: "#4ade80" },
           { label: "Late", count: late, color: "var(--gold)" },
           { label: "Absent", count: absent, color: "#f87171" },
-          { label: "Total Filtered", count: filtered.length, color: "var(--foreground, #fff)" }
+          { label: "Total Filtered", count: filtered.length, color: "var(--white)" }
         ].map((item) => (
           <div key={item.label} style={{ display: "flex", alignItems: "center", flex: 1 }}>
              <div style={{ flex: 1 }}>
@@ -152,7 +152,7 @@ export default function FacilitatorAttendance() {
           <input 
             className="search-input" 
             placeholder="Search student name or email..." 
-            style={{ border: "1px solid var(--border, rgba(255,255,255,0.07))", background: "var(--card, #13152a)", padding: "0 12px 0 36px", height: "36px", borderRadius: "var(--radius-sm)", color: "var(--foreground, #fff)", fontSize: "13px", width: "100%", outline: "none", transition: "border-color 0.15s ease" }}
+            style={{ border: "1px solid var(--border)", background: "var(--surface)", padding: "0 12px 0 36px", height: "36px", borderRadius: "var(--radius-sm)", color: "var(--white)", fontSize: "13px", width: "100%", outline: "none", transition: "border-color 0.15s ease" }}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -166,7 +166,7 @@ export default function FacilitatorAttendance() {
                 background: "transparent", 
                 border: "none", 
                 borderBottom: filterStatus === f ? "2px solid var(--gold)" : "2px solid transparent", 
-                color: filterStatus === f ? "var(--foreground, #fff)" : "var(--muted)", 
+                color: filterStatus === f ? "var(--white)" : "var(--muted)", 
                 padding: "0 4px 12px", 
                 fontSize: "13px", 
                 fontWeight: filterStatus === f ? 500 : 400,
@@ -185,7 +185,7 @@ export default function FacilitatorAttendance() {
 
         <select 
           className="search-input select-input" 
-          style={{ width: "auto", minWidth: "140px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border, rgba(255,255,255,0.07))", background: "var(--card, #13152a)", color: "var(--foreground, #fff)", fontSize: "13px", padding: "0 12px", outline: "none", cursor: "pointer" }} 
+          style={{ width: "auto", minWidth: "140px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", fontSize: "13px", padding: "0 12px", outline: "none", cursor: "pointer" }} 
           value={filterSection} 
           onChange={(e) => setFilterSection(e.target.value)}
         >
@@ -195,17 +195,17 @@ export default function FacilitatorAttendance() {
       </div>
 
       {/* Table */}
-      <div style={{ background: "var(--card, #13152a)", border: "1px solid var(--border, rgba(255,255,255,0.07))", borderRadius: 12, overflow: "hidden" }}>
+      <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
         <div className="table-wrap">
           <table className="attendance-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid var(--border, rgba(255,255,255,0.07))" }}>
-                <th style={{ padding: "14px 24px", textAlign: "left", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Student Name</th>
-                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Subject / Event</th>
-                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Section</th>
-                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Date</th>
-                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Clock In</th>
-                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Status</th>
+              <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                <th style={{ padding: "14px 24px", textAlign: "left", fontSize: 11, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Student Name</th>
+                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Subject / Event</th>
+                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Section</th>
+                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Date</th>
+                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Clock In</th>
+                <th style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -213,26 +213,26 @@ export default function FacilitatorAttendance() {
                 const initials = r.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "S";
                 
                 return (
-                  <tr key={r.id} className="user-row" style={{ borderBottom: i < filtered.length - 1 ? "1px solid var(--border, rgba(255,255,255,0.04))" : "none" }}>
+                  <tr key={r.id} className="user-row" style={{ borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none" }}>
                     <td style={{ padding: "14px 24px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                        <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", fontWeight: 600, flexShrink: 0, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", fontWeight: 600, flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--dimmed)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           {initials}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 500, color: "var(--foreground, #fff)" }}>{r.name}</div>
-                          <div style={{ fontSize: "13px", color: "var(--muted)" }}>{r.email}</div>
+                          <div style={{ fontWeight: 500, color: "var(--white)" }}>{r.name}</div>
+                          <div style={{ fontSize: "13px", color: "var(--dimmed)" }}>{r.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: "14px 20px", color: "rgba(255,255,255,0.85)", fontSize: "13px" }}>{r.subject}</td>
+                    <td style={{ padding: "14px 20px", color: "var(--white-shade)", fontSize: "13px" }}>{r.subject}</td>
                     <td style={{ padding: "14px 20px" }}>
-                      <span className="tag" style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "var(--muted)", fontSize: "11px", padding: "4px 8px", borderRadius: 4 }}>{r.section}</span>
+                      <span className="tag" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--dimmed)", fontSize: "11px", padding: "4px 8px", borderRadius: 4 }}>{r.section}</span>
                     </td>
-                    <td style={{ padding: "14px 20px", color: "var(--muted)", fontSize: "13px" }}>{r.displayDate}</td>
-                    <td style={{ padding: "14px 20px", fontSize: "13px", color: r.timeIn === "—" ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.85)" }}>{r.timeIn}</td>
+                    <td style={{ padding: "14px 20px", color: "var(--dimmed)", fontSize: "13px" }}>{r.displayDate}</td>
+                    <td style={{ padding: "14px 20px", fontSize: "13px", color: r.timeIn === "—" ? "var(--dimmed)" : "var(--white-shade)" }}>{r.timeIn}</td>
                     <td style={{ padding: "14px 20px" }}>
-                      <span className={`badge badge-${r.status}`} style={{ fontSize: "11px" }}>
+                      <span className={`status-badge ${r.status}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
                         {r.status.toUpperCase()}
                       </span>
                     </td>

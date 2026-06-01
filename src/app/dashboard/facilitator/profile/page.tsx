@@ -32,6 +32,17 @@ export default function FacilitatorProfilePage() {
 
   if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
 
+  if (!user) {
+    return (
+      <div className="sp-center-screen" style={{ flexDirection: "column", gap: "12px" }}>
+        <p style={{ color: "var(--dimmed)" }}>Failed to load profile details.</p>
+        <button className="sp-save-btn" style={{ width: "auto", padding: "8px 20px" }} onClick={() => window.location.reload()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   const fullName = user?.full_name || "—";
   const initials = fullName.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() || "F";
   const department = user?.facilitator_profiles?.department || "Pharmacy";
@@ -56,7 +67,9 @@ export default function FacilitatorProfilePage() {
 
       <div className="sp-profile-grid">
         <div className="sp-avatar-panel">
-          <div className="sp-avatar-circle">{initials}</div>
+          <div className="sp-avatar-circle" style={{ overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", padding: "4px" }}>
+            <img src="/usa.png" alt="USA Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          </div>
           <h2 className="sp-avatar-name">{fullName}</h2>
           <p className="sp-avatar-email">{user?.email}</p>
           <div className="sp-avatar-tags">

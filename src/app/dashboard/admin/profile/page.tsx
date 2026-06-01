@@ -35,6 +35,17 @@ export default function AdminProfilePage() {
 
   if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
 
+  if (!user) {
+    return (
+      <div className="sp-center-screen" style={{ flexDirection: "column", gap: "12px" }}>
+        <p style={{ color: "var(--dimmed)" }}>Failed to load profile details.</p>
+        <button className="sp-save-btn" style={{ width: "auto", padding: "8px 20px" }} onClick={() => window.location.reload()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="fade-in sd-root">
       <header className="sd-header">
