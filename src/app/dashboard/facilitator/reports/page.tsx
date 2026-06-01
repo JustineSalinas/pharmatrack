@@ -142,6 +142,7 @@ export default function FacultyReports() {
   const [atRisk, setAtRisk] = useState<any[]>([]);
   const [perfectCount, setPerfectCount] = useState(0);
   const [avgAttendanceRate, setAvgAttendanceRate] = useState(0);
+  const [attendanceTrend, setAttendanceTrend] = useState<any[]>([]);
   
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<SubTabKey>("students");
@@ -248,6 +249,35 @@ export default function FacultyReports() {
         const totalOverallAttended = parsedStudents.reduce((sum, s) => sum + (s.present_count + s.late_count), 0);
         const overallAvgRate = totalOverallRecords > 0 ? Math.round((totalOverallAttended / totalOverallRecords) * 100) : 0;
         setAvgAttendanceRate(overallAvgRate);
+
+        // Group records by date to calculate daily trend
+        const dateStatsMap: Record<string, { dateStr: string, attended: number, total: number }> = {};
+        records?.forEach((r: any) => {
+          if (!r.events?.date) return;
+          const dateVal = r.events.date; // YYYY-MM-DD
+          if (!dateStatsMap[dateVal]) {
+            dateStatsMap[dateVal] = {
+              dateStr: dateVal,
+              attended: 0,
+              total: 0
+            };
+          }
+          dateStatsMap[dateVal].total += 1;
+          if (r.status === "present" || r.status === "late") {
+            dateStatsMap[dateVal].attended += 1;
+          }
+        });
+
+        const calculatedTrend = Object.values(dateStatsMap)
+          .map(d => ({
+            date: d.dateStr,
+            displayDate: new Date(d.dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            rate: d.total > 0 ? Math.round((d.attended / d.total) * 100) : 0
+          }))
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .slice(-6); // Last 6 events/dates for trend
+        
+        setAttendanceTrend(calculatedTrend);
 
       } catch (err) {
         console.error("Error loading reports:", err);
@@ -433,6 +463,29 @@ export default function FacultyReports() {
     s.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const hasRecords = allStudents.some(s => s.total_records > 0);
+
+  const svgWidth = 480;
+  const svgHeight = 150;
+  const paddingX = 40;
+  const paddingY = 20;
+
+  const points = attendanceTrend.map((d, i) => {
+    const x = paddingX + (i * (svgWidth - paddingX * 2)) / (attendanceTrend.length - 1 || 1);
+    const y = svgHeight - paddingY - (d.rate / 100) * (svgHeight - paddingY * 2);
+    return { x, y, displayDate: d.displayDate, rate: d.rate };
+  });
+
+  let pathD = "";
+  let areaD = "";
+  if (points.length > 0) {
+    pathD = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      pathD += ` L ${points[i].x} ${points[i].y}`;
+    }
+    areaD = `${pathD} L ${points[points.length - 1].x} ${svgHeight - paddingY} L ${points[0].x} ${svgHeight - paddingY} Z`;
+  }
+
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
@@ -517,6 +570,131 @@ export default function FacultyReports() {
           </div>
         </div>
       </div>
+
+      {/* VISUAL ANALYTICS DASHBOARD GRID */}
+      {hasRecords ? (
+        <div className="reports-visual-grid" style={{ display: "grid", gap: "20px", marginBottom: "24px" }}>
+          
+          {/* Card A: Attendance Trend */}
+          <div className="reports-card" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", height: "260px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 className="card-title" style={{ fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <TrendingUp size={16} color="#4f46e5" />
+                Attendance Trend
+              </h3>
+              <span style={{ fontSize: "11px", color: "#6b7280", background: "rgba(79, 70, 229, 0.05)", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
+                Last {attendanceTrend.length} Events
+              </span>
+            </div>
+            
+            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {attendanceTrend.length < 2 ? (
+                <div style={{ color: "#6b7280", fontSize: "12px", textAlign: "center" }}>
+                  Not enough historical event data to render trend.
+                </div>
+              ) : (
+                <svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none" style={{ overflow: "visible" }}>
+                  <defs>
+                    <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgba(79, 70, 229, 0.25)" />
+                      <stop offset="100%" stopColor="rgba(79, 70, 229, 0.0)" />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Grid Lines */}
+                  {[0, 25, 50, 75, 100].map((level) => {
+                    const y = svgHeight - paddingY - (level / 100) * (svgHeight - paddingY * 2);
+                    return (
+                      <g key={level}>
+                        <line x1={paddingX} y1={y} x2={svgWidth - paddingX} y2={y} stroke="rgba(0,0,0,0.05)" strokeDasharray="4 4" />
+                        <text x={paddingX - 10} y={y + 3} textAnchor="end" fontSize={9} fill="#9ca3af">{level}%</text>
+                      </g>
+                    );
+                  })}
+                  
+                  {/* Area Fill */}
+                  {areaD && <path d={areaD} fill="url(#chartGrad)" />}
+                  
+                  {/* Line Curve */}
+                  {pathD && <path d={pathD} fill="none" stroke="#4f46e5" strokeWidth={2.5} strokeLinecap="round" />}
+                  
+                  {/* Dots & Labels */}
+                  {points.map((p, idx) => (
+                    <g key={idx}>
+                      <circle cx={p.x} cy={p.y} r={4} fill="#4f46e5" stroke="#ffffff" strokeWidth={1.5} style={{ transition: "all 0.15s ease", cursor: "pointer" }} />
+                      <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#4f46e5">{p.rate}%</text>
+                      <text x={p.x} y={svgHeight - paddingY + 12} textAnchor="middle" fontSize={9.5} fill="#6b7280" fontWeight={500}>{p.displayDate}</text>
+                    </g>
+                  ))}
+                </svg>
+              )}
+            </div>
+          </div>
+          
+          {/* Card B: Section Ranking Bar Chart */}
+          <div className="reports-card" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", height: "260px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 className="card-title" style={{ fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Award size={16} color="#16a34a" />
+                Section Standings
+              </h3>
+              <span style={{ fontSize: "11px", color: "#16a34a", background: "rgba(22, 163, 74, 0.05)", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
+                Section Comparison
+              </span>
+            </div>
+            
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px", justifyContent: "center", overflowY: "auto" }}>
+              {sectionBreakdown.length === 0 ? (
+                <div style={{ color: "#6b7280", fontSize: "12px", textAlign: "center" }}>
+                  No sections data available yet.
+                </div>
+              ) : (
+                sectionBreakdown.slice(0, 4).map((sec, idx) => {
+                  const colors = [
+                    { bar: "linear-gradient(90deg, #4f46e5, #818cf8)", bg: "rgba(79, 70, 229, 0.05)" },
+                    { bar: "linear-gradient(90deg, #16a34a, #4ade80)", bg: "rgba(22, 163, 74, 0.05)" },
+                    { bar: "linear-gradient(90deg, #d97706, #fbbf24)", bg: "rgba(217, 119, 6, 0.05)" },
+                    { bar: "linear-gradient(90deg, #dc2626, #f87171)", bg: "rgba(220, 38, 38, 0.05)" }
+                  ];
+                  const colScheme = colors[idx % colors.length];
+                  return (
+                    <div key={sec.name} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 600 }}>
+                        <span style={{ color: "#111827" }}>{sec.name} <span style={{ fontWeight: 400, color: "#6b7280", fontSize: "11px" }}>({sec.count} studs)</span></span>
+                        <span style={{ color: "#4f46e5" }}>{sec.rate}%</span>
+                      </div>
+                      <div style={{ width: "100%", height: "12px", background: "#f3f4f6", borderRadius: "99px", overflow: "hidden" }}>
+                        <div 
+                          className="rank-bar-fill"
+                          style={{ 
+                            width: `${sec.rate}%`, 
+                            height: "100%", 
+                            background: colScheme.bar, 
+                            borderRadius: "99px",
+                            transition: "width 1s ease" 
+                          }} 
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+          
+        </div>
+      ) : (
+        /* Empty Visuals Dashboard */
+        <div className="reports-card" style={{ padding: "40px 24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: "220px", marginBottom: "24px", gap: "12px" }}>
+          <div style={{ width: "52px", height: "52px", borderRadius: "12px", background: "rgba(79, 70, 229, 0.05)", border: "1px dashed rgba(79, 70, 229, 0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <TrendingUp size={24} color="#6b7280" />
+          </div>
+          <div>
+            <h3 className="card-title" style={{ fontSize: "15px", marginBottom: "4px" }}>Visual Analytics Dashboard</h3>
+            <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>Data will appear once events are logged</p>
+          </div>
+        </div>
+      )}
 
       {/* SUB-NAVBAR TABS */}
       <div className="reports-sub-navbar">
@@ -639,8 +817,14 @@ export default function FacultyReports() {
               <tbody>
                 {topEvents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: "48px 24px", textAlign: "center", color: "#4b5563" }}>
-                      No events with attendance records logged yet.
+                    <td colSpan={6}>
+                      <div style={{ padding: "64px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", textAlign: "center" }}>
+                        <div style={{ width: "48px", height: "48px", borderRadius: "10px", background: "rgba(79, 70, 229, 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <CalendarCheck size={20} color="#6b7280" />
+                        </div>
+                        <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>Most Attended Events</div>
+                        <p style={{ color: "#6b7280", fontSize: "12.5px", margin: 0, maxWidth: "320px" }}>Data will appear once events are logged</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -704,8 +888,14 @@ export default function FacultyReports() {
               <tbody>
                 {sectionBreakdown.length === 0 ? (
                   <tr>
-                    <td colSpan={4} style={{ padding: "48px 24px", textAlign: "center", color: "#4b5563" }}>
-                      No student records found to group into sections.
+                    <td colSpan={4}>
+                      <div style={{ padding: "64px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", textAlign: "center" }}>
+                        <div style={{ width: "48px", height: "48px", borderRadius: "10px", background: "rgba(22, 163, 74, 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Award size={20} color="#6b7280" />
+                        </div>
+                        <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>Section Breakdown</div>
+                        <p style={{ color: "#6b7280", fontSize: "12.5px", margin: 0, maxWidth: "320px" }}>Data will appear once events are logged</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -759,8 +949,20 @@ export default function FacultyReports() {
               <tbody>
                 {atRisk.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: "48px 24px", textAlign: "center", color: "#16a34a", fontWeight: 500 }}>
-                      🎉 Excellent! No students are currently in the at-risk attendance threshold.
+                    <td colSpan={5}>
+                      {!hasRecords ? (
+                        <div style={{ padding: "64px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", textAlign: "center" }}>
+                          <div style={{ width: "48px", height: "48px", borderRadius: "10px", background: "rgba(220, 38, 38, 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <AlertTriangle size={20} color="#6b7280" />
+                          </div>
+                          <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>At-Risk Students</div>
+                          <p style={{ color: "#6b7280", fontSize: "12.5px", margin: 0, maxWidth: "320px" }}>Data will appear once events are logged</p>
+                        </div>
+                      ) : (
+                        <div style={{ padding: "48px 24px", textAlign: "center", color: "#16a34a", fontWeight: 500 }}>
+                          🎉 Excellent! No students are currently in the at-risk attendance threshold.
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -922,6 +1124,19 @@ export default function FacultyReports() {
           letter-spacing: 0.05em !important;
           font-weight: 600 !important;
           margin-top: 4px !important;
+        }
+
+        /* ── VISUAL ANALYTICS ── */
+        .facilitator-reports-page .reports-visual-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        @media (max-width: 900px) {
+          .facilitator-reports-page .reports-visual-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        .facilitator-reports-page .rank-bar-fill {
+          transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* ── SUB-NAVBAR TABS ── */
