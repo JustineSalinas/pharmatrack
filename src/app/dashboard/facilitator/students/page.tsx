@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   Search, Users, CheckCircle, XCircle, Clock, ChevronRight, X,
-  TrendingUp, AlertTriangle, FileText, Loader2, Calendar, MapPin
+  TrendingUp, AlertTriangle, FileText, Loader2, Calendar, MapPin,
+  AlertCircle
 } from "lucide-react";
 
 function initials(name: string) {
@@ -173,35 +174,43 @@ export default function StudentsPage() {
       </header>
 
       {/* TODAY SUMMARY STRIP */}
-      <div className="summary-strip">
-        <div className="summary-tile tile-green">
-          <div className="tile-icon"><CheckCircle size={16} /></div>
-          <div>
-            <div className="tile-val">{presentToday}</div>
-            <div className="tile-lbl">Present Today</div>
+      <div 
+        className="summary-cards-grid" 
+        style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+          gap: "16px", 
+          marginBottom: "32px" 
+        }}
+      >
+        {[
+          { label: "Present Today", count: presentToday, color: "#4ade80", bg: "rgba(74, 222, 128, 0.03)", border: "rgba(74, 222, 128, 0.15)", icon: <CheckCircle size={16} color="#4ade80" /> },
+          { label: "Late Today", count: lateToday, color: "var(--gold)", bg: "rgba(232, 184, 75, 0.03)", border: "rgba(232, 184, 75, 0.15)", icon: <Clock size={16} color="var(--gold)" /> },
+          { label: "Absent Today", count: absentToday, color: "#f87171", bg: "rgba(248, 113, 113, 0.03)", border: "rgba(248, 113, 113, 0.15)", icon: <AlertCircle size={16} color="#f87171" /> },
+          { label: "Total Students", count: students.length, color: "#a78bfa", bg: "rgba(167, 139, 250, 0.03)", border: "rgba(167, 139, 250, 0.15)", icon: <Users size={16} color="#a78bfa" /> }
+        ].map((item) => (
+          <div 
+            key={item.label} 
+            className="stat-card"
+            style={{ 
+              display: "flex", 
+              flexDirection: "column", 
+              background: item.bg, 
+              border: `1px solid ${item.border}`, 
+              borderRadius: "var(--radius)", 
+              padding: "18px 20px", 
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            }}
+          >
+             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+               <div style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{item.label}</div>
+               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "50%", background: `${item.color}12` }}>
+                 {item.icon}
+               </div>
+             </div>
+             <div style={{ fontSize: "32px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em", lineHeight: "1" }}>{item.count}</div>
           </div>
-        </div>
-        <div className="summary-tile tile-red">
-          <div className="tile-icon"><XCircle size={16} /></div>
-          <div>
-            <div className="tile-val">{absentToday}</div>
-            <div className="tile-lbl">Absent Today</div>
-          </div>
-        </div>
-        <div className="summary-tile tile-amber">
-          <div className="tile-icon"><Clock size={16} /></div>
-          <div>
-            <div className="tile-val">{lateToday}</div>
-            <div className="tile-lbl">Late Today</div>
-          </div>
-        </div>
-        <div className="summary-tile tile-indigo">
-          <div className="tile-icon"><Users size={16} /></div>
-          <div>
-            <div className="tile-val">{students.length}</div>
-            <div className="tile-lbl">Total Students</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* SEARCH & FILTER */}
@@ -455,36 +464,12 @@ export default function StudentsPage() {
         }
 
         /* Summary strip */
-        .students-page .summary-strip {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 14px;
-          margin-bottom: 22px;
+        .stat-card {
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        @media (max-width: 900px) {
-          .students-page .summary-strip { grid-template-columns: repeat(2, 1fr); }
-        }
-        .students-page .summary-tile {
-          background: #ffffff !important;
-          border: 1px solid rgba(79,70,229,0.10) !important;
-          border-radius: 10px !important;
-          padding: 14px 18px !important;
-          display: flex; align-items: center; gap: 14px;
-        }
-        .students-page .tile-icon {
-          width: 34px; height: 34px; border-radius: 8px;
-          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .students-page .tile-green .tile-icon { background: rgba(22,163,74,0.08); color: #16a34a; }
-        .students-page .tile-red   .tile-icon { background: rgba(220,38,38,0.08);  color: #dc2626; }
-        .students-page .tile-amber .tile-icon { background: rgba(217,119,6,0.08);  color: #d97706; }
-        .students-page .tile-indigo .tile-icon { background: rgba(79,70,229,0.08); color: #4f46e5; }
-        .students-page .tile-val {
-          font-size: 22px; font-weight: 800; color: #111827 !important; line-height: 1;
-        }
-        .students-page .tile-lbl {
-          font-size: 11px; color: #6b7280 !important; text-transform: uppercase;
-          letter-spacing: 0.05em; font-weight: 600; margin-top: 3px;
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
         /* Filter bar */
