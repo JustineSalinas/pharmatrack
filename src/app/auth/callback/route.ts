@@ -72,7 +72,12 @@ export async function GET(request: NextRequest) {
       const dest = profile ? "/dashboard" : "/onboarding";
       return NextResponse.redirect(new URL(dest, origin));
     }
-    if (error) console.error("Code exchange failed:", error.message);
+    if (error) {
+      console.error("Code exchange failed:", error.message);
+      const errUrl = new URL("/login", origin);
+      errUrl.searchParams.set("error", `code_exchange_failed:${error.message}`);
+      return NextResponse.redirect(errUrl);
+    }
   }
 
   // ── Fallback ──────────────────────────────────────────────────────────

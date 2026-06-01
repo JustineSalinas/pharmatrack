@@ -33,8 +33,12 @@ function LoginForm() {
     if (reset === "success") {
       setSuccessMsg("Password updated successfully! Please log in with your new password.");
     }
-    if (err === "verification_failed") {
-      setError("Email verification failed. The link may have expired. Please try registering again.");
+    if (err) {
+      if (err.startsWith("code_exchange_failed:")) {
+        setError(`Google login failed: ${err.replace("code_exchange_failed:", "")}`);
+      } else if (err === "verification_failed") {
+        setError("Email verification failed. The link may have expired. Please try registering again.");
+      }
     }
   }, [searchParams]);
 
