@@ -107,7 +107,7 @@ export default function ChangePassword() {
           />
           <button type="button" onClick={() => setShow(!show)}
             style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 0, display: "flex" }}>
-            {show ? <EyeOff size={16} /> : <Eye size={16} />}
+            {show ? <Eye size={16} /> : <EyeOff size={16} />}
           </button>
         </div>
       </div>
