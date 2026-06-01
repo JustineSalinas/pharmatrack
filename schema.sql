@@ -34,6 +34,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
+-- SECURITY DEFINER functions still require the *caller* role to hold EXECUTE.
+-- Without these grants, every RLS policy that calls is_admin()/is_council()
+-- fails with "permission denied for function is_admin" — which blocks even a
+-- user reading their own profile row, and therefore breaks login entirely.
+GRANT EXECUTE ON FUNCTION public.is_admin()   TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.is_council() TO authenticated, anon;
+
 -- ============================================================
 -- USERS
 -- ============================================================

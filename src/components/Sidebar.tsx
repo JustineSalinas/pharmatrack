@@ -28,6 +28,7 @@ interface SidebarProps {
   userName: string;
   userSub: string;
   avatarInitials: string;
+  onClose?: () => void;
 }
 
 const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
@@ -102,11 +103,23 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
   ],
 };
 
-export default function Sidebar({ role, userName, userSub, avatarInitials }: SidebarProps) {
+const SUPPORT_CATEGORIES = [
+  "Technical Issue",
+  "Login / Access Problem",
+  "Attendance Dispute",
+  "Missing QR Code",
+  "Missing Records",
+  "Other",
+];
+
+export default function Sidebar({ role, userName, userSub, avatarInitials, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [supportCategory, setSupportCategory] = useState("");
+  const [supportDesc, setSupportDesc] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -114,9 +127,46 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
     window.location.href = "/login";
   };
 
-  const handleEmailSupport = () => {
-    window.location.href = "mailto:cdg.solutionsph@gmail.com?subject=PharmaTrack%20Support%20Request";
-  };
+  function buildSupportEmail() {
+    const subject = `PharmaTrack Support: ${supportCategory || "General"} — ${userName}`;
+    const body = [
+      `Name: ${userName}`,
+      `Role: ${userSub}`,
+      `Category: ${supportCategory || "Not specified"}`,
+      ``,
+      `Description:`,
+      supportDesc.trim() || "(no description provided)",
+      ``,
+      `---`,
+      `Sent from PharmaTrack Portal`,
+    ].join("\n");
+    return { subject, body };
+  }
+
+  function handleOpenEmail() {
+    const { subject, body } = buildSupportEmail();
+    window.location.href = `mailto:cdg.solutionsph@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  async function handleCopyMessage() {
+    const { subject, body } = buildSupportEmail();
+    const full = `To: cdg.solutionsph@gmail.com\nSubject: ${subject}\n\n${body}`;
+    try {
+      await navigator.clipboard.writeText(full);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // fallback for browsers that block clipboard API
+      alert(`Copy this and send to cdg.solutionsph@gmail.com:\n\n${full}`);
+    }
+  }
+
+  function openSupportModal() {
+    setSupportCategory("");
+    setSupportDesc("");
+    setCopied(false);
+    setShowSupportModal(true);
+  }
 
   return (
     <>
@@ -162,6 +212,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
                       key={item.href}
                       href={item.href as any}
                       className={`nav-link${isActive ? " nav-link--active" : ""}`}
+                      onClick={onClose}
                     >
                       <span className="nav-link-icon">{item.icon}</span>
                       <span className="nav-link-label">{item.label}</span>
@@ -187,7 +238,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
             </div>
           )}
 
-          <button className="sidebar-support-btn" onClick={() => setShowSupportModal(true)}>
+          <button className="sidebar-support-btn" onClick={openSupportModal}>
             <HeadphonesIcon size={16} />
             <span>Contact Support</span>
           </button>
@@ -234,37 +285,73 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
       {showSupportModal && (
         <div className="support-overlay" onClick={() => setShowSupportModal(false)}>
           <div className="support-card" onClick={(e) => e.stopPropagation()}>
-            <div className="support-icon-wrap">
-              <HeadphonesIcon size={24} />
-            </div>
-            <h3 className="support-title">Contact Support</h3>
-            <p className="support-desc">
-              Have questions or running into issues with PharmaTrack? Reach out to our technical support team.
-            </p>
 
-            <div className="support-info-list">
-              <div className="support-info-item">
-                <Mail size={16} className="support-info-icon" />
-                <div>
-                  <span className="support-info-label">Email:</span>
-                  <span className="support-info-value">cdg.solutionsph@gmail.com</span>
-                </div>
+            {/* Close button */}
+            <button className="support-x-btn" onClick={() => setShowSupportModal(false)} aria-label="Close">
+              ×
+            </button>
+
+            {/* Header */}
+            <div className="support-header">
+              <div className="support-icon-wrap">
+                <HeadphonesIcon size={20} />
+              </div>
+              <div>
+                <h3 className="support-title">Contact Support</h3>
+                <p className="support-desc">We'll compose a structured email to our support team.</p>
               </div>
             </div>
 
-            <div className="support-actions">
-              <button
-                className="support-close-btn"
-                onClick={() => setShowSupportModal(false)}
-              >
-                Close
+            {/* Sender chip */}
+            <div className="support-sender-chip">
+              <Mail size={13} />
+              <span>Sending as <strong>{userName}</strong> · {userSub}</span>
+            </div>
+
+            {/* Form */}
+            <div className="support-form">
+              <div className="support-field">
+                <label className="support-field-label">Issue Category</label>
+                <select
+                  className="support-select"
+                  value={supportCategory}
+                  onChange={(e) => setSupportCategory(e.target.value)}
+                >
+                  <option value="">Select a category…</option>
+                  {SUPPORT_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="support-field">
+                <label className="support-field-label">Describe your issue</label>
+                <textarea
+                  className="support-textarea"
+                  placeholder="What happened? What were you trying to do?"
+                  value={supportDesc}
+                  onChange={(e) => setSupportDesc(e.target.value)}
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="support-footer">
+              <button className="support-cancel-btn" onClick={() => setShowSupportModal(false)}>
+                Cancel
               </button>
-              <button
-                className="support-email-btn"
-                onClick={handleEmailSupport}
-              >
+              <button className="support-send-btn" onClick={handleOpenEmail}>
                 <Mail size={14} />
-                Send Email
+                Send via Email
+              </button>
+            </div>
+
+            {/* Clipboard fallback */}
+            <div className="support-copy-row">
+              <span>No email app?</span>
+              <button className="support-copy-link" onClick={handleCopyMessage}>
+                {copied ? "✓ Copied!" : "Copy message"}
               </button>
             </div>
           </div>
@@ -272,7 +359,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
       )}
 
       <style jsx>{`
-        .logout-overlay, .support-overlay {
+        .logout-overlay {
           position: fixed;
           inset: 0;
           z-index: 9999;
@@ -284,110 +371,37 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
           animation: fadeIn 0.15s ease;
         }
 
-        .logout-card, .support-card {
+        .logout-card {
           background: #ffffff;
           border: 1px solid #e5e7eb;
           border-radius: 14px;
-          padding: 32px 28px 24px;
           width: 100%;
           max-width: 360px;
+          padding: 32px 28px 24px;
           text-align: center;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
           animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .support-card {
-          max-width: 400px;
-        }
-
-        .logout-icon-wrap, .support-icon-wrap {
+        .logout-icon-wrap {
           width: 48px;
           height: 48px;
           border-radius: 12px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #dc2626;
           display: flex;
           align-items: center;
           justify-content: center;
           margin: 0 auto 16px;
         }
 
-        .logout-icon-wrap {
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
-        }
-
-        .support-icon-wrap {
-          background: rgba(79, 70, 229, 0.08);
-          border: 1px solid rgba(79, 70, 229, 0.18);
-          color: #4f46e5;
-        }
-
-        .logout-title, .support-title {
-          font-size: 17px;
-          font-weight: 600;
-          color: #111827;
-          margin: 0 0 6px;
-          letter-spacing: -0.01em;
-        }
-
-        .support-title {
-          font-size: 18px;
-          font-weight: 700;
-        }
-
-        .logout-desc, .support-desc {
-          font-size: 13.5px;
-          color: #6b7280;
-          margin: 0 0 24px;
-          line-height: 1.5;
-        }
-
-        .support-desc {
-          font-size: 13px;
-          margin-bottom: 20px;
-        }
-
-        .support-info-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-bottom: 24px;
-          text-align: left;
-          background: #f9fafb;
-          padding: 16px;
-          border-radius: 10px;
-          border: 1px solid #f3f4f6;
-        }
-
-        .support-info-item {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 13px;
-          color: #374151;
-        }
-
-        .support-info-icon {
-          color: #4f46e5;
-          flex-shrink: 0;
-        }
-
-        .support-info-label {
-          font-weight: 600;
-          color: #111827;
-          margin-right: 6px;
-        }
-
-        .support-info-value {
-          color: #4b5563;
-        }
-
-        .logout-actions, .support-actions {
+        .logout-actions {
           display: flex;
           gap: 10px;
         }
 
-        .logout-cancel-btn, .support-close-btn {
+        .logout-cancel-btn {
           flex: 1;
           height: 40px;
           border-radius: 8px;
@@ -401,16 +415,17 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
           font-family: var(--font-sans);
         }
 
-        .logout-cancel-btn:hover, .support-close-btn:hover {
+        .logout-cancel-btn:hover {
           background: #f9fafb;
           border-color: #9ca3af;
         }
 
-        .logout-confirm-btn, .support-email-btn {
+        .logout-confirm-btn {
           flex: 1;
           height: 40px;
           border-radius: 8px;
           border: none;
+          background: #dc2626;
           color: #ffffff;
           font-size: 13.5px;
           font-weight: 600;
@@ -423,20 +438,8 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
           gap: 6px;
         }
 
-        .logout-confirm-btn {
-          background: #dc2626;
-        }
-
         .logout-confirm-btn:hover {
           background: #b91c1c;
-        }
-
-        .support-email-btn {
-          background: #4f46e5;
-        }
-
-        .support-email-btn:hover {
-          background: #4338ca;
         }
 
         .logout-confirm-btn:disabled {

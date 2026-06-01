@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { logoutUser, getCurrentUser, getAuthUser } from "@/lib/auth-client";
+import { Menu, X } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import type { PharmaUser, StudentProfile, FacilitatorProfile } from "@/lib/schema";
 
@@ -97,17 +98,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="dash-layout">
-      {/* Mobile toggle */}
+      {/* Mobile toggle FAB */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        style={{
-          position: "fixed", top: 16, left: 16, zIndex: 30,
-          background: "var(--surface2)", border: "1px solid var(--border)",
-          borderRadius: 8, padding: "8px 10px", cursor: "pointer",
-          display: "none", fontSize: 18,
-        }}
+        style={{ display: "none" }}
         className="mobile-menu-btn"
-      >☰</button>
+        aria-label={sidebarOpen ? "Close menu" : "Open menu"}
+      >
+        {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+      </button>
 
       {/* Wrapping Sidebar in a div that controls mobile open state if needed */}
       <div className={`sidebar-wrapper ${sidebarOpen ? "open" : ""}`}>
@@ -116,6 +115,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           userName={userName}
           userSub={userSub}
           avatarInitials={avatarInitials}
+          onClose={() => setSidebarOpen(false)}
         />
       </div>
 
