@@ -177,7 +177,8 @@ CREATE POLICY "Student scans session attendance" ON public.attendance_records FO
 -- VIEWS
 -- ============================================================
 DROP VIEW IF EXISTS public.student_attendance_summary;
-CREATE OR REPLACE VIEW public.student_attendance_summary AS
+CREATE OR REPLACE VIEW public.student_attendance_summary 
+WITH (security_invoker = true) AS
 SELECT
   u.id AS student_id,
   u.full_name,
