@@ -111,7 +111,12 @@ function LoginForm() {
       }
 
       // Student (auto-approved)
-      router.push("/dashboard");
+      const redirect = searchParams.get("redirect");
+      if (redirect === "checkin") {
+        router.push("/dashboard?checkin=true");
+      } else {
+        router.push("/dashboard");
+      }
 
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred. Please check your credentials.");

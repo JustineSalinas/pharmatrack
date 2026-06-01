@@ -92,7 +92,7 @@ export default function LandingPage() {
           </p>
 
           <div className="hero-cta">
-            <Link href="/check-in" className="btn btn-gold pulse-btn" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>
+            <Link href="/dashboard?checkin=true" className="btn btn-gold pulse-btn" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>
               Go to Scanner
             </Link>
             <Link href="/register" className="btn btn-outline" style={{ padding: "18px 48px", fontSize: "1.1rem" }}>

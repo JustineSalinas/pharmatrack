@@ -18,7 +18,14 @@ import {
   Award,
   Zap,
   X,
+  Loader2,
+  QrCode,
+  Scan,
+  Info,
+  CheckCircle2,
+  History,
 } from "lucide-react";
+import Scanner from "@/components/Scanner";
 
 const SECTIONS_BY_YEAR: Record<string, string[]> = {
   "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
@@ -29,10 +36,12 @@ const SECTIONS_BY_YEAR: Record<string, string[]> = {
 import Link from "next/link";
 import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import type { AttendanceSummary, PharmaUser, StudentProfile, Event } from "@/lib/schema";
 
-export default function StudentDashboard() {
+function StudentDashboardContent() {
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<(PharmaUser & { student_profiles: StudentProfile | null }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AttendanceSummary | null>(null);
@@ -46,12 +55,21 @@ export default function StudentDashboard() {
   const [repairError, setRepairError] = useState("");
   const router = useRouter();
 
+  // Check-In Modal state
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [checkInMode, setCheckInMode] = useState<"present" | "scan">("present");
+  const [checkInLoading, setCheckInLoading] = useState(false);
+  const [checkInScanSuccess, setCheckInScanSuccess] = useState(false);
+  const [checkInTime, setCheckInTime] = useState("");
+  const modalQrWrapRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     async function loadDashboard() {
       try {
         const u = await getCurrentUser();
         if (!u) {
-          router.push("/login");
+          const isCheckin = searchParams.get("checkin") === "true";
+          router.push(isCheckin ? "/login?redirect=checkin" : "/login");
           return;
         }
         if (u.account_type === "admin") { router.push("/dashboard/admin"); return; }
@@ -85,6 +103,12 @@ export default function StudentDashboard() {
     }
     loadDashboard();
   }, [router]);
+
+  useEffect(() => {
+    if (searchParams.get("checkin") === "true") {
+      openCheckInModal();
+    }
+  }, [searchParams]);
 
   function openRepairModal() {
     setRepairStudentId("");
@@ -131,6 +155,63 @@ export default function StudentDashboard() {
       setIsRepairing(false);
     }
   }
+
+  const openCheckInModal = () => {
+    setCheckInMode("present");
+    setCheckInScanSuccess(false);
+    setCheckInLoading(false);
+    setCheckInTime("");
+    setShowCheckInModal(true);
+  };
+
+  const closeCheckInModal = () => {
+    setShowCheckInModal(false);
+    if (searchParams.get("checkin") === "true") {
+      router.replace("/dashboard");
+    }
+  };
+
+  const handleScanSuccess = async (code: string) => {
+    if (!user) return;
+    try {
+      setCheckInLoading(true);
+      const { data: session, error: sessionErr } = await supabase
+        .from("qr_sessions").select("*").eq("code", code).single();
+      if (sessionErr || !session) throw new Error("Invalid or expired QR code");
+      
+      const now = new Date();
+      if (new Date((session as any).expires_at) < now) throw new Error("This QR code has expired");
+      
+      const { data: existing } = await supabase
+        .from("attendance_records").select("id")
+        .eq("student_id", user.id).eq("session_id", (session as any).id).single();
+      if (existing) throw new Error("Already checked in for this session");
+      
+      const { error: attErr } = await (supabase.from("attendance_records") as any).insert({
+        student_id: user.id,
+        session_id: (session as any).id,
+        status: "present",
+        time_in: now.toISOString(),
+        remarks: "Self check-in via QR Scan",
+      });
+      if (attErr) throw attErr;
+
+      // Update attendance summary stats immediately
+      const { data: updatedStats } = await supabase
+        .from("student_attendance_summary")
+        .select("*")
+        .eq("student_id", user.id)
+        .single();
+      if (updatedStats) setStats(updatedStats);
+
+      setCheckInTime(now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
+      setCheckInScanSuccess(true);
+    } catch (err: any) {
+      alert("⚠️ " + (err.message || "Attendance failed"));
+    } finally {
+      setCheckInLoading(false);
+    }
+  };
 
   if (loading) return <DashboardSkeleton />;
 
@@ -324,10 +405,15 @@ export default function StudentDashboard() {
           </div>
 
           <div className="sd-qr-footer">
-            <Link href="/check-in" className="sd-present-btn">
+            <button
+              type="button"
+              onClick={openCheckInModal}
+              className="sd-present-btn"
+              style={{ width: "100%", border: "none", cursor: "pointer" }}
+            >
               <Maximize2 size={14} />
               Open Full-Screen
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -390,13 +476,18 @@ export default function StudentDashboard() {
           <div className="sd-quick-links">
             <p className="sd-panel-label" style={{ marginBottom: 10 }}>Quick Actions</p>
             <div className="sd-quick-grid">
-              <Link href="/check-in" className="sd-quick-card">
+              <button
+                type="button"
+                onClick={openCheckInModal}
+                className="sd-quick-card"
+                style={{ width: "100%", textAlign: "left" }}
+              >
                 <div className="sd-quick-icon" style={{ background: "rgba(45,212,191,0.12)", color: "var(--teal)" }}>
                   <Zap size={16} />
                 </div>
                 <span className="sd-quick-label">Check In</span>
                 <ChevronRight size={14} className="sd-quick-arrow" />
-              </Link>
+              </button>
               <Link href="/dashboard/records" className="sd-quick-card">
                 <div className="sd-quick-icon" style={{ background: "rgba(232,184,75,0.12)", color: "var(--gold)" }}>
                   <ClipboardList size={16} />
@@ -531,6 +622,291 @@ export default function StudentDashboard() {
           </div>
         </div>
       )}
+
+      {/* ── CHECK-IN MODAL ────────────────────────────────────── */}
+      {showCheckInModal && (
+        <div
+          className="sd-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          onClick={closeCheckInModal}
+        >
+          <div
+            className="sd-modal-card checkin-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <style dangerouslySetInnerHTML={{__html: `
+              .checkin-modal-card {
+                max-width: 500px !important;
+                width: 100% !important;
+                padding: 28px !important;
+                background: linear-gradient(145deg, #180d32, #0d061f) !important;
+                border: 1px solid rgba(255, 255, 255, 0.12) !important;
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4) !important;
+              }
+              .checkin-modal-title {
+                color: #ffffff !important;
+                font-size: 1.55rem !important;
+                font-weight: 700 !important;
+                margin: 0 0 8px !important;
+                text-align: center !important;
+              }
+              .checkin-modal-sub {
+                color: rgba(255, 255, 255, 0.75) !important;
+                font-size: 0.88rem !important;
+                margin: 0 !important;
+                line-height: 1.5 !important;
+                text-align: center !important;
+              }
+              .checkin-mode-toggle {
+                display: flex !important;
+                background: rgba(22, 22, 29, 0.5) !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                padding: 4px !important;
+                border-radius: 14px !important;
+                gap: 4px !important;
+                width: 100% !important;
+                margin-bottom: 24px !important;
+              }
+              .checkin-mode-btn {
+                flex: 1 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                padding: 10px 16px !important;
+                border: none !important;
+                border-radius: 10px !important;
+                font-size: 13px !important;
+                cursor: pointer !important;
+                background: transparent !important;
+                color: rgba(255, 255, 255, 0.6) !important;
+                font-weight: 500 !important;
+                transition: all 0.2s ease !important;
+              }
+              .checkin-mode-btn.active {
+                background: #E8B84B !important;
+                color: #0F0F13 !important;
+                font-weight: 700 !important;
+                box-shadow: 0 4px 12px rgba(232, 184, 75, 0.25) !important;
+              }
+              .checkin-qr-code-label {
+                font-family: monospace !important;
+                font-size: 22px !important;
+                font-weight: 700 !important;
+                letter-spacing: 5px !important;
+                color: #E8B84B !important;
+                margin-bottom: 12px !important;
+                text-shadow: 0 2px 4px rgba(232, 184, 75, 0.1) !important;
+                text-align: center !important;
+              }
+              .checkin-qr-instruction {
+                font-size: 14px !important;
+                color: rgba(255, 255, 255, 0.85) !important;
+                margin-bottom: 20px !important;
+                max-width: 320px !important;
+                line-height: 1.45 !important;
+                text-align: center !important;
+              }
+              .checkin-qr-download-btn {
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+                background: rgba(232, 184, 75, 0.08) !important;
+                border: 1px solid #E8B84B !important;
+                color: #E8B84B !important;
+                font-size: 13px !important;
+                font-weight: 600 !important;
+                padding: 8px 18px !important;
+                border-radius: 999px !important;
+                cursor: pointer !important;
+                transition: all 0.15s ease !important;
+                margin: 0 auto 16px auto !important;
+              }
+              .checkin-qr-download-btn:hover {
+                background: rgba(232, 184, 75, 0.18) !important;
+                border-color: #F0C96B !important;
+                color: #F0C96B !important;
+              }
+              .checkin-qr-hint-row {
+                display: flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+                font-size: 12px !important;
+                color: rgba(255, 255, 255, 0.5) !important;
+                padding: 8px 16px !important;
+                background: rgba(255, 255, 255, 0.02) !important;
+                border-radius: 99px !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+              }
+              .checkin-modal-close {
+                position: absolute !important;
+                top: 14px !important;
+                right: 14px !important;
+                width: 32px !important;
+                height: 32px !important;
+                border-radius: 50% !important;
+                background: rgba(255, 255, 255, 0.06) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                color: rgba(255, 255, 255, 0.7) !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                cursor: pointer !important;
+                transition: all 0.15s ease !important;
+              }
+              .checkin-modal-close:hover {
+                background: rgba(255, 255, 255, 0.15) !important;
+                color: #ffffff !important;
+              }
+              .checkin-scan-hint {
+                display: flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+                font-size: 12px !important;
+                color: rgba(255, 255, 255, 0.7) !important;
+                justify-content: center !important;
+              }
+              .checkin-processing-text {
+                color: rgba(255, 255, 255, 0.8) !important;
+                font-size: 14px !important;
+              }
+              .checkin-success-title {
+                font-size: 20px !important;
+                font-weight: 700 !important;
+                color: #ffffff !important;
+                margin-bottom: 8px !important;
+              }
+              .checkin-success-body {
+                font-size: 14px !important;
+                color: rgba(255, 255, 255, 0.8) !important;
+                margin-bottom: 20px !important;
+              }
+            `}} />
+
+            <button
+              type="button"
+              className="checkin-modal-close"
+              onClick={closeCheckInModal}
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="sd-modal-header" style={{ marginBottom: "20px" }}>
+              <h2 className="checkin-modal-title">Attendance Check-In</h2>
+              <p className="checkin-modal-sub">
+                Scan the event code or present your student ID pass.
+              </p>
+            </div>
+
+            {/* Mode Toggle */}
+            <div className="checkin-mode-toggle">
+              <button
+                type="button"
+                className={`checkin-mode-btn ${checkInMode === "present" ? "active" : ""}`}
+                onClick={() => { setCheckInMode("present"); setCheckInScanSuccess(false); }}
+              >
+                <QrCode size={15} /> Present My ID
+              </button>
+              <button
+                type="button"
+                className={`checkin-mode-btn ${checkInMode === "scan" ? "active" : ""}`}
+                onClick={() => setCheckInMode("scan")}
+              >
+                <Scan size={15} /> Scan Event Code
+              </button>
+            </div>
+
+            {/* Main Panel Content */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+              {checkInMode === "present" ? (
+                <div className="sp-present-panel" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", width: "100%" }}>
+                  {qrCodeValue !== "NOT-FOUND" ? (
+                    <>
+                      <div className="sp-qr-wrapper" ref={modalQrWrapRef} style={{ background: "#fff", padding: "24px", borderRadius: "20px", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 16px 48px rgba(0, 0, 0, 0.3), 0 0 24px rgba(232, 184, 75, 0.1)" }}>
+                        <QRCodeSVG value={qrCodeValue} size={200} level="H" includeMargin={false} />
+                      </div>
+                      <p className="checkin-qr-code-label">{qrCodeValue}</p>
+                      <p className="checkin-qr-instruction">
+                        Present this to a Council Admin or Facilitator for scanning
+                      </p>
+                      <button
+                        type="button"
+                        className="checkin-qr-download-btn"
+                        onClick={() => downloadQRPng(modalQrWrapRef.current, `PharmaTrack_${qrCodeValue}.png`).catch((e) => alert("Download failed: " + e.message))}
+                      >
+                        <DownloadIcon size={12} /> Download QR
+                      </button>
+                      <div className="checkin-qr-hint-row">
+                        <Info size={12} />
+                        Keep screen brightness high for best scan results
+                      </div>
+                    </>
+                  ) : (
+                    <div className="sp-qr-error-state" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <div className="sp-error-icon-wrap" style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(248, 113, 113, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                        <AlertCircle size={28} color="var(--danger)" />
+                      </div>
+                      <h3 className="sp-error-title" style={{ fontSize: "16px", fontWeight: "700", color: "var(--white)", marginBottom: "8px" }}>QR Code Unavailable</h3>
+                      <p className="sp-error-body" style={{ fontSize: "13px", color: "var(--muted)" }}>
+                        We couldn't link a student profile to your account.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="sp-scan-panel" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+                  {!checkInScanSuccess ? (
+                    <>
+                      {checkInLoading ? (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px" }}>
+                          <Loader2 className="sp-spinner" size={32} style={{ marginBottom: "12px", color: "#E8B84B" }} />
+                          <span className="checkin-processing-text">Processing attendance...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="sp-scanner-frame" style={{ width: "100%", maxWidth: "320px", aspectRatio: 1, border: "2px solid var(--gold-dim)", borderRadius: "16px", overflow: "hidden", marginBottom: "16px" }}>
+                            <Scanner onSuccess={handleScanSuccess} />
+                          </div>
+                          <p className="checkin-scan-hint">
+                            <Info size={13} /> Center the event QR code in the viewport
+                          </p>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="sp-success-state fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "10px 0" }}>
+                      <div className="sp-success-icon" style={{ marginBottom: "16px" }}>
+                        <CheckCircle2 size={40} color="var(--success)" />
+                      </div>
+                      <h3 className="checkin-success-title">Attendance Recorded!</h3>
+                      <p className="checkin-success-body">
+                        Your check-in was confirmed at <span className="sp-success-time" style={{ color: "#E8B84B", fontWeight: "600" }}>{checkInTime}</span>
+                      </p>
+                      <div className="sp-success-actions" style={{ display: "flex", gap: "12px", width: "100%" }}>
+                        <button className="sp-rescan-btn" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "10px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", cursor: "pointer", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--white-shade)" }} onClick={() => setCheckInScanSuccess(false)}>
+                          <Scan size={14} /> Scan Another
+                        </button>
+                        <button
+                          className="sp-history-btn"
+                          style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "10px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", cursor: "pointer", background: "#E8B84B", border: "1px solid #E8B84B", color: "#000" }}
+                          onClick={() => {
+                            closeCheckInModal();
+                            router.push("/dashboard/records");
+                          }}
+                        >
+                          View Records
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -614,5 +990,13 @@ function DashboardSkeleton() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function StudentDashboard() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <StudentDashboardContent />
+    </Suspense>
   );
 }

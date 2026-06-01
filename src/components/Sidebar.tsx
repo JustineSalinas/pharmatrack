@@ -37,7 +37,7 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
       section: "Main",
       items: [
         { href: "/dashboard", label: "Overview", icon: <Home size={18} /> },
-        { href: "/check-in", label: "Check-In", icon: <Camera size={18} /> },
+        { href: "/dashboard?checkin=true", label: "Check-In", icon: <Camera size={18} /> },
         { href: "/dashboard/records", label: "My Records", icon: <ClipboardList size={18} /> },
         { href: "/dashboard/calendar", label: "Calendar", icon: <Calendar size={18} /> },
         { href: "/dashboard/schedule", label: "Schedule", icon: <Calendar size={18} /> },
