@@ -28,6 +28,7 @@ export default function EventsManagement() {
   // Search & Delete States
   const [searchQuery, setSearchQuery] = useState("");
   const [eventToDelete, setEventToDelete] = useState<any | null>(null);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Form State
@@ -155,6 +156,20 @@ export default function EventsManagement() {
     }
   }
 
+  async function handleDeleteAllConfirm() {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from("events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) throw error;
+      setShowDeleteAllModal(false);
+      fetchEvents();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   function resetForm() {
     setName("");
     setLocation("");
@@ -194,14 +209,11 @@ export default function EventsManagement() {
           <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: "var(--white)" }}>Manage Events</h2>
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>Create and schedule pharmacy council activities.</p>
         </div>
-        <button className="btn-create-event" onClick={() => { resetForm(); setShowModal(true); }}>
-          <PlusCircle size={16} /> Create Event
-        </button>
       </header>
 
       {/* SEARCH BAR */}
-      <div style={{ marginBottom: "24px", display: "flex", gap: "12px", alignItems: "center" }}>
-        <div style={{ position: "relative", flex: 1 }}>
+      <div style={{ marginBottom: "24px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ position: "relative", flex: "0 1 360px" }}>
           <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--dimmed)" }} />
           <input
             type="text"
@@ -224,6 +236,24 @@ export default function EventsManagement() {
             }}
           />
         </div>
+
+        {events.length > 0 && (
+          <button 
+            type="button"
+            onClick={() => setShowDeleteAllModal(true)}
+            className="btn-danger-outline"
+          >
+            <Trash2 size={14} /> Delete All Events
+          </button>
+        )}
+
+        <button 
+          className="btn-create-event" 
+          onClick={() => { resetForm(); setShowModal(true); }} 
+          style={{ height: "40px", marginLeft: "auto" }}
+        >
+          <PlusCircle size={16} /> Create Event
+        </button>
       </div>
 
       {loading ? (
@@ -483,6 +513,58 @@ export default function EventsManagement() {
         </div>
       )}
 
+      {/* DELETE ALL CONFIRMATION MODAL */}
+      {showDeleteAllModal && (
+        <div className="modal-overlay" style={{ 
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000,
+          padding: "20px", paddingTop: "15vh"
+        }}>
+          <div className="modal-card" style={{ 
+            width: "100%", maxWidth: "480px", 
+            background: "var(--surface)", border: "1px solid var(--border)", 
+            borderRadius: "12px", padding: "28px", position: "relative",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
+          }}>
+            <div style={{ display: "flex", gap: "16px" }}>
+              <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(239, 68, 68, 0.2)", color: "var(--danger)", flexShrink: 0 }}>
+                <AlertTriangle size={20} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--white)", marginBottom: "8px" }}>Delete All Events</h3>
+                <p style={{ color: "var(--dimmed)", fontSize: "13px", lineHeight: "1.5", margin: 0 }}>
+                  Are you sure you want to delete <strong>ALL</strong> events? This action is irreversible. It will permanently delete all events and erase all participation and attendance records system-wide.
+                </p>
+              </div>
+            </div>
+            
+            <div style={{ marginTop: "24px", display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button 
+                type="button" 
+                onClick={() => setShowDeleteAllModal(false)}
+                className="btn-ghost"
+                style={{ padding: "0 16px", height: "36px", fontSize: "13px", fontWeight: 500, borderRadius: "var(--radius-sm)", color: "var(--white-shade)", border: "1px solid var(--border)", background: "var(--surface2)", cursor: "pointer", transition: "all 0.15s ease" }}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={handleDeleteAllConfirm}
+                className="btn-danger"
+                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#fff", background: "var(--danger)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: isDeleting ? 0.7 : 1, transition: "all 0.15s ease" }}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <><Loader2 size={14} className="animate-spin" /> Deleting...</>
+                ) : "Delete All Events"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         .search-input:focus {
           border-color: var(--gold) !important;
@@ -494,6 +576,27 @@ export default function EventsManagement() {
         }
         .btn-danger:hover {
           background: #dc2626 !important;
+        }
+        .btn-danger-outline {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          height: 40px;
+          padding: 0 16px;
+          border-radius: var(--radius-sm);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          background: rgba(239, 68, 68, 0.05);
+          color: var(--danger);
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          white-space: nowrap;
+        }
+        .btn-danger-outline:hover {
+          background: rgba(239, 68, 68, 0.12) !important;
+          border-color: rgba(239, 68, 68, 0.6) !important;
+          color: #ef4444 !important;
         }
         .btn-create-event {
           display: inline-flex;

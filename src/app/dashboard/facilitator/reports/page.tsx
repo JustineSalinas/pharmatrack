@@ -1459,6 +1459,11 @@ export default function FacultyReports() {
           outline: none;
         }
 
+        .reports-select-input option {
+          color: #111827 !important;
+          background-color: #ffffff !important;
+        }
+
         .reports-modal-table-wrap {
           overflow-y: auto;
           flex: 1;
