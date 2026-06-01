@@ -1,20 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
-  Loader2, User, Mail, Save, CheckCircle2,
-  AlertCircle, Crown, Calendar, Clock,
+  Loader2, User, Mail, Crown, Calendar, Clock, ShieldCheck,
 } from "lucide-react";
+import ChangePassword from "@/components/ChangePassword";
 
 export default function AdminProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [tab, setTab] = useState<"profile" | "security">("profile");
 
   const formatDate = (dateStr: string | undefined | null) => {
     if (!dateStr) return "—";
@@ -36,20 +33,7 @@ export default function AdminProfilePage() {
     load();
   }, []);
 
-  const handleSaveProfile = async () => {
-    setSaving(true); setError("");
-    try {
-      if (!user) return;
-      const { error: e1 } = await supabase.from("users").update({ full_name: fullName }).eq("id", user.id);
-      if (e1) throw e1;
-      setSaved(true); setTimeout(() => setSaved(false), 2500);
-    } catch (err: any) { setError(err.message || "Failed to save changes"); }
-    finally { setSaving(false); }
-  };
-
   if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
-
-  const initials = fullName.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase() || "A";
 
   return (
     <div className="fade-in sd-root">
@@ -60,75 +44,72 @@ export default function AdminProfilePage() {
         </div>
       </header>
 
-
+      <div className="sp-tab-bar">
+        <button className={`sp-tab-btn ${tab === "profile" ? "active" : ""}`} onClick={() => setTab("profile")}>
+          <User size={14} /> Account Details
+        </button>
+        <button className={`sp-tab-btn ${tab === "security" ? "active" : ""}`} onClick={() => setTab("security")}>
+          <ShieldCheck size={14} /> Security
+        </button>
+      </div>
 
       <div className="sp-profile-grid">
         <div className="sp-avatar-panel">
-          <div className="sp-avatar-circle">{initials}</div>
+          <div className="sp-avatar-circle" style={{ overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", padding: "6px" }}>
+            <img src="/usa.png" alt="USA Logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "50%" }} />
+          </div>
           <h2 className="sp-avatar-name">{fullName || "—"}</h2>
           <p className="sp-avatar-email">{user?.email}</p>
           <div className="sp-avatar-tags">
-            <span className="sp-avatar-tag sp-tag-gold"><Crown size={11} style={{ marginRight: 4, verticalAlign: "middle" }} />Administrator</span>
+            <span className="sp-avatar-tag sp-tag-gold" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <Crown size={11} />Administrator
+            </span>
           </div>
         </div>
 
         <div className="sp-form-panel">
-          <div className="sp-form-body">
-            {error && <div className="sp-form-error"><AlertCircle size={15} /> {error}</div>}
-            {saved && <div className="sp-form-success"><CheckCircle2 size={15} /> Profile saved successfully!</div>}
+          {tab === "profile" ? (
+            <div className="sp-form-body">
+              <div className="sp-form-section-title">
+                <User size={15} color="var(--gold)" /> Account Details
+              </div>
 
-            <div className="sp-form-section-title">
-              <User size={15} color="var(--gold)" /> Account Details
-            </div>
+              <div className="sp-input-group">
+                <label className="sp-input-label">Full Display Name</label>
+                <div className="sp-input-wrap">
+                  <User size={15} className="sp-input-icon" />
+                  <input className="sp-input" value={fullName} disabled style={{ opacity: 0.5 }} />
+                </div>
+              </div>
 
-            <div className="sp-input-group">
-              <label className="sp-input-label">Full Display Name</label>
-              <div className="sp-input-wrap">
-                <User size={15} className="sp-input-icon" />
-                <input className="sp-input" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Enter your full name" />
+              <div className="sp-input-group">
+                <label className="sp-input-label">Institutional Email</label>
+                <div className="sp-input-wrap">
+                  <Mail size={15} className="sp-input-icon" />
+                  <input className="sp-input" type="email" value={user?.email || ""} disabled style={{ opacity: 0.5 }} />
+                </div>
+                <p className="sp-input-hint">Email is managed by the institution and cannot be changed.</p>
+              </div>
+
+              <div className="sp-date-info-row">
+                <div className="sp-date-info-item">
+                  <Calendar size={13} className="sp-date-info-icon" />
+                  <span className="sp-date-info-label">Account Created:</span>
+                  <span className="sp-date-info-value">{formatDate(user?.created_at)}</span>
+                </div>
+                <div className="sp-date-info-item">
+                  <Clock size={13} className="sp-date-info-icon" />
+                  <span className="sp-date-info-label">Last Updated:</span>
+                  <span className="sp-date-info-value">{formatDate(user?.updated_at)}</span>
+                </div>
               </div>
             </div>
-
-            <div className="sp-input-group">
-              <label className="sp-input-label">Institutional Email</label>
-              <div className="sp-input-wrap">
-                <Mail size={15} className="sp-input-icon" />
-                <input className="sp-input" type="email" value={user?.email || ""} disabled style={{ opacity: 0.5 }} />
-              </div>
-              <p className="sp-input-hint">Email is managed by the institution and cannot be changed.</p>
-            </div>
-
-            <button className="sp-save-btn" onClick={handleSaveProfile} disabled={saving} style={{ color: "#ffffff" }}>
-              {saving ? (
-                <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                  <Loader2 size={15} className="sp-spinner-sm" /> Saving…
-                </span>
-              ) : saved ? (
-                <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                  <CheckCircle2 size={15} /> Saved!
-                </span>
-              ) : (
-                <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                  <Save size={15} style={{ stroke: "#ffffff" }} /> Save Changes
-                </span>
-              )}
-             </button>
-
-             <div className="sp-date-info-row">
-               <div className="sp-date-info-item">
-                 <Calendar size={13} className="sp-date-info-icon" />
-                 <span className="sp-date-info-label">Account Created:</span>
-                 <span className="sp-date-info-value">{formatDate(user?.created_at)}</span>
-               </div>
-               <div className="sp-date-info-item">
-                 <Clock size={13} className="sp-date-info-icon" />
-                 <span className="sp-date-info-label">Last Updated:</span>
-                 <span className="sp-date-info-value">{formatDate(user?.updated_at)}</span>
-               </div>
-             </div>
-           </div>
+          ) : (
+            <ChangePassword />
+          )}
         </div>
       </div>
     </div>
   );
 }
+

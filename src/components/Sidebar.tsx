@@ -72,10 +72,25 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
       section: "Main",
       items: [
         { href: "/dashboard/admin", label: "Dashboard", icon: <Home size={18} /> },
+      ],
+    },
+    {
+      section: "Management",
+      items: [
         { href: "/dashboard/admin/users", label: "User Management", icon: <Users size={18} /> },
         { href: "/dashboard/admin/events", label: "Manage Events", icon: <Calendar size={18} /> },
-        { href: "/dashboard/admin/attendance", label: "Attendance Logs", icon: <ClipboardList size={18} /> },
+      ],
+    },
+    {
+      section: "Attendance",
+      items: [
         { href: "/dashboard/admin/scanner", label: "QR Scanner", icon: <QrCode size={18} /> },
+        { href: "/dashboard/admin/attendance", label: "Attendance Logs", icon: <ClipboardList size={18} /> },
+      ],
+    },
+    {
+      section: "Analytics & Settings",
+      items: [
         { href: "/dashboard/admin/reports", label: "Analytics", icon: <BarChart size={18} /> },
         { href: "/dashboard/admin/settings", label: "Settings", icon: <Settings size={18} /> },
       ],
@@ -136,7 +151,12 @@ export default function Sidebar({ role, userName, userSub, avatarInitials }: Sid
                   {group.section === "Main" ? "Main Menu" : group.section}
                 </p>
                 {group.items.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = pathname === item.href || (
+                    item.href !== "/dashboard" &&
+                    item.href !== "/dashboard/admin" &&
+                    item.href !== "/dashboard/facilitator" &&
+                    pathname.startsWith(item.href + "/")
+                  );
                   return (
                     <Link
                       key={item.href}
