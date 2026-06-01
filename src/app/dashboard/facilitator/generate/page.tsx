@@ -185,10 +185,10 @@ export default function GenerateQRPage() {
       {/* Header */}
       <header className="sd-header">
         <div>
-          <p className="sd-header-eyebrow">Facilitator · QR Sessions</p>
-          <h1 className="sd-header-title">Generate Class QR</h1>
+          <p className="sd-header-eyebrow">Facilitator · QR Events</p>
+          <h1 className="sd-header-title">Generate Event QR</h1>
           <p className="sd-header-tagline">
-            Create a timed QR code your students scan to log attendance for a class or lab session.
+            Create a timed QR code your students scan to log attendance for an event or lab session.
           </p>
         </div>
         <div className="sd-header-date">
@@ -211,12 +211,12 @@ export default function GenerateQRPage() {
           )}
 
           <div className="sp-input-group">
-            <label className="sp-input-label">Subject / Activity</label>
+            <label className="sp-input-label">Event Name / Activity</label>
             <div className="sp-input-wrap">
               <BookOpen size={15} className="sp-input-icon" />
               <input
                 className="sp-input"
-                placeholder="e.g. Pharmacology Lecture"
+                placeholder="e.g. Pharmacology Seminar"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
               />
@@ -262,7 +262,7 @@ export default function GenerateQRPage() {
               </span>
             ) : (
               <span style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                <QrCode size={15} style={{ stroke: "#ffffff" }} /> Generate QR Session
+                <QrCode size={15} style={{ stroke: "#ffffff" }} /> Generate Event QR
               </span>
             )}
           </button>
@@ -274,7 +274,7 @@ export default function GenerateQRPage() {
             <div className="gqr-active-card">
               <div className="gqr-active-header">
                 <div>
-                  <p className="sd-panel-label">Active Session</p>
+                  <p className="sd-panel-label">Active Event</p>
                   <h3 className="gqr-active-title">{showActive.subject}</h3>
                   <p className="gqr-active-sub">{showActive.section}</p>
                 </div>
@@ -316,9 +316,9 @@ export default function GenerateQRPage() {
           ) : (
             <div className="gqr-empty-card">
               <div className="gqr-empty-icon"><QrCode size={36} /></div>
-              <h3 className="gqr-empty-title">No active session yet</h3>
+              <h3 className="gqr-empty-title">No active event yet</h3>
               <p className="gqr-empty-sub">
-                Fill out the form to generate a timed QR code. Active sessions appear here.
+                Fill out the form to generate a timed QR code. Active events appear here.
               </p>
             </div>
           )}
@@ -327,12 +327,12 @@ export default function GenerateQRPage() {
           <div className="gqr-recent-panel">
             <div className="gqr-recent-header">
               <CalendarDays size={14} color="var(--gold)" />
-              <h4 className="gqr-recent-title">Recent Sessions</h4>
+              <h4 className="gqr-recent-title">Recent Events</h4>
             </div>
 
             {sessions.length === 0 ? (
               <div className="gqr-recent-empty">
-                You haven&apos;t created any sessions yet.
+                You haven&apos;t created any events yet.
               </div>
             ) : (
               <div className="gqr-recent-list">
@@ -364,7 +364,7 @@ export default function GenerateQRPage() {
                         <button
                           type="button"
                           className="gqr-icon-btn danger"
-                          title="End session"
+                          title="End event"
                           onClick={() => handleDelete(s.id)}
                         >
                           <Trash2 size={14} />
