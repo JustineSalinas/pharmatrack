@@ -137,7 +137,7 @@ export default function CheckInPage() {
             className={`sp-mode-btn ${mode === "scan" ? "active" : ""}`}
             onClick={() => setMode("scan")}
           >
-            <Scan size={15} /> Scan Class Code
+            <Scan size={15} /> Scan Event Code
           </button>
         </div>
       )}
@@ -193,7 +193,7 @@ export default function CheckInPage() {
                   <Scanner onSuccess={handleScanSuccess} />
                 </div>
                 <p className="sp-scan-hint">
-                  <Info size={13} /> Center the class QR code in the viewport
+                  <Info size={13} /> Center the event QR code in the viewport
                 </p>
               </>
             ) : (
