@@ -155,7 +155,7 @@ export default function FacilitatorOverview() {
       icon: <QrCode size={16} />,
       label: "Open Scanner",
       sub: "Scan QR codes",
-      href: "/dashboard/facilitator/generate",
+      href: "/dashboard/facilitator/scanner",
     },
     {
       icon: <CalendarCheck size={16} />,
