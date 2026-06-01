@@ -192,7 +192,7 @@ export default function AdminUsers() {
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                         <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", fontWeight: 600, flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--dimmed)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          {u.account_type === "admin" ? (
+                          {u.account_type === "admin" || u.account_type === "facilitator" ? (
                             <img src="/usa.png" alt="USA Logo" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "2px" }} />
                           ) : (
                             initials
