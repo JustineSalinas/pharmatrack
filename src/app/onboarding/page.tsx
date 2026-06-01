@@ -76,7 +76,10 @@ export default function OnboardingPage() {
       <div className="auth-page fade-in">
         <div className="auth-card">
           <div className="auth-header">
-            <h2 style={{ fontSize: "1.8rem" }}>Complete Your Profile</h2>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+              <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
+            </div>
+            <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 1.8rem)", lineHeight: 1.2 }}>Complete Your Profile</h2>
             <p>You&apos;re almost there! We just need a few more details to set up your account.</p>
           </div>
 

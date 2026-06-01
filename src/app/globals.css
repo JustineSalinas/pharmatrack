@@ -1642,7 +1642,9 @@ html {
 .sidebar {
   width: 100%;
   height: 100%;
-  background: var(--gold-dim);
+  /* Opaque: a faint indigo tint layered over the solid surface so the panel
+     never goes see-through when it's fixed over page content on mobile. */
+  background: linear-gradient(var(--gold-dim), var(--gold-dim)), var(--surface);
   border-right: 1px solid rgba(79, 70, 229, 0.12);
   display: flex;
   flex-direction: column;
@@ -2749,6 +2751,23 @@ html {
     display: block;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Sidebar wrapper must collapse so it doesn't push main-content off-screen.
+     A fixed wrapper creates its own stacking context, so it needs a z-index
+     above the open-state overlay (z-index 40) or the sidebar hides behind it. */
+  .sidebar-wrapper {
+    position: fixed !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: visible !important;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* Re-enable pointer events for the actual sidebar panel when open */
+  .sidebar-wrapper .sidebar {
+    pointer-events: auto;
   }
 
   .mobile-menu-btn {
@@ -6236,5 +6255,500 @@ input[type="password"]::-ms-clear {
   .sk-event-card,
   .sk-quick-card {
     animation: none;
+  }
+}
+
+/* ============================================================ */
+/* DASHBOARD MOBILE FIXES — all roles (≤ 768px)                */
+/* ============================================================ */
+@media (max-width: 768px) {
+
+  /* ── Admin: header actions ── */
+  .dash-header-right .dash-search {
+    display: none !important;
+  }
+
+  /* ── Admin: stat strip (3-col → 2-col) ── */
+  .stat-cards-row {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Hero stat card spans both cols; inner layout stacks */
+  .admin-stat-card > div[style] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+  .admin-stat-card > div[style] > div:last-child {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* ── Admin/Facilitator: content grid (2-col → 1-col) ── */
+  .dash-content-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Facilitator overview: stats (4-col → 2-col) ── */
+  .facilitator-overview-page .sd-stat-tiles {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* ── Facilitator overview: bottom row (fixed sidebar → stack) ── */
+  .facilitator-overview-page .sd-bottom-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Calendar: compact cells, hide event pills ── */
+  .cal-grid-panel {
+    padding: 10px 8px !important;
+  }
+  .cal-weekday-row,
+  .cal-grid {
+    gap: 3px !important;
+  }
+  .cal-weekday {
+    font-size: 10px !important;
+    padding: 4px 0 !important;
+  }
+  .cal-cell {
+    min-height: 44px !important;
+    padding: 4px 3px !important;
+    gap: 2px !important;
+    border-radius: 6px !important;
+  }
+  .cal-cell-num {
+    font-size: 11px !important;
+  }
+  .cal-cell-event-pill {
+    display: none !important;
+  }
+  .cal-cell-more {
+    display: none !important;
+  }
+  /* Show a small dot instead of pills for event-bearing days */
+  .cal-cell.has-events .cal-cell-events::after {
+    content: "";
+    display: block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #b45309;
+    margin: 1px auto 0;
+  }
+  /* Calendar nav: wrap month label */
+  .sd-header .cal-month-nav {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .cal-month-label {
+    min-width: 120px !important;
+    font-size: 12px !important;
+  }
+
+  /* ── Profile: grid → single column ── */
+  .sp-profile-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .sp-two-col {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── All modals: never exceed viewport width ── */
+  [class*="modal-card"],
+  [class*="reports-modal"],
+  [class*="event-modal-card"],
+  .logout-card,
+  .support-card {
+    max-width: min(92vw, 480px) !important;
+    margin: 0 !important;
+  }
+
+  /* ── Tables: always scrollable ── */
+  .sp-table-wrap,
+  .table-wrap,
+  [class$="-table-wrap"],
+  [class*="attendance-table-wrap"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── sd-header on all dashboard pages ── */
+  .sd-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  .sd-header-date {
+    align-self: flex-start;
+  }
+
+  /* ── Notification dropdown ── */
+  .dash-notif-btn + div {
+    width: min(280px, 90vw) !important;
+    right: 0 !important;
+  }
+}
+
+/* ── Extra small (≤ 480px): go fully single-column ── */
+@media (max-width: 480px) {
+  .stat-cards-row {
+    grid-template-columns: 1fr !important;
+  }
+  .facilitator-overview-page .sd-stat-tiles {
+    grid-template-columns: 1fr !important;
+  }
+  .main-content {
+    padding: 20px 14px 100px !important;
+  }
+  /* Slightly tighter calendar cells */
+  .cal-cell {
+    min-height: 36px !important;
+  }
+}
+
+/* ============================================================ */
+/* PER-PAGE MOBILE FIXES — inline-style overrides (≤ 768px)    */
+/* ============================================================ */
+@media (max-width: 768px) {
+
+  /* ── Generic page headers: stack title above actions ── */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+  .page-header .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  /* ── Facilitator: Manage Events rows ── */
+  /* Fixed 130px time columns would overflow — let them wrap */
+  .event-row {
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+  .event-row > div {
+    width: auto !important;
+  }
+  .event-row > div:first-child {
+    flex: 1 1 100% !important;
+  }
+  .event-row > div:last-child {
+    margin-left: auto;
+  }
+
+  /* ── Modal inner grids: stack to 2-col (name/loc, time inputs) ── */
+  .modal-card form > div[style*="grid"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* ── Admin: Reports grids ── */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .content-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Facilitator: Students master/detail → single column ── */
+  .students-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Admin: Users search bar → full width ── */
+  .search-bar-wrap {
+    width: 100% !important;
+  }
+
+  /* ── Attendance summary strips: wrap 4 stats to 2×2 ── */
+  .fade-in > div[style*="display: flex"][style*="space"] > div[style*="flex: 1"] {
+    min-width: 45%;
+  }
+
+  /* ── Admin: settings 2-col forms → stack ──
+     (React renders inline styles kebab-cased in the DOM) */
+  div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ============================================================ */
+/* CONTACT SUPPORT MODAL — global (not scoped via styled-jsx)  */
+/* ============================================================ */
+
+.support-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: supportFadeIn 0.15s ease;
+}
+
+@keyframes supportFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.support-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  padding: 28px 28px 24px;
+  position: relative;
+  text-align: left;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.14);
+  animation: supportPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes supportPop {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.support-x-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.support-x-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+  border-color: #9ca3af;
+}
+
+.support-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding-right: 28px;
+}
+
+.support-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(79, 70, 229, 0.08);
+  border: 1px solid rgba(79, 70, 229, 0.18);
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.support-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 3px;
+  letter-spacing: -0.01em;
+}
+
+.support-desc {
+  font-size: 12.5px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.support-sender-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(79, 70, 229, 0.06);
+  border: 1px solid rgba(79, 70, 229, 0.15);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 20px;
+}
+
+.support-sender-chip strong {
+  color: #111827;
+}
+
+.support-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.support-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.support-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.support-select {
+  height: 38px;
+  padding: 0 32px 0 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  font-size: 13.5px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+  width: 100%;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.support-select:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.support-textarea {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  font-size: 13.5px;
+  outline: none;
+  resize: vertical;
+  width: 100%;
+  line-height: 1.5;
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-height: 100px;
+}
+
+.support-textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.support-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.support-footer {
+  display: flex;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.support-cancel-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.support-cancel-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.support-send-btn {
+  flex: 2;
+  height: 40px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.support-send-btn:hover {
+  background: #4338ca;
+}
+
+.support-copy-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.support-copy-link {
+  background: none;
+  border: none;
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.support-copy-link:hover {
+  color: #4338ca;
+}
+
+@media (max-width: 480px) {
+  .support-card {
+    padding: 22px 20px 20px;
+    border-radius: 14px;
+  }
+  .support-footer {
+    flex-direction: column;
+  }
+  .support-send-btn,
+  .support-cancel-btn {
+    flex: none;
+    width: 100%;
   }
 }

@@ -77,9 +77,10 @@ function LoginForm() {
       const user = await getCurrentUser() as any;
 
       if (!user) {
-        setError("Your account was found, but your profile record is missing. Please contact the administrator.");
-        await logoutUser();
-        setLoading(false);
+        // Profile row missing — happens when a Google OAuth user
+        // authenticated but never completed onboarding. Send them there
+        // so they can finish setting up their account.
+        router.push("/onboarding");
         return;
       }
 
@@ -301,10 +302,16 @@ function LoginForm() {
                   </div>
                 </div>
 
+                <div style={{ textAlign: "right", marginTop: "-8px" }}>
+                  <Link href="/forgot-password" className="auth-link" style={{ fontSize: "0.85rem" }}>
+                    Forgot password?
+                  </Link>
+                </div>
+
                 <button
                   type="submit"
                   className="btn btn-gold pulse-btn"
-                  style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem", border: "none" }}
+                  style={{ width: "100%", padding: "16px", marginTop: "4px", fontSize: "1.1rem", border: "none" }}
                   disabled={loading}
                 >
                   {loading ? "Logging in..." : "Secure Log In"}
