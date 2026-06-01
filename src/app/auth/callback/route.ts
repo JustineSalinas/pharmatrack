@@ -16,8 +16,18 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");
   const code = searchParams.get("code");
+  const oauthError = searchParams.get("error");
+  const oauthErrorDesc = searchParams.get("error_description");
 
   const loginUrl = new URL("/login", origin);
+
+  // ── Case 0: Google / Supabase returned an OAuth error directly ────────
+  if (oauthError) {
+    console.error("OAuth callback error:", oauthError, oauthErrorDesc);
+    const errUrl = new URL("/login", origin);
+    errUrl.searchParams.set("error", `oauth_error:${oauthError}${oauthErrorDesc ? ` - ${oauthErrorDesc}` : ""}`);
+    return NextResponse.redirect(errUrl);
+  }
 
   // ── Case 1: email verification (token_hash) ──────────────────────────
   if (token_hash && type) {
@@ -37,6 +47,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
     console.error("Email verification failed:", error.message);
+    const errUrl = new URL("/login", origin);
+    errUrl.searchParams.set("error", `verification_failed:${error.message}`);
+    return NextResponse.redirect(errUrl);
   }
 
   // ── Case 2: OAuth / PKCE code exchange (cookie-backed session) ────────
@@ -76,6 +89,12 @@ export async function GET(request: NextRequest) {
       console.error("Code exchange failed:", error.message);
       const errUrl = new URL("/login", origin);
       errUrl.searchParams.set("error", `code_exchange_failed:${error.message}`);
+      return NextResponse.redirect(errUrl);
+    }
+    if (!data.user) {
+      console.error("Code exchange failed: No user returned");
+      const errUrl = new URL("/login", origin);
+      errUrl.searchParams.set("error", "code_exchange_failed:No user session found");
       return NextResponse.redirect(errUrl);
     }
   }
