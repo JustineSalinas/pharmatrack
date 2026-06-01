@@ -228,7 +228,8 @@ create policy "Students can insert own attendance for sessions" on public.attend
 -- ============================================================
 
 drop view if exists public.student_attendance_summary;
-create or replace view public.student_attendance_summary as
+create or replace view public.student_attendance_summary 
+with (security_invoker = true) as
 select
   u.id as student_id,
   u.full_name,
