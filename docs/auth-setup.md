@@ -6,10 +6,11 @@ all of it.
 
 ---
 
-## 1. "Continue with Google" (Google OAuth)
+## 1. "Continue with Google" (Google OAuth) [REMOVED]
 
-The button and callback are already implemented. To make it work you need to (a) create a
-Google OAuth client, and (b) enable the Google provider in Supabase.
+> [!WARNING]
+> Google OAuth has been removed from the application UI and client-side code. This documentation is preserved for reference only.
+
 
 ### Step A — Create a Google OAuth client
 1. Go to <https://console.cloud.google.com/> and create (or pick) a project.
@@ -76,4 +77,4 @@ match what's in `.env.local`.
 - [ ] Log in with an email/password account (no "Legacy API keys" error).
 - [ ] Click **Forgot password?** → receive email → set a new password → log in with it.
 - [ ] In **Profile → Security**, change your password (student, facilitator, admin).
-- [ ] After Step 1–C above, click **Continue with Google**.
+- [ ] [DEPRECATED/REMOVED] After Step 1–C above, click **Continue with Google**.
