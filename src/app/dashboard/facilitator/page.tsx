@@ -17,7 +17,9 @@ import {
   ChevronRight,
   ArrowRight,
   Clock,
-  ScanLine
+  ScanLine,
+  CheckCircle,
+  AlertCircle
 } from "lucide-react";
 
 export default function FacilitatorOverview() {
@@ -192,46 +194,44 @@ export default function FacilitatorOverview() {
       </header>
 
       {/* STATS STRIP */}
-      <div className="sd-stat-tiles" style={{ gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "none", width: "100%", display: "grid", gap: "16px", marginBottom: "24px" }}>
-        <div className="sd-stat-tile">
-          <div className="sd-tile-icon-wrap" style={{ background: "rgba(79, 70, 229, 0.08)", color: "#4f46e5" }}>
-            <Users size={18} />
+      <div 
+        className="summary-cards-grid" 
+        style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+          gap: "16px", 
+          marginBottom: "24px",
+          width: "100%"
+        }}
+      >
+        {[
+          { label: "Total Students", count: stats.totalStudents, color: "#a78bfa", bg: "rgba(167, 139, 250, 0.03)", border: "rgba(167, 139, 250, 0.15)", icon: <Users size={16} color="#a78bfa" /> },
+          { label: "Active Events", count: stats.activeEventsToday, color: "#38bdf8", bg: "rgba(56, 189, 248, 0.03)", border: "rgba(56, 189, 248, 0.15)", icon: <CalendarCheck size={16} color="#38bdf8" /> },
+          { label: "Scans Today", count: stats.scansToday, color: "#4ade80", bg: "rgba(74, 222, 128, 0.03)", border: "rgba(74, 222, 128, 0.15)", icon: <CheckCircle size={16} color="#4ade80" /> },
+          { label: "Absent Today", count: stats.studentsAbsent, color: "#f87171", bg: "rgba(248, 113, 113, 0.03)", border: "rgba(248, 113, 113, 0.15)", icon: <AlertCircle size={16} color="#f87171" /> }
+        ].map((item) => (
+          <div 
+            key={item.label} 
+            className="stat-card"
+            style={{ 
+              display: "flex", 
+              flexDirection: "column", 
+              background: item.bg, 
+              border: `1px solid ${item.border}`, 
+              borderRadius: "var(--radius)", 
+              padding: "18px 20px", 
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            }}
+          >
+             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+               <div style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{item.label}</div>
+               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "50%", background: `${item.color}12` }}>
+                 {item.icon}
+               </div>
+             </div>
+             <div style={{ fontSize: "32px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em", lineHeight: "1" }}>{item.count}</div>
           </div>
-          <div>
-            <div className="sd-tile-number">{stats.totalStudents}</div>
-            <div className="sd-tile-label">Total Students</div>
-          </div>
-        </div>
-
-        <div className="sd-stat-tile">
-          <div className="sd-tile-icon-wrap" style={{ background: "rgba(79, 70, 229, 0.08)", color: "#4f46e5" }}>
-            <CalendarCheck size={18} />
-          </div>
-          <div>
-            <div className="sd-tile-number">{stats.activeEventsToday}</div>
-            <div className="sd-tile-label">Active Events</div>
-          </div>
-        </div>
-
-        <div className="sd-stat-tile">
-          <div className="sd-tile-icon-wrap" style={{ background: "rgba(22, 163, 74, 0.08)", color: "#16a34a" }}>
-            <LogIn size={18} />
-          </div>
-          <div>
-            <div className="sd-tile-number">{stats.scansToday}</div>
-            <div className="sd-tile-label">Scans Today</div>
-          </div>
-        </div>
-
-        <div className="sd-stat-tile">
-          <div className="sd-tile-icon-wrap" style={{ background: "rgba(220, 38, 38, 0.08)", color: "#dc2626" }}>
-            <LogOut size={18} />
-          </div>
-          <div>
-            <div className="sd-tile-number">{stats.studentsAbsent}</div>
-            <div className="sd-tile-label">Absent Today</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* BOTTOM LAYOUT */}
@@ -365,43 +365,12 @@ export default function FacilitatorOverview() {
           white-space: nowrap !important;
         }
 
-        .facilitator-overview-page .sd-stat-tile {
-          background: #ffffff !important;
-          border: 1px solid rgba(79, 70, 229, 0.12) !important;
-          border-radius: 10px !important;
-          padding: 14px 18px !important;
-          display: flex !important;
-          align-items: center !important;
-          gap: 14px !important;
-          position: relative !important;
-          overflow: hidden !important;
+        .stat-card {
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-
-        .facilitator-overview-page .sd-tile-icon-wrap {
-          width: 36px !important;
-          height: 36px !important;
-          border-radius: 9px !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          flex-shrink: 0 !important;
-        }
-
-        .facilitator-overview-page .sd-tile-number {
-          font-size: 26px !important;
-          font-weight: 800 !important;
-          color: #111827 !important;
-          letter-spacing: -0.04em !important;
-          line-height: 1 !important;
-        }
-
-        .facilitator-overview-page .sd-tile-label {
-          font-size: 11px !important;
-          color: #6b7280 !important;
-          text-transform: uppercase !important;
-          letter-spacing: 0.07em !important;
-          font-weight: 600 !important;
-          margin-top: 2px !important;
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
         /* ── LIVE ACTIVITY FEED ── */
