@@ -8,19 +8,6 @@ export async function loginUser({ email, password }: LoginInput) {
   if (error) throw new Error(error.message);
   return data;
 }
-
-export async function signInWithGoogle() {
-  const redirectTo = `${window.location.origin}/auth/callback`;
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo,
-    },
-  });
-  if (error) throw new Error(error.message);
-  return data;
-}
-
 /**
  * Returns auth user info including email_confirmed_at for verification checks.
  */
