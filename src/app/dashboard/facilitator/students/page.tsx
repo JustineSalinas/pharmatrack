@@ -44,6 +44,13 @@ function getRateColor(rate: number) {
   return           { color: "#dc2626", bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.15)"  };
 }
 
+const SECTIONS_BY_YEAR: Record<string, string[]> = {
+  "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
+  "2nd Year": ["PH 2A", "PH 2B", "PH 2C", "PH 2D", "PH 2E"],
+  "3rd Year": ["PH 3A", "PH 3B", "PH 3C", "PH 3D"],
+  "4th Year": ["PH 4A", "PH 4B", "PH 4C", "PH 4D"],
+};
+
 export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [sections, setSections] = useState<string[]>([]);
@@ -145,6 +152,17 @@ export default function StudentsPage() {
     }
   }
 
+  // 1. Get unique sections from students in the database
+  const dynamicSections = Array.from(
+    new Set(students.map(s => s.section))
+  ).filter(Boolean).sort() as string[];
+
+  // 2. Determine static fallback sections (all years)
+  const staticFallback = Object.values(SECTIONS_BY_YEAR).flat();
+
+  // 3. Combine them
+  const availableSectionsList = Array.from(new Set([...dynamicSections, ...staticFallback]));
+
   const filtered = students.filter(s =>
     (sectionFilter === "All" || s.section === sectionFilter) &&
     (s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase()))
@@ -225,16 +243,38 @@ export default function StudentsPage() {
             className="search-input"
           />
         </div>
-        <div className="section-filters">
-          {["All", ...sections].map(s => (
-            <button
-              key={s}
-              onClick={() => setSectionFilter(s)}
-              className={`filter-chip ${sectionFilter === s ? "active" : ""}`}
-            >
-              {s}
-            </button>
-          ))}
+        <div className="section-filters" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            onClick={() => { setSectionFilter("All"); }}
+            className={`filter-chip ${sectionFilter === "All" ? "active" : ""}`}
+          >
+            All
+          </button>
+
+          <select 
+            value={sectionFilter} 
+            onChange={(e) => setSectionFilter(e.target.value)}
+            className="filter-select"
+            style={{
+              padding: "7px 14px",
+              borderRadius: "7px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              border: "1px solid #d1d5db",
+              background: "#ffffff",
+              color: "#374151",
+              outline: "none",
+              transition: "all 0.15s ease",
+              boxSizing: "border-box",
+              height: "33px"
+            }}
+          >
+            <option value="All">All Sections</option>
+            {availableSectionsList.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -501,6 +541,29 @@ export default function StudentsPage() {
         .students-page .filter-chip.active {
           background: #4f46e5 !important; border-color: #4f46e5 !important;
           color: #ffffff !important;
+        }
+        .students-page .filter-select {
+          padding: 7px 14px;
+          border-radius: 7px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid #d1d5db;
+          background: #ffffff;
+          color: #374151;
+          outline: none;
+          transition: all 0.15s ease;
+        }
+        .students-page .filter-select option {
+          color: #374151 !important;
+          background-color: #ffffff !important;
+        }
+        .students-page .filter-select:hover {
+          border-color: #4f46e5 !important;
+          color: #4f46e5 !important;
+        }
+        .students-page .filter-select:focus {
+          border-color: #4f46e5 !important;
         }
 
         /* Grid */
