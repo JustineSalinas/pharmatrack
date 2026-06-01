@@ -128,10 +128,10 @@ CREATE TABLE IF NOT EXISTS public.events (
 );
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Everyone views events" ON public.events;
 DROP POLICY IF EXISTS "Admins manage events" ON public.events;
+DROP POLICY IF EXISTS "Council manages events" ON public.events;
 CREATE POLICY "Everyone views events" ON public.events FOR SELECT USING (true);
-CREATE POLICY "Admins manage events" ON public.events FOR ALL USING (public.is_admin());
+CREATE POLICY "Council manages events" ON public.events FOR ALL USING (public.is_council());
 
 -- ============================================================
 -- QR SESSIONS
