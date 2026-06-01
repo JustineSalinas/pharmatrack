@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { Loader2, Download, Search, Calendar, FileSpreadsheet } from "lucide-react";
+import { Loader2, Download, Search, Calendar, FileSpreadsheet, CheckCircle, Clock, AlertCircle, Activity, ChevronDown } from "lucide-react";
 
 export default function FacilitatorAttendance() {
   const [records, setRecords] = useState<any[]>([]);
@@ -14,8 +14,99 @@ export default function FacilitatorAttendance() {
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterSection, setFilterSection] = useState("All");
   const [availableSections, setAvailableSections] = useState<string[]>([]);
-  const [selectedDate, setSelectedDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Date Range Picker States
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePreset, setDatePreset] = useState("all"); // 'all', 'today', 'yesterday', '7days', '30days', 'custom'
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDatePicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const setPresetRange = (preset: string) => {
+    setDatePreset(preset);
+    const today = new Date();
+    
+    // Format helper to YYYY-MM-DD
+    const toISOStringLocal = (date: Date) => {
+      const offset = date.getTimezoneOffset() * 60000;
+      return new Date(date.getTime() - offset).toISOString().split("T")[0];
+    };
+
+    if (preset === "all") {
+      setStartDate("");
+      setEndDate("");
+      setShowDatePicker(false);
+    } else if (preset === "today") {
+      const todayStr = toISOStringLocal(today);
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+      setShowDatePicker(false);
+    } else if (preset === "yesterday") {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = toISOStringLocal(yesterday);
+      setStartDate(yesterdayStr);
+      setEndDate(yesterdayStr);
+      setShowDatePicker(false);
+    } else if (preset === "7days") {
+      const past7 = new Date();
+      past7.setDate(today.getDate() - 6);
+      setStartDate(toISOStringLocal(past7));
+      setEndDate(toISOStringLocal(today));
+      setShowDatePicker(false);
+    } else if (preset === "30days") {
+      const past30 = new Date();
+      past30.setDate(today.getDate() - 29);
+      setStartDate(toISOStringLocal(past30));
+      setEndDate(toISOStringLocal(today));
+      setShowDatePicker(false);
+    } else if (preset === "custom") {
+      // Don't auto-close, let user pick custom dates
+    }
+  };
+
+  const getRangeLabel = () => {
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return "";
+      return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    };
+
+    if (datePreset === "all" || (!startDate && !endDate)) {
+      return "All Time";
+    }
+    if (datePreset === "today") {
+      return "Today";
+    }
+    if (datePreset === "yesterday") {
+      return "Yesterday";
+    }
+    if (datePreset === "7days") {
+      return "Last 7 Days";
+    }
+    if (datePreset === "30days") {
+      return "Last 30 Days";
+    }
+    
+    if (startDate && endDate) {
+      if (startDate === endDate) return formatDate(startDate);
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    }
+    if (startDate) return `From ${formatDate(startDate)}`;
+    if (endDate) return `Until ${formatDate(endDate)}`;
+    return "Custom Range";
+  };
 
   useEffect(() => {
     async function fetchAttendance() {
@@ -79,7 +170,17 @@ export default function FacilitatorAttendance() {
   const filtered = records.filter(r => {
     const sMatch = filterStatus === "All" || r.status.toLowerCase() === filterStatus.toLowerCase();
     const secMatch = filterSection === "All" || r.section === filterSection;
-    const dateMatch = !selectedDate || r.rawDate === selectedDate;
+    
+    let dateMatch = true;
+    if (startDate || endDate) {
+      if (r.rawDate) {
+        if (startDate && r.rawDate < startDate) dateMatch = false;
+        if (endDate && r.rawDate > endDate) dateMatch = false;
+      } else {
+        dateMatch = false;
+      }
+    }
+    
     const searchMatch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.email.toLowerCase().includes(searchQuery.toLowerCase());
     return sMatch && secMatch && dateMatch && searchMatch;
   });
@@ -107,17 +208,194 @@ export default function FacilitatorAttendance() {
           <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: "var(--white)" }}>Attendance Logs</h2>
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4, margin: 0 }}>Master database of all recorded participation</p>
         </div>
-        <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-           <div style={{ position: "relative", width: "160px" }}>
-              <Calendar size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--dimmed)" }} />
-              <input 
-                className="date-input" 
-                type="date" 
-                value={selectedDate} 
-                onChange={(e) => setSelectedDate(e.target.value)} 
-                style={{ paddingLeft: "36px", paddingRight: "12px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", width: "100%", fontSize: "13px", outline: "none", cursor: "pointer", transition: "border-color 0.15s ease" }}
-              />
-           </div>
+        <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center", position: "relative" }} ref={dropdownRef}>
+           <button 
+             onClick={() => setShowDatePicker(!showDatePicker)}
+             className="btn-ghost date-range-btn" 
+             style={{ 
+               display: "flex", 
+               alignItems: "center", 
+               height: "36px", 
+               padding: "0 14px", 
+               borderRadius: "var(--radius-sm)", 
+               border: showDatePicker ? "1px solid rgba(255, 255, 255, 0.25)" : "1px solid var(--border)", 
+               background: "var(--surface)", 
+               color: "var(--white-shade)", 
+               fontSize: "13px", 
+               fontWeight: 500, 
+               cursor: "pointer", 
+               gap: "8px", 
+               transition: "all 0.15s ease",
+               boxShadow: showDatePicker ? "0 0 10px rgba(255, 255, 255, 0.05)" : "none"
+             }}
+           >
+             <Calendar size={14} style={{ color: "var(--gold)" }} />
+             <span>{getRangeLabel()}</span>
+             <ChevronDown size={14} style={{ opacity: 0.5, transform: showDatePicker ? "rotate(180deg)" : "none", transition: "transform 0.2s ease" }} />
+           </button>
+
+           {showDatePicker && (
+             <div 
+               className="date-picker-dropdown fade-in" 
+               style={{ 
+                 position: "absolute", 
+                 top: "calc(100% + 8px)", 
+                 right: 0, 
+                 background: "var(--surface2, #1C1C25)", 
+                 border: "1px solid var(--border)", 
+                 borderRadius: "var(--radius)", 
+                 padding: "16px", 
+                 width: "320px", 
+                 zIndex: 100, 
+                 boxShadow: "0 20px 40px rgba(0, 0, 0, 0.5)", 
+                 backdropFilter: "blur(12px)",
+                 display: "flex",
+                 flexDirection: "column",
+                 gap: "14px"
+               }}
+             >
+               <div style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, borderBottom: "1px solid var(--border)", paddingBottom: "6px" }}>
+                 Filter by Date Range
+               </div>
+               
+               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                 {[
+                   { id: "all", label: "All Time" },
+                   { id: "today", label: "Today" },
+                   { id: "yesterday", label: "Yesterday" },
+                   { id: "7days", label: "Last 7 Days" },
+                   { id: "30days", label: "Last 30 Days" },
+                   { id: "custom", label: "Custom Range" }
+                 ].map(preset => (
+                   <button
+                     key={preset.id}
+                     onClick={() => setPresetRange(preset.id)}
+                     style={{
+                       padding: "8px 10px",
+                       borderRadius: "var(--radius-sm)",
+                       border: datePreset === preset.id ? "1px solid var(--gold)" : "1px solid var(--border)",
+                       background: datePreset === preset.id ? "var(--gold-dim)" : "var(--surface)",
+                       color: datePreset === preset.id ? "var(--gold)" : "var(--white-shade)",
+                       fontSize: "12px",
+                       fontWeight: 500,
+                       textAlign: "left",
+                       cursor: "pointer",
+                       transition: "all 0.15s ease"
+                     }}
+                   >
+                     {preset.label}
+                   </button>
+                 ))}
+               </div>
+
+               {datePreset === "custom" && (
+                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", borderTop: "1px solid var(--border)", paddingTop: "12px" }}>
+                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                     <div>
+                       <label style={{ display: "block", fontSize: "10px", color: "var(--muted)", marginBottom: "4px", textTransform: "uppercase" }}>Start Date</label>
+                       <input 
+                         type="date"
+                         value={startDate}
+                         onChange={(e) => setStartDate(e.target.value)}
+                         onClick={(e) => {
+                           try {
+                             (e.currentTarget as any).showPicker();
+                           } catch (err) {}
+                         }}
+                         onFocus={(e) => {
+                           try {
+                             (e.currentTarget as any).showPicker();
+                           } catch (err) {}
+                         }}
+                         className="date-input"
+                         style={{
+                           width: "100%",
+                           height: "32px",
+                           padding: "0 8px",
+                           borderRadius: "var(--radius-sm)",
+                           border: "1px solid var(--border)",
+                           background: "var(--surface)",
+                           color: "var(--white)",
+                           fontSize: "12px",
+                           outline: "none",
+                           cursor: "pointer"
+                         }}
+                       />
+                     </div>
+                     <div>
+                       <label style={{ display: "block", fontSize: "10px", color: "var(--muted)", marginBottom: "4px", textTransform: "uppercase" }}>End Date</label>
+                       <input 
+                         type="date"
+                         value={endDate}
+                         onChange={(e) => setEndDate(e.target.value)}
+                         onClick={(e) => {
+                           try {
+                             (e.currentTarget as any).showPicker();
+                           } catch (err) {}
+                         }}
+                         onFocus={(e) => {
+                           try {
+                             (e.currentTarget as any).showPicker();
+                           } catch (err) {}
+                         }}
+                         className="date-input"
+                         style={{
+                           width: "100%",
+                           height: "32px",
+                           padding: "0 8px",
+                           borderRadius: "var(--radius-sm)",
+                           border: "1px solid var(--border)",
+                           background: "var(--surface)",
+                           color: "var(--white)",
+                           fontSize: "12px",
+                           outline: "none",
+                           cursor: "pointer"
+                         }}
+                       />
+                     </div>
+                   </div>
+                   <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                     <button
+                       onClick={() => {
+                         setStartDate("");
+                         setEndDate("");
+                       }}
+                       style={{
+                         flex: 1,
+                         height: "30px",
+                         borderRadius: "var(--radius-sm)",
+                         border: "1px solid var(--border)",
+                         background: "transparent",
+                         color: "var(--muted)",
+                         fontSize: "11px",
+                         cursor: "pointer",
+                         fontWeight: 500
+                       }}
+                     >
+                       Clear
+                     </button>
+                     <button
+                       onClick={() => setShowDatePicker(false)}
+                       style={{
+                         flex: 2,
+                         height: "30px",
+                         borderRadius: "var(--radius-sm)",
+                         border: "none",
+                         background: "var(--gold)",
+                         color: "black",
+                         fontSize: "11px",
+                         cursor: "pointer",
+                         fontWeight: 600
+                       }}
+                     >
+                       Apply Range
+                     </button>
+                   </div>
+                 </div>
+               )}
+             </div>
+           )}
+           
            <button 
              className="btn-ghost" 
              style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
@@ -127,19 +405,42 @@ export default function FacilitatorAttendance() {
         </div>
       </div>
 
-      {/* Summary Strip - Single horizontal block */}
-      <div style={{ display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px 24px", marginBottom: "32px" }}>
+      {/* Summary Cards Grid */}
+      <div 
+        className="summary-cards-grid" 
+        style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+          gap: "16px", 
+          marginBottom: "32px" 
+        }}
+      >
         {[
-          { label: "Present", count: present, color: "#4ade80" },
-          { label: "Late", count: late, color: "var(--gold)" },
-          { label: "Absent", count: absent, color: "#f87171" },
-          { label: "Total Filtered", count: filtered.length, color: "var(--white)" }
+          { label: "Present", count: present, color: "#4ade80", bg: "rgba(74, 222, 128, 0.03)", border: "rgba(74, 222, 128, 0.15)", icon: <CheckCircle size={16} color="#4ade80" /> },
+          { label: "Late", count: late, color: "var(--gold)", bg: "rgba(232, 184, 75, 0.03)", border: "rgba(232, 184, 75, 0.15)", icon: <Clock size={16} color="var(--gold)" /> },
+          { label: "Absent", count: absent, color: "#f87171", bg: "rgba(248, 113, 113, 0.03)", border: "rgba(248, 113, 113, 0.15)", icon: <AlertCircle size={16} color="#f87171" /> },
+          { label: "Total Filtered", count: filtered.length, color: "#a78bfa", bg: "rgba(167, 139, 250, 0.03)", border: "rgba(167, 139, 250, 0.15)", icon: <Activity size={16} color="#a78bfa" /> }
         ].map((item) => (
-          <div key={item.label} style={{ display: "flex", alignItems: "center", flex: 1 }}>
-             <div style={{ flex: 1 }}>
-               <div style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>{item.label}</div>
-               <div style={{ fontSize: "28px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em" }}>{item.count}</div>
+          <div 
+            key={item.label} 
+            className="stat-card"
+            style={{ 
+              display: "flex", 
+              flexDirection: "column", 
+              background: item.bg, 
+              border: `1px solid ${item.border}`, 
+              borderRadius: "var(--radius)", 
+              padding: "18px 20px", 
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            }}
+          >
+             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+               <div style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{item.label}</div>
+               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "50%", background: `${item.color}12` }}>
+                 {item.icon}
+               </div>
              </div>
+             <div style={{ fontSize: "32px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em", lineHeight: "1" }}>{item.count}</div>
           </div>
         ))}
       </div>
@@ -260,16 +561,34 @@ export default function FacilitatorAttendance() {
           border-color: rgba(255,255,255,0.2) !important;
         }
 
+        .date-input {
+          background-color: var(--surface) !important;
+          color: var(--white) !important;
+          color-scheme: dark !important;
+        }
+
         .date-input::-webkit-calendar-picker-indicator {
           filter: invert(1);
-          opacity: 0.3;
+          opacity: 0.5;
           cursor: pointer;
         }
         .date-input::-webkit-calendar-picker-indicator:hover {
-          opacity: 0.6;
+          opacity: 0.8;
         }
 
         .btn-ghost:hover {
+          background: rgba(255,255,255,0.05) !important;
+          border-color: rgba(255,255,255,0.15) !important;
+        }
+
+        .stat-card {
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .date-range-btn:hover {
           background: rgba(255,255,255,0.05) !important;
           border-color: rgba(255,255,255,0.15) !important;
         }
