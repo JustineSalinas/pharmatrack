@@ -101,7 +101,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile toggle FAB */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        style={{ display: "none" }}
         className="mobile-menu-btn"
         aria-label={sidebarOpen ? "Close menu" : "Open menu"}
       >

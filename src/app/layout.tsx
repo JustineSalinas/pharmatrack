@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "PharmaTrack — Attendance Monitoring",
   description: "QR-based attendance tracking for the University of San Agustin Pharmacy Department",
-  icons: { icon: "/favicon.ico" },
+  icons: { icon: "/pham-logo.png" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

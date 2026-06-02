@@ -162,6 +162,7 @@ function ResetPasswordForm() {
                     placeholder="Min. 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
                     required
                     style={{ paddingLeft: "42px", paddingRight: "42px" }}
                   />
@@ -182,6 +183,7 @@ function ResetPasswordForm() {
                     placeholder="Repeat new password"
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
+                    autoComplete="new-password"
                     required
                     style={{ paddingLeft: "42px" }}
                   />
