@@ -204,7 +204,7 @@ export default function EventsManagement() {
       <header style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 4 }}>
-            Facilitator
+            {user?.account_type === "admin" ? "Admin" : "Facilitator"}
           </div>
           <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: "var(--white)" }}>Manage Events</h2>
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>Create and schedule pharmacy council activities.</p>

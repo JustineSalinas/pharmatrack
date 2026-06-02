@@ -61,6 +61,7 @@ function StudentDashboardContent() {
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [checkInScanSuccess, setCheckInScanSuccess] = useState(false);
   const [checkInTime, setCheckInTime] = useState("");
+  const [checkInError, setCheckInError] = useState("");
   const modalQrWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -161,6 +162,7 @@ function StudentDashboardContent() {
     setCheckInScanSuccess(false);
     setCheckInLoading(false);
     setCheckInTime("");
+    setCheckInError("");
     setShowCheckInModal(true);
   };
 
@@ -205,9 +207,10 @@ function StudentDashboardContent() {
       if (updatedStats) setStats(updatedStats);
 
       setCheckInTime(now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
+      setCheckInError("");
       setCheckInScanSuccess(true);
     } catch (err: any) {
-      alert("⚠️ " + (err.message || "Attendance failed"));
+      setCheckInError(err.message || "Attendance check-in failed. Please try again.");
     } finally {
       setCheckInLoading(false);
     }
@@ -576,7 +579,7 @@ function StudentDashboardContent() {
                     required
                     style={{ appearance: "none" }}
                   >
-                    <option value="" disabled>Select Year</option>
+                    <option value="" disabled>Year</option>
                     {Object.keys(SECTIONS_BY_YEAR).map((y) => (
                       <option key={y} value={y}>{y}</option>
                     ))}
@@ -593,7 +596,7 @@ function StudentDashboardContent() {
                     required
                     style={{ appearance: "none" }}
                   >
-                    <option value="" disabled>Select Section</option>
+                    <option value="" disabled>Section</option>
                     {repairYear && SECTIONS_BY_YEAR[repairYear].map((s) => (
                       <option key={s} value={s}>{s}</option>
                     ))}
@@ -805,7 +808,7 @@ function StudentDashboardContent() {
               <button
                 type="button"
                 className={`checkin-mode-btn ${checkInMode === "present" ? "active" : ""}`}
-                onClick={() => { setCheckInMode("present"); setCheckInScanSuccess(false); }}
+                onClick={() => { setCheckInMode("present"); setCheckInScanSuccess(false); setCheckInError(""); }}
               >
                 <QrCode size={15} /> Present My ID
               </button>
@@ -866,6 +869,12 @@ function StudentDashboardContent() {
                         </div>
                       ) : (
                         <>
+                          {checkInError && (
+                            <div style={{ width: "100%", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: "10px", padding: "10px 14px", marginBottom: "14px", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#fca5a5" }}>
+                              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                              {checkInError}
+                            </div>
+                          )}
                           <div className="sp-scanner-frame" style={{ width: "100%", maxWidth: "320px", aspectRatio: 1, border: "2px solid var(--gold-dim)", borderRadius: "16px", overflow: "hidden", marginBottom: "16px" }}>
                             <Scanner onSuccess={handleScanSuccess} />
                           </div>

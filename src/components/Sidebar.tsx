@@ -202,11 +202,19 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
                   {group.section === "Main" ? "Main Menu" : group.section}
                 </p>
                 {group.items.map((item) => {
-                  const isActive = pathname === item.href || (
-                    item.href !== "/dashboard" &&
-                    item.href !== "/dashboard/admin" &&
-                    item.href !== "/dashboard/facilitator" &&
-                    pathname.startsWith(item.href + "/")
+                  // Items that carry a query string (e.g. the student "Check-In"
+                  // link → /dashboard?checkin=true) open a modal rather than a
+                  // distinct page, so they should never claim the active state —
+                  // otherwise they'd double-highlight alongside "Overview".
+                  const hrefPath = item.href.split("?")[0];
+                  const hasQuery = item.href.includes("?");
+                  const isActive = !hasQuery && (
+                    pathname === hrefPath || (
+                      hrefPath !== "/dashboard" &&
+                      hrefPath !== "/dashboard/admin" &&
+                      hrefPath !== "/dashboard/facilitator" &&
+                      pathname.startsWith(hrefPath + "/")
+                    )
                   );
                   return (
                     <Link

@@ -2850,12 +2850,20 @@ html {
     top: 0 !important;
     left: 0 !important;
     max-width: 100% !important;
-    z-index: -1 !important;
+    /* z-index 0 (not -1) so the USA watermark paints above the body's
+       opaque background and stays visible — matching desktop. Page content
+       is explicitly z-index:1, so it still sits on top. */
+    z-index: 0 !important;
   }
 
   .hero-watermark {
     background-size: 78vw auto;
     opacity: 0.12 !important;
+  }
+
+  /* Auth pages (login/register/forgot/reset) keep a soft seal like desktop */
+  .animated-bg.darker .hero-watermark {
+    opacity: 0.1 !important;
   }
 
   .hero {

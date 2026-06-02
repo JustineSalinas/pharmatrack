@@ -74,7 +74,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <>
+    <div className="page-wrapper">
       {/* ANIMATED BACKGROUND (DARKER) */}
       <div className="animated-bg darker">
         <div className="hero-watermark"></div>
@@ -211,6 +211,7 @@ export default function RegisterPage() {
                     placeholder="Juan Dela Cruz"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
+                    autoComplete="name"
                     required
                   />
                 </div>
@@ -223,6 +224,7 @@ export default function RegisterPage() {
                     placeholder="name@usa.edu.ph"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -250,7 +252,7 @@ export default function RegisterPage() {
                           required
                           style={{ appearance: 'none' }}
                         >
-                          <option value="" disabled>Select Year</option>
+                          <option value="" disabled>Year</option>
                           {Object.keys(sectionsByYear).map(y => (
                             <option key={y} value={y}>{y}</option>
                           ))}
@@ -266,7 +268,7 @@ export default function RegisterPage() {
                           required
                           style={{ appearance: 'none' }}
                         >
-                          <option value="" disabled>Select Section</option>
+                          <option value="" disabled>Section</option>
                           {year && sectionsByYear[year].map(s => (
                             <option key={s} value={s}>{s}</option>
                           ))}
@@ -285,6 +287,7 @@ export default function RegisterPage() {
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
                       required
                       style={{ paddingRight: "45px" }}
                     />
@@ -321,6 +324,7 @@ export default function RegisterPage() {
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      autoComplete="new-password"
                       required
                       style={{ paddingRight: "45px" }}
                     />
@@ -365,6 +369,6 @@ export default function RegisterPage() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
