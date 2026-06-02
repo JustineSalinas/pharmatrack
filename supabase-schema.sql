@@ -308,6 +308,16 @@ create policy "Authenticated users can read sessions" on public.qr_sessions for 
     )
   )
 );
+-- Allows students to see upcoming sessions for their section in the schedule view
+-- Required because student_schedule uses security_invoker=true, so the underlying
+-- qr_sessions RLS policies are enforced for the calling student.
+create policy "Students can view sessions for their section" on public.qr_sessions for select using (
+  exists (
+    select 1 from public.student_profiles sp
+    where sp.user_id = auth.uid()
+    and sp.section = qr_sessions.section
+  )
+);
 create policy "Admins and creators can manage sessions" on public.qr_sessions for all using (public.is_admin() OR auth.uid() = facilitator_id);
 
 -- ============================================================
@@ -377,8 +387,11 @@ where u.account_type = 'student'
 group by u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year;
 
 -- Secure schedule view for students (excludes the secret code column)
+-- security_invoker=true ensures auth.uid() resolves to the CALLING student,
+-- not the view definer. Without this, the WHERE clause returns 0 rows for students.
 drop view if exists public.student_schedule;
-create or replace view public.student_schedule as
+create or replace view public.student_schedule
+with (security_invoker = true) as
 select id, facilitator_id, subject, section, date, expires_at, created_at
 from public.qr_sessions
 where section = (

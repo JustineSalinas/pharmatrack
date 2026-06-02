@@ -17,7 +17,6 @@ interface QRSessionRow {
   expires_at: string;
   created_at: string;
 }
-
 type DayKey = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 const DAY_LABELS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const DAY_INDEX_MAP: Record<number, DayKey> = { 1: "MON", 2: "TUE", 3: "WED", 4: "THU", 5: "FRI", 6: "SAT", 0: "SUN" };
@@ -77,18 +76,18 @@ export default function SchedulePage() {
         const endStr = endOfWeek.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
         setWeekRange(`${startStr} – ${endStr}`);
 
-        // Compute actual dates for MON–SUN
+        // Compute actual dates for MON–SAT
         const start = new Date(startOfWeek);
         const dayDatesMap: Record<DayKey, string> = {} as Record<DayKey, string>;
-        const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-        for (let i = 0; i < 7; i++) {
+        const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
+        for (let i = 0; i < 6; i++) {
           const d = new Date(start);
           d.setDate(start.getDate() + i);
           dayDatesMap[DAY_KEYS[i]] = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         }
         setDates(dayDatesMap);
 
-        const byDay: Record<DayKey, SessionBlock[]> = { MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: [] };
+        const byDay: Record<DayKey, SessionBlock[]> = { MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: [] } as Record<DayKey, SessionBlock[]>;
         const subjectSet = new Set<string>();
         for (const s of sessions) {
           const [y, m, d] = (s.date as string).split("-").map(Number);
