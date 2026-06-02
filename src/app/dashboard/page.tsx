@@ -173,6 +173,25 @@ function StudentDashboardContent() {
     }
   };
 
+  // Robust parsing utility for system config time strings (12h or 24h)
+  function parseConfigTime(timeStr: string): { hours: number; minutes: number } | null {
+    if (!timeStr) return null;
+    const match24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+      return { hours: parseInt(match24[1], 10), minutes: parseInt(match24[2], 10) };
+    }
+    const match12 = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match12) {
+      let hours = parseInt(match12[1], 10);
+      const minutes = parseInt(match12[2], 10);
+      const ampm = match12[3].toUpperCase();
+      if (ampm === "PM" && hours < 12) hours += 12;
+      if (ampm === "AM" && hours === 12) hours = 0;
+      return { hours, minutes };
+    }
+    return null;
+  }
+
   const handleScanSuccess = async (code: string) => {
     if (!user) return;
     try {
@@ -188,13 +207,35 @@ function StudentDashboardContent() {
         .from("attendance_records").select("id")
         .eq("student_id", user.id).eq("session_id", (session as any).id).single();
       if (existing) throw new Error("Already checked in for this session");
+
+      // Calculate attendance status from system settings threshold
+      let checkInStatus = "present";
+      try {
+        const { data: configData } = await supabase
+          .from("system_config")
+          .select("value")
+          .eq("key", "lateThreshold")
+          .maybeSingle();
+
+        const threshold = configData?.value || "07:35";
+        const parsed = parseConfigTime(threshold);
+        if (parsed) {
+          const thresholdDate = new Date();
+          thresholdDate.setHours(parsed.hours, parsed.minutes, 0, 0);
+          if (now > thresholdDate) {
+            checkInStatus = "late";
+          }
+        }
+      } catch (configErr) {
+        console.warn("Could not retrieve system late threshold. Defaulting to present.", configErr);
+      }
       
       const { error: attErr } = await (supabase.from("attendance_records") as any).insert({
         student_id: user.id,
         session_id: (session as any).id,
-        status: "present",
+        status: checkInStatus,
         time_in: now.toISOString(),
-        remarks: "Self check-in via QR Scan",
+        remarks: `Self check-in via QR Scan${checkInStatus === "late" ? " (LATE)" : ""}`,
       });
       if (attErr) throw attErr;
 

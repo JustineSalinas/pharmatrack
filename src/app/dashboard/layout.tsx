@@ -58,13 +58,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  // If Admin is pending, show restricted view
-  if (user?.account_type === "admin" && user?.status === "pending") {
+  // If Admin is pending or rejected, show restricted view
+  if (user?.account_type === "admin" && user?.status !== "approved") {
+    const isRejected = user?.status === "rejected";
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center" }}>
         <div className="card" style={{ maxWidth: "500px" }}>
-          <h2 style={{ color: "var(--gold)" }}>Approval Pending</h2>
-          <p style={{ margin: "20px 0" }}>Your admin account is currently awaiting verification by the Department Head. You will be granted full access once approved.</p>
+          <h2 style={{ color: isRejected ? "var(--danger)" : "var(--gold)" }}>
+            {isRejected ? "Account Rejected" : "Approval Pending"}
+          </h2>
+          <p style={{ margin: "20px 0" }}>
+            {isRejected
+              ? "Your administrator account has been rejected. Please contact the Department Head for more information."
+              : "Your admin account is currently awaiting verification by the Department Head. You will be granted full access once approved."}
+          </p>
           <button onClick={handleLogout} className="btn btn-outline" style={{ width: "100%" }}>Log Out</button>
         </div>
       </div>
