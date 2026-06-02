@@ -270,6 +270,7 @@ CREATE TABLE IF NOT EXISTS public.qr_sessions (
 ALTER TABLE public.qr_sessions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Facilitators create sessions" ON public.qr_sessions;
 DROP POLICY IF EXISTS "Everyone authenticated reads sessions" ON public.qr_sessions;
+DROP POLICY IF EXISTS "Students can view sessions for their section" ON public.qr_sessions;
 DROP POLICY IF EXISTS "Admins manage sessions" ON public.qr_sessions;
 CREATE POLICY "Facilitators create sessions" ON public.qr_sessions FOR INSERT WITH CHECK (auth.uid() = facilitator_id AND public.is_council());
 CREATE POLICY "Everyone authenticated reads sessions" ON public.qr_sessions FOR SELECT USING (
@@ -280,6 +281,16 @@ CREATE POLICY "Everyone authenticated reads sessions" ON public.qr_sessions FOR 
       SELECT 1 FROM public.attendance_records ar
       WHERE ar.session_id = qr_sessions.id AND ar.student_id = auth.uid()
     )
+  )
+);
+-- Allows students to see upcoming sessions for their section in the schedule view.
+-- Required because student_schedule uses security_invoker=true, so the underlying
+-- qr_sessions RLS policies are enforced for the calling student.
+CREATE POLICY "Students can view sessions for their section" ON public.qr_sessions FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM public.student_profiles sp
+    WHERE sp.user_id = auth.uid()
+    AND sp.section = qr_sessions.section
   )
 );
 CREATE POLICY "Admins manage sessions" ON public.qr_sessions FOR ALL USING (public.is_admin() OR auth.uid() = facilitator_id);
@@ -337,8 +348,11 @@ WHERE u.account_type = 'student'
 GROUP BY u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year;
 
 -- Secure schedule view for students (excludes the secret code column)
+-- security_invoker=true ensures auth.uid() resolves to the CALLING student,
+-- not the view definer. Without this, the WHERE clause returns 0 rows for students.
 DROP VIEW IF EXISTS public.student_schedule;
-CREATE OR REPLACE VIEW public.student_schedule AS
+CREATE OR REPLACE VIEW public.student_schedule
+WITH (security_invoker = true) AS
 SELECT id, facilitator_id, subject, section, date, expires_at, created_at
 FROM public.qr_sessions
 WHERE section = (
