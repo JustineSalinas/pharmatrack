@@ -51,7 +51,7 @@ export default function SchedulePage() {
         if (!profile) { setGrouped({} as Record<DayKey, SessionBlock[]>); setLoading(false); return; }
         setStudentInfo({ section: profile.section, current_year: profile.current_year });
         const { data: raw, error: err } = await supabase
-          .from("qr_sessions")
+          .from("student_schedule")
           .select("id, subject, section, date, expires_at, created_at")
           .eq("section", profile.section)
           .order("date", { ascending: true });

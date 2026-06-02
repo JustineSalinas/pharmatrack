@@ -6491,9 +6491,9 @@ input[type="password"]::-ms-clear {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(8, 4, 22, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6507,16 +6507,18 @@ input[type="password"]::-ms-clear {
 }
 
 .support-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: linear-gradient(145deg, rgba(30, 20, 50, 0.98), rgba(15, 10, 30, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
   width: 100%;
   max-width: 440px;
   padding: 28px 28px 24px;
   position: relative;
   text-align: left;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.08);
   animation: supportPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 @keyframes supportPop {
@@ -6531,9 +6533,9 @@ input[type="password"]::-ms-clear {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  color: #6b7280;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -6544,9 +6546,9 @@ input[type="password"]::-ms-clear {
 }
 
 .support-x-btn:hover {
-  background: #f3f4f6;
-  color: #111827;
-  border-color: #9ca3af;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .support-header {
@@ -6561,9 +6563,9 @@ input[type="password"]::-ms-clear {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(79, 70, 229, 0.08);
-  border: 1px solid rgba(79, 70, 229, 0.18);
-  color: #4f46e5;
+  background: rgba(232, 184, 75, 0.08);
+  border: 1px solid rgba(232, 184, 75, 0.18);
+  color: var(--gold);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6573,14 +6575,14 @@ input[type="password"]::-ms-clear {
 .support-title {
   font-size: 16px;
   font-weight: 700;
-  color: #111827;
+  color: #ffffff;
   margin: 0 0 3px;
   letter-spacing: -0.01em;
 }
 
 .support-desc {
   font-size: 12.5px;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.6);
   margin: 0;
   line-height: 1.4;
 }
@@ -6589,17 +6591,17 @@ input[type="password"]::-ms-clear {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: rgba(79, 70, 229, 0.06);
-  border: 1px solid rgba(79, 70, 229, 0.15);
+  background: rgba(232, 184, 75, 0.06);
+  border: 1px solid rgba(232, 184, 75, 0.15);
   border-radius: 20px;
   padding: 6px 12px;
   font-size: 12px;
-  color: #374151;
+  color: rgba(255, 255, 255, 0.8);
   margin-bottom: 20px;
 }
 
 .support-sender-chip strong {
-  color: #111827;
+  color: var(--gold);
 }
 
 .support-form {
@@ -6618,7 +6620,7 @@ input[type="password"]::-ms-clear {
 .support-field-label {
   font-size: 11px;
   font-weight: 700;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -6627,67 +6629,72 @@ input[type="password"]::-ms-clear {
   height: 38px;
   padding: 0 32px 0 12px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
   font-size: 13.5px;
   outline: none;
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   background-size: 14px;
   width: 100%;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.support-select option {
+  background-color: #1a0b36;
+  color: #ffffff;
+}
+
 .support-select:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(232, 184, 75, 0.15);
 }
 
 .support-textarea {
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
   font-size: 13.5px;
   outline: none;
   resize: vertical;
   width: 100%;
   line-height: 1.5;
   box-sizing: border-box;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   min-height: 100px;
 }
 
 .support-textarea:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(232, 184, 75, 0.15);
 }
 
 .support-textarea::placeholder {
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .support-footer {
   display: flex;
   gap: 10px;
   padding-top: 18px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .support-cancel-btn {
   flex: 1;
   height: 40px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #374151;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
@@ -6695,8 +6702,8 @@ input[type="password"]::-ms-clear {
 }
 
 .support-cancel-btn:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .support-send-btn {
@@ -6704,10 +6711,10 @@ input[type="password"]::-ms-clear {
   height: 40px;
   border-radius: 8px;
   border: none;
-  background: #4f46e5;
-  color: #ffffff;
+  background: var(--gold);
+  color: #000000;
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
@@ -6717,7 +6724,8 @@ input[type="password"]::-ms-clear {
 }
 
 .support-send-btn:hover {
-  background: #4338ca;
+  background: var(--gold2);
+  box-shadow: 0 0 15px rgba(232, 184, 75, 0.35);
 }
 
 .support-copy-row {
@@ -6727,13 +6735,13 @@ input[type="password"]::-ms-clear {
   gap: 6px;
   margin-top: 12px;
   font-size: 12px;
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .support-copy-link {
   background: none;
   border: none;
-  color: #4f46e5;
+  color: var(--gold);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -6743,7 +6751,7 @@ input[type="password"]::-ms-clear {
 }
 
 .support-copy-link:hover {
-  color: #4338ca;
+  color: var(--gold2);
 }
 
 @media (max-width: 480px) {

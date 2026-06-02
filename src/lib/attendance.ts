@@ -51,49 +51,80 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   const studentIds = (students ?? []).map((s: any) => s.id as string);
   if (studentIds.length === 0) return result;
 
+  // 3. Fetch ALL existing attendance records for these events in a SINGLE query!
+  const eventIds = events.map((ev: any) => ev.id);
+  const { data: allRecords, error: arErr } = await supabase
+    .from("attendance_records")
+    .select("id, student_id, event_id, time_in, time_out, status")
+    .in("event_id", eventIds);
+  if (arErr) { result.errors.push("attendance_records fetch: " + arErr.message); return result; }
+
+  // 4. Group existing records by event_id for fast O(1) in-memory lookup
+  const recordsByEvent = new Map<string, any[]>();
+  for (const r of allRecords ?? []) {
+    if (!r.event_id) continue;
+    if (!recordsByEvent.has(r.event_id)) {
+      recordsByEvent.set(r.event_id, []);
+    }
+    recordsByEvent.get(r.event_id)!.push(r);
+  }
+
+  const absentRowsToInsert: any[] = [];
+  const incompleteIdsToUpdate: string[] = [];
+
   for (const ev of events as any[]) {
     result.eventsProcessed++;
 
-    // 2a. Existing records for this event.
-    const { data: existing, error: arErr } = await supabase
-      .from("attendance_records")
-      .select("id, student_id, time_in, time_out, status")
-      .eq("event_id", ev.id);
-    if (arErr) { result.errors.push(`event ${ev.id} fetch: ${arErr.message}`); continue; }
+    const existing = recordsByEvent.get(ev.id) ?? [];
+    const recorded = new Set(existing.map((r: any) => r.student_id as string));
 
-    const recorded = new Set((existing ?? []).map((r: any) => r.student_id as string));
-
-    // 2b. Insert "absent" rows for any student without a record.
+    // 2b. Collect "absent" rows for any student without a record.
     const missing = studentIds.filter((sid) => !recorded.has(sid));
-    if (missing.length > 0) {
-      const rows = missing.map((sid) => ({
+    for (const sid of missing) {
+      absentRowsToInsert.push({
         student_id: sid,
         event_id: ev.id,
         status: "absent" as const,
         remarks: "Auto-marked: no scan recorded during the event.",
-      }));
-      // Insert in batches of 500 to stay well under request limits.
-      for (let i = 0; i < rows.length; i += 500) {
-        const slice = rows.slice(i, i + 500);
-        const { error: insErr } = await supabase.from("attendance_records").insert(slice);
-        if (insErr) result.errors.push(`event ${ev.id} absent insert: ${insErr.message}`);
-        else result.absentInserted += slice.length;
-      }
+      });
     }
 
-    // 2c. Mark "incomplete": time_in present, time_out missing, check_out window closed.
-    //     (Skip if event has no check_out_end — time_out wasn't expected.)
+    // 2c. Collect "incomplete" record IDs: time_in present, time_out missing, check_out window closed.
     if (ev.check_out_end && new Date(ev.check_out_end) < new Date(nowIso)) {
-      const incompleteIds = (existing ?? [])
-        .filter((r: any) => r.time_in && !r.time_out && r.status !== "incomplete" && r.status !== "absent")
-        .map((r: any) => r.id as string);
-      if (incompleteIds.length > 0) {
-        const { error: upErr } = await supabase
-          .from("attendance_records")
-          .update({ status: "incomplete", remarks: "Auto-marked: time-in recorded but no time-out." })
-          .in("id", incompleteIds);
-        if (upErr) result.errors.push(`event ${ev.id} incomplete update: ${upErr.message}`);
-        else result.incompleteUpdated += incompleteIds.length;
+      const incomplete = existing.filter(
+        (r: any) => r.time_in && !r.time_out && r.status !== "incomplete" && r.status !== "absent"
+      );
+      for (const r of incomplete) {
+        incompleteIdsToUpdate.push(r.id);
+      }
+    }
+  }
+
+  // 5. Batch insert the absent records (using batches of 500)
+  if (absentRowsToInsert.length > 0) {
+    for (let i = 0; i < absentRowsToInsert.length; i += 500) {
+      const slice = absentRowsToInsert.slice(i, i + 500);
+      const { error: insErr } = await supabase.from("attendance_records").insert(slice);
+      if (insErr) {
+        result.errors.push("absent insert failed: " + insErr.message);
+      } else {
+        result.absentInserted += slice.length;
+      }
+    }
+  }
+
+  // 6. Batch update the incomplete records (using batches of 500)
+  if (incompleteIdsToUpdate.length > 0) {
+    for (let i = 0; i < incompleteIdsToUpdate.length; i += 500) {
+      const slice = incompleteIdsToUpdate.slice(i, i + 500);
+      const { error: upErr } = await supabase
+        .from("attendance_records")
+        .update({ status: "incomplete", remarks: "Auto-marked: time-in recorded but no time-out." })
+        .in("id", slice);
+      if (upErr) {
+        result.errors.push("incomplete update failed: " + upErr.message);
+      } else {
+        result.incompleteUpdated += slice.length;
       }
     }
   }

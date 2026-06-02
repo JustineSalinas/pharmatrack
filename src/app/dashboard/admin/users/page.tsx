@@ -70,9 +70,16 @@ export default function AdminUsers() {
   async function handleResetPassword(email: string, name: string) {
     if (!confirm(`Send a password reset link for ${name} (${email})?`)) return;
     try {
+      // Get the current session to extract the access token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const res = await fetch("/api/admin/reset-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ email }),
       });
       const json = await res.json();
