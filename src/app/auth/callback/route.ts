@@ -31,20 +31,39 @@ export async function GET(request: NextRequest) {
 
   // ── Case 1: email verification (token_hash) ──────────────────────────
   if (token_hash && type) {
-    const supabase = createClient(
+    const cookieStore = cookies();
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
+        },
+      }
     );
 
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type: type as any });
+    const { data, error } = await supabase.auth.verifyOtp({ token_hash, type: type as any });
 
     if (!error) {
       // Recovery links should land on the reset form, not the login screen.
-      if (type === "recovery") {
-        return NextResponse.redirect(new URL("/reset-password", origin));
+      const targetUrl = type === "recovery"
+        ? new URL("/reset-password", origin)
+        : new URL("/login?verified=true", origin);
+
+      const response = NextResponse.redirect(targetUrl);
+      if (data.session) {
+        response.cookies.set("pharmatrack_token", data.session.access_token, {
+          httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7,
+        });
       }
-      loginUrl.searchParams.set("verified", "true");
-      return NextResponse.redirect(loginUrl);
+      return response;
     }
     console.error("Email verification failed:", error.message);
     const errUrl = new URL("/login", origin);
@@ -83,7 +102,13 @@ export async function GET(request: NextRequest) {
         .maybeSingle();
 
       const dest = profile ? "/dashboard" : "/onboarding";
-      return NextResponse.redirect(new URL(dest, origin));
+      const response = NextResponse.redirect(new URL(dest, origin));
+      if (data.session) {
+        response.cookies.set("pharmatrack_token", data.session.access_token, {
+          httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7,
+        });
+      }
+      return response;
     }
     if (error) {
       console.error("Code exchange failed:", error.message);

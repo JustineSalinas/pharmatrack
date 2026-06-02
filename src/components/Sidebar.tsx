@@ -382,27 +382,29 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
         }
 
         .logout-card {
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
+          background: linear-gradient(145deg, rgba(30, 20, 50, 0.98), rgba(15, 10, 30, 0.98));
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 20px;
           width: 100%;
           max-width: 360px;
           padding: 32px 28px 24px;
           text-align: center;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.08);
           animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
         }
 
         .logout-title {
           font-size: 18px;
           font-weight: 700;
-          color: #111827 !important;
+          color: #ffffff !important;
           margin: 0 0 8px !important;
         }
 
         .logout-desc {
           font-size: 14px;
-          color: #4b5563 !important;
+          color: rgba(255, 255, 255, 0.75) !important;
           margin: 0 0 24px !important;
           line-height: 1.5;
         }
@@ -411,9 +413,9 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
           width: 48px;
           height: 48px;
           border-radius: 12px;
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
+          background: rgba(220, 38, 38, 0.12);
+          border: 1px solid rgba(220, 38, 38, 0.25);
+          color: #f87171;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -429,9 +431,9 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
           flex: 1;
           height: 40px;
           border-radius: 8px;
-          border: 1px solid #d1d5db;
-          background: #ffffff;
-          color: #374151;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.05);
+          color: rgba(255, 255, 255, 0.85);
           font-size: 13.5px;
           font-weight: 500;
           cursor: pointer;
@@ -440,8 +442,9 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
         }
 
         .logout-cancel-btn:hover {
-          background: #f9fafb;
-          border-color: #9ca3af;
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(255, 255, 255, 0.25);
+          color: #ffffff;
         }
 
         .logout-confirm-btn {
@@ -464,6 +467,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
 
         .logout-confirm-btn:hover {
           background: #b91c1c;
+          box-shadow: 0 0 15px rgba(220, 38, 38, 0.4);
         }
 
         .logout-confirm-btn:disabled {

@@ -41,6 +41,103 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 GRANT EXECUTE ON FUNCTION public.is_admin()   TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.is_council() TO authenticated, anon;
 
+-- Trigger to protect users table columns
+CREATE OR REPLACE FUNCTION public.protect_user_fields()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF auth.jwt() ->> 'role' = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NOT public.is_admin() THEN
+    IF NEW.account_type IS DISTINCT FROM OLD.account_type THEN
+      RAISE EXCEPTION 'You are not allowed to change your account_type.';
+    END IF;
+
+    IF NEW.status IS DISTINCT FROM OLD.status THEN
+      RAISE EXCEPTION 'You are not allowed to change your status.';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION public.protect_user_fields() TO authenticated, anon;
+
+-- Student self check-in function
+CREATE OR REPLACE FUNCTION public.check_in_student(session_code TEXT)
+RETURNS JSON AS $$
+DECLARE
+  v_session RECORD;
+  v_student_id UUID;
+  v_status TEXT;
+  v_late_threshold TEXT;
+  v_now TIMESTAMPTZ;
+  v_existing RECORD;
+  v_record RECORD;
+BEGIN
+  v_student_id := auth.uid();
+  IF v_student_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  SELECT * INTO v_session
+  FROM public.qr_sessions
+  WHERE code = session_code;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invalid QR code';
+  END IF;
+
+  IF v_session.expires_at < NOW() THEN
+    RAISE EXCEPTION 'This QR code has expired';
+  END IF;
+
+  SELECT id INTO v_existing
+  FROM public.attendance_records
+  WHERE student_id = v_student_id AND session_id = v_session.id;
+
+  IF FOUND THEN
+    RAISE EXCEPTION 'Already checked in for this session';
+  END IF;
+
+  v_now := NOW();
+  v_status := 'present';
+
+  SELECT value INTO v_late_threshold
+  FROM public.system_config
+  WHERE key = 'lateThreshold';
+
+  IF v_late_threshold IS NOT NULL THEN
+    IF ((timezone('Asia/Manila', v_now))::time > v_late_threshold::time) THEN
+      v_status := 'late';
+    END IF;
+  END IF;
+
+  INSERT INTO public.attendance_records (
+    student_id,
+    session_id,
+    status,
+    time_in,
+    remarks
+  ) VALUES (
+    v_student_id,
+    v_session.id,
+    v_status,
+    v_now,
+    'Self check-in via QR Scan' || CASE WHEN v_status = 'late' THEN ' (LATE)' ELSE '' END
+  ) RETURNING * INTO v_record;
+
+  RETURN json_build_object(
+    'ok', true,
+    'record', row_to_json(v_record)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION public.check_in_student(TEXT) TO authenticated;
+
 -- ============================================================
 -- USERS
 -- ============================================================
@@ -65,7 +162,14 @@ BEGIN
     END LOOP;
 END $$;
 
-CREATE POLICY "allow_signup" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "allow_signup" ON public.users FOR INSERT WITH CHECK (
+  auth.uid() = id 
+  AND account_type IN ('student', 'facilitator') 
+  AND (
+    (account_type = 'student' AND status = 'approved') OR
+    (account_type = 'facilitator' AND status = 'pending')
+  )
+);
 CREATE POLICY "allow_own_read" ON public.users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "allow_own_update" ON public.users FOR UPDATE USING (auth.uid() = id);
 -- Council (facilitators + admins) may READ all user rows. Facilitator
@@ -75,6 +179,12 @@ CREATE POLICY "allow_own_update" ON public.users FOR UPDATE USING (auth.uid() = 
 -- so this does not recurse. Read-only — write access stays admin-only below.
 CREATE POLICY "allow_council_read_all" ON public.users FOR SELECT USING (public.is_council());
 CREATE POLICY "allow_admin_manage_all" ON public.users FOR ALL USING ((auth.uid() != id) AND public.is_admin());
+
+DROP TRIGGER IF EXISTS trigger_protect_user_fields ON public.users;
+CREATE TRIGGER trigger_protect_user_fields
+  BEFORE UPDATE ON public.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.protect_user_fields();
 
 -- ============================================================
 -- STUDENT PROFILES
@@ -93,9 +203,11 @@ ALTER TABLE public.student_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Student reads own profile" ON public.student_profiles;
 DROP POLICY IF EXISTS "Council reads all profiles" ON public.student_profiles;
 DROP POLICY IF EXISTS "Student inserts own profile" ON public.student_profiles;
+DROP POLICY IF EXISTS "Student updates own profile" ON public.student_profiles;
 CREATE POLICY "Student reads own profile" ON public.student_profiles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Council reads all profiles" ON public.student_profiles FOR SELECT USING (public.is_council());
 CREATE POLICY "Student inserts own profile" ON public.student_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Student updates own profile" ON public.student_profiles FOR UPDATE USING (auth.uid() = user_id);
 
 -- ============================================================
 -- FACILITATOR PROFILES
@@ -111,9 +223,11 @@ ALTER TABLE public.facilitator_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Facilitator reads own profile" ON public.facilitator_profiles;
 DROP POLICY IF EXISTS "Admin manages facilitators" ON public.facilitator_profiles;
 DROP POLICY IF EXISTS "Facilitator inserts own profile" ON public.facilitator_profiles;
+DROP POLICY IF EXISTS "Facilitator updates own profile" ON public.facilitator_profiles;
 CREATE POLICY "Facilitator reads own profile" ON public.facilitator_profiles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admin manages facilitators" ON public.facilitator_profiles FOR ALL USING (public.is_admin());
 CREATE POLICY "Facilitator inserts own profile" ON public.facilitator_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Facilitator updates own profile" ON public.facilitator_profiles FOR UPDATE USING (auth.uid() = user_id);
 
 -- ============================================================
 -- EVENTS
@@ -158,7 +272,16 @@ DROP POLICY IF EXISTS "Facilitators create sessions" ON public.qr_sessions;
 DROP POLICY IF EXISTS "Everyone authenticated reads sessions" ON public.qr_sessions;
 DROP POLICY IF EXISTS "Admins manage sessions" ON public.qr_sessions;
 CREATE POLICY "Facilitators create sessions" ON public.qr_sessions FOR INSERT WITH CHECK (auth.uid() = facilitator_id AND public.is_council());
-CREATE POLICY "Everyone authenticated reads sessions" ON public.qr_sessions FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Everyone authenticated reads sessions" ON public.qr_sessions FOR SELECT USING (
+  public.is_council()
+  OR (
+    auth.role() = 'authenticated'
+    AND EXISTS (
+      SELECT 1 FROM public.attendance_records ar
+      WHERE ar.session_id = qr_sessions.id AND ar.student_id = auth.uid()
+    )
+  )
+);
 CREATE POLICY "Admins manage sessions" ON public.qr_sessions FOR ALL USING (public.is_admin() OR auth.uid() = facilitator_id);
 
 -- ============================================================
@@ -184,7 +307,8 @@ DROP POLICY IF EXISTS "Council manages attendance" ON public.attendance_records;
 DROP POLICY IF EXISTS "Student scans session attendance" ON public.attendance_records;
 CREATE POLICY "Student reads own attendance" ON public.attendance_records FOR SELECT USING (auth.uid() = student_id);
 CREATE POLICY "Council manages attendance" ON public.attendance_records FOR ALL USING (public.is_council());
-CREATE POLICY "Student scans session attendance" ON public.attendance_records FOR INSERT WITH CHECK (auth.uid() = student_id);
+-- Note: Student insertion is now handled exclusively via the secure check_in_student() RPC function.
+-- Direct table insertion is blocked for non-council users.
 
 -- ============================================================
 -- VIEWS
@@ -211,6 +335,17 @@ JOIN public.student_profiles sp ON sp.user_id = u.id
 LEFT JOIN public.attendance_records ar ON ar.student_id = u.id
 WHERE u.account_type = 'student'
 GROUP BY u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year;
+
+-- Secure schedule view for students (excludes the secret code column)
+DROP VIEW IF EXISTS public.student_schedule;
+CREATE OR REPLACE VIEW public.student_schedule AS
+SELECT id, facilitator_id, subject, section, date, expires_at, created_at
+FROM public.qr_sessions
+WHERE section = (
+  SELECT section FROM public.student_profiles WHERE user_id = auth.uid()
+);
+
+GRANT SELECT ON public.student_schedule TO authenticated;
 
 -- ============================================================
 -- SEED: Admin account

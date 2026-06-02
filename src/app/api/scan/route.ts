@@ -1,8 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
+import { getBackendUser } from "@/lib/auth";
 
 const getSupabase = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -12,36 +12,41 @@ const getSupabase = () => {
 };
 
 export async function POST(req: NextRequest) {
+  console.log("[Scan API] POST request received");
   const supabase = getSupabase();
 
   // ── Auth: require logged-in admin / facilitator ──────────
-  const cookieStore = await cookies();
-  const token = cookieStore.get("pharmatrack_token")?.value;
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-  if (authErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await getBackendUser(req);
+  if (!user) {
+    console.warn("[Scan API] Unauthorized scan attempt - no valid session");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { data: scanner } = await supabase
     .from("users")
-    .select("account_type, status")
+    .select("account_type, status, email")
     .eq("id", user.id)
     .single();
 
   if (!scanner || !["admin", "facilitator"].includes(scanner.account_type) || scanner.status !== "approved") {
-    return NextResponse.json({ error: "Only approved admins/facilitator can scan" }, { status: 403 });
+    console.warn(`[Scan API] Forbidden scan attempt by user ${user.id} (${scanner?.email || "unknown email"}), Account Type: ${scanner?.account_type || "none"}, Status: ${scanner?.status || "none"}`);
+    return NextResponse.json({ error: "Only approved admins/facilitators can scan" }, { status: 403 });
   }
+
+  console.log(`[Scan API] Authorized scan request by ${scanner.email} (${scanner.account_type})`);
 
   // ── Parse body ───────────────────────────────────────────
   let body: { qr_code_id?: string; event_id?: string };
   try {
     body = await req.json();
   } catch {
+    console.error("[Scan API] Failed to parse JSON body");
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const { qr_code_id, event_id } = body;
   if (!qr_code_id || !event_id) {
+    console.warn(`[Scan API] Missing fields in scan payload: qr_code_id=${qr_code_id}, event_id=${event_id}`);
     return NextResponse.json({ error: "qr_code_id and event_id are required" }, { status: 400 });
   }
 
@@ -53,10 +58,12 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (spErr || !studentProfile) {
+    console.warn(`[Scan API] Student profile not found for QR code ${qr_code_id}`);
     return NextResponse.json({ error: "Student not found for this QR code" }, { status: 404 });
   }
 
   const studentId = studentProfile.user_id;
+  console.log(`[Scan API] Resolved QR code ${qr_code_id} to student ${studentId}`);
 
   // ── Fetch event & validate time window ──────────────────
   const { data: event, error: evErr } = await supabase
@@ -66,6 +73,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (evErr || !event) {
+    console.error(`[Scan API] Event ${event_id} not found or query error:`, evErr);
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
@@ -78,6 +86,7 @@ export async function POST(req: NextRequest) {
 
   // Prevent scanning before the event has started
   if (now < checkInStart) {
+    console.warn(`[Scan API] Scan attempted before event start. Event check-in opens at ${checkInStart.toISOString()}`);
     return NextResponse.json(
       { error: "Event has not started yet. Check-in opens at " + checkInStart.toISOString() },
       { status: 400 },
@@ -97,10 +106,12 @@ export async function POST(req: NextRequest) {
   // ────────────────────────────────────────────────────────
   if (!existing) {
     if (now > checkInEnd) {
+      console.warn(`[Scan API] Check-in window closed for event ${event_id}. Closed at ${checkInEnd.toISOString()}`);
       return NextResponse.json({ error: "Check-in window has closed" }, { status: 400 });
     }
 
     const status = now <= checkInLate ? "present" : "late";
+    console.log(`[Scan API] Creating check-in for student ${studentId} with status ${status}`);
 
     const { data: record, error: insertErr } = await supabase
       .from("attendance_records")
@@ -115,9 +126,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (insertErr) {
+      console.error(`[Scan API] Error inserting check-in record for student ${studentId}:`, insertErr);
       return NextResponse.json({ error: insertErr.message }, { status: 500 });
     }
 
+    console.log(`[Scan API] Successfully checked in student ${studentId} (Status: ${status}, Record ID: ${record.id})`);
     return NextResponse.json({
       action: "time_in",
       status,
@@ -135,6 +148,7 @@ export async function POST(req: NextRequest) {
     const hoursSinceIn = (now.getTime() - timeIn.getTime()) / (1000 * 60 * 60);
 
     if (hoursSinceIn > 4) {
+      console.warn(`[Scan API] Check-out failed: Time-out window expired (hours since check-in: ${hoursSinceIn.toFixed(2)} > 4)`);
       return NextResponse.json(
         { error: "Time-out window expired (more than 4 hours since check-in)" },
         { status: 400 },
@@ -143,17 +157,21 @@ export async function POST(req: NextRequest) {
 
     // If event defines a check-out window, enforce it
     if (checkOutStart && now < checkOutStart) {
+      console.warn(`[Scan API] Check-out failed: Check-out window not open. Opens at ${checkOutStart.toISOString()}`);
       return NextResponse.json(
         { error: "Check-out window has not opened yet" },
         { status: 400 },
       );
     }
     if (checkOutEnd && now > checkOutEnd) {
+      console.warn(`[Scan API] Check-out failed: Check-out window closed. Closed at ${checkOutEnd.toISOString()}`);
       return NextResponse.json(
         { error: "Check-out window has closed" },
         { status: 400 },
       );
     }
+
+    console.log(`[Scan API] Recording check-out for student ${studentId} (Record ID: ${existing.id})`);
 
     const { data: record, error: updateErr } = await supabase
       .from("attendance_records")
@@ -163,9 +181,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (updateErr) {
+      console.error(`[Scan API] Error updating check-out record ${existing.id} for student ${studentId}:`, updateErr);
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
+    console.log(`[Scan API] Successfully checked out student ${studentId} (Record ID: ${record.id})`);
     return NextResponse.json({
       action: "time_out",
       status: existing.status,
@@ -177,6 +197,7 @@ export async function POST(req: NextRequest) {
   // ────────────────────────────────────────────────────────
   // CASE 3: Already has both time_in and time_out
   // ────────────────────────────────────────────────────────
+  console.warn(`[Scan API] Student ${studentId} has already completed check-in and check-out for event ${event_id}`);
   return NextResponse.json(
     { error: "Student has already checked in and out for this event" },
     { status: 409 },

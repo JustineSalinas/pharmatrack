@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "commit-push": "git add -A && git commit -m \"feat: apply frontend audit design system improvements, auth/security hardening, and database RLS/attendance optimizations\" && git push"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",
@@ -31,7 +34,9 @@
     "dotenv": "^17.3.1",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.8"
   },
   "optionalDependencies": {
     "@next/swc-win32-x64-msvc": "^16.2.1"

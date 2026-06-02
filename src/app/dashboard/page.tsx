@@ -196,46 +196,9 @@ function StudentDashboardContent() {
     if (!user) return;
     try {
       setCheckInLoading(true);
-      const { data: session, error: sessionErr } = await supabase
-        .from("qr_sessions").select("*").eq("code", code).single();
-      if (sessionErr || !session) throw new Error("Invalid or expired QR code");
       
-      const now = new Date();
-      if (new Date((session as any).expires_at) < now) throw new Error("This QR code has expired");
-      
-      const { data: existing } = await supabase
-        .from("attendance_records").select("id")
-        .eq("student_id", user.id).eq("session_id", (session as any).id).single();
-      if (existing) throw new Error("Already checked in for this session");
-
-      // Calculate attendance status from system settings threshold
-      let checkInStatus = "present";
-      try {
-        const { data: configData } = await supabase
-          .from("system_config")
-          .select("value")
-          .eq("key", "lateThreshold")
-          .maybeSingle();
-
-        const threshold = configData?.value || "07:35";
-        const parsed = parseConfigTime(threshold);
-        if (parsed) {
-          const thresholdDate = new Date();
-          thresholdDate.setHours(parsed.hours, parsed.minutes, 0, 0);
-          if (now > thresholdDate) {
-            checkInStatus = "late";
-          }
-        }
-      } catch (configErr) {
-        console.warn("Could not retrieve system late threshold. Defaulting to present.", configErr);
-      }
-      
-      const { error: attErr } = await (supabase.from("attendance_records") as any).insert({
-        student_id: user.id,
-        session_id: (session as any).id,
-        status: checkInStatus,
-        time_in: now.toISOString(),
-        remarks: `Self check-in via QR Scan${checkInStatus === "late" ? " (LATE)" : ""}`,
+      const { data: rpcRes, error: attErr } = await supabase.rpc("check_in_student", {
+        session_code: code
       });
       if (attErr) throw attErr;
 
@@ -247,6 +210,7 @@ function StudentDashboardContent() {
         .single();
       if (updatedStats) setStats(updatedStats);
 
+      const now = new Date();
       setCheckInTime(now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
       setCheckInError("");
       setCheckInScanSuccess(true);
