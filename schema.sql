@@ -68,6 +68,12 @@ END $$;
 CREATE POLICY "allow_signup" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "allow_own_read" ON public.users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "allow_own_update" ON public.users FOR UPDATE USING (auth.uid() = id);
+-- Council (facilitators + admins) may READ all user rows. Facilitator
+-- dashboards/lists count and display students from this table, so without a
+-- read policy their "Total Students" reads 0. is_council() is SECURITY
+-- DEFINER (bypasses RLS internally), mirroring the student_profiles policy,
+-- so this does not recurse. Read-only — write access stays admin-only below.
+CREATE POLICY "allow_council_read_all" ON public.users FOR SELECT USING (public.is_council());
 CREATE POLICY "allow_admin_manage_all" ON public.users FOR ALL USING ((auth.uid() != id) AND public.is_admin());
 
 -- ============================================================
