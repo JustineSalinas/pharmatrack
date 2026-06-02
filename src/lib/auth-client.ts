@@ -225,7 +225,7 @@ export async function getCurrentUser() {
       .from("student_profiles")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
     return { ...profile, student_profiles: studentProfile || null };
   }
 
@@ -234,7 +234,7 @@ export async function getCurrentUser() {
       .from("facilitator_profiles")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
     return { ...profile, facilitator_profiles: facilitatorProfile || null };
   }
 

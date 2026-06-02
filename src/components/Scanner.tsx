@@ -1,100 +1,167 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Html5Qrcode } from "html5-qrcode";
+import { Loader2, AlertCircle } from "lucide-react";
 
 interface ScannerProps {
+  /** Called with the decoded QR text (an event/session code). */
   onSuccess: (code: string) => void;
 }
 
+const READER_ID = "student-qr-reader";
+
+/**
+ * Real camera QR scanner for the student self check-in modal. Uses
+ * html5-qrcode to read an event/session QR code and hands the decoded text to
+ * `onSuccess`. If the camera can't start (permission denied, no device), it
+ * falls back to a manual code entry so students can still check in.
+ */
 export default function Scanner({ onSuccess }: ScannerProps) {
-  const [scanning, setScanning] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const handledRef = useRef(false);
+  const [status, setStatus] = useState<"starting" | "scanning" | "error">("starting");
   const [manualCode, setManualCode] = useState("");
-  const [currentTime, setCurrentTime] = useState("");
-  const [currentDate, setCurrentDate] = useState("");
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const update = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-      setCurrentDate(now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }));
+    let cancelled = false;
+    const qr = new Html5Qrcode(READER_ID, /* verbose */ false);
+    scannerRef.current = qr;
+
+    // Safety net: if the camera never comes up (device busy, slow hardware, a
+    // getUserMedia call that hangs without resolving), fall back to manual
+    // entry after 12s instead of leaving the student stuck on "Starting…".
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        setStatus((s) => (s === "starting" ? "error" : s));
+      }
+    }, 12000);
+
+    qr.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: (w, h) => {
+          const size = Math.min(w, h) * 0.7;
+          return { width: size, height: size };
+        },
+      },
+      (decoded) => {
+        if (handledRef.current) return;
+        handledRef.current = true;
+        finish(decoded);
+      },
+      () => {
+        /* per-frame decode misses are normal — ignore */
+      }
+    )
+      .then(() => {
+        clearTimeout(timeout);
+        // If the component unmounted while the camera was starting (React
+        // Strict Mode double-invoke), shut it back down immediately.
+        if (cancelled) {
+          qr.stop().then(() => qr.clear()).catch(() => {});
+        } else {
+          setStatus("scanning");
+        }
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        if (!cancelled) setStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      if (qr.isScanning) {
+        qr.stop().then(() => qr.clear()).catch(() => {});
+      }
     };
-    update();
-    tickRef.current = setInterval(update, 1000);
-    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const simulateScan = () => {
-    setScanning(true);
-    setTimeout(() => {
-      setScanning(false);
-      onSuccess(manualCode || "PHARM-0322-A1");
-    }, 1400);
-  };
+  async function stopCamera() {
+    const qr = scannerRef.current;
+    scannerRef.current = null;
+    if (qr) {
+      try {
+        if (qr.isScanning) await qr.stop();
+        qr.clear();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 
-  // Random QR pattern cells
-  const cells = Array.from({ length: 64 }, (_, i) => ({
-    show: Math.random() > 0.4,
-    height: Math.floor(Math.random() * 14 + 4),
-  }));
+  function finish(code: string) {
+    const trimmed = code.trim();
+    stopCamera().finally(() => onSuccess(trimmed));
+  }
+
+  function submitManual(e: React.FormEvent) {
+    e.preventDefault();
+    const code = manualCode.trim();
+    if (!code || handledRef.current) return;
+    handledRef.current = true;
+    finish(code);
+  }
 
   return (
-    <div className="scanner-page">
-      {/* QR Frame */}
-      <div className="qr-frame">
-        <div className="qr-corners" />
-        <div className="corner-tr" />
-        <div className="corner-bl" />
-        <div className="scan-line" />
-        <div className="qr-inner-pattern">
-          {cells.map((c, i) => (
-            <div key={i} className="qr-cell" style={{ opacity: c.show ? 1 : 0, height: c.height }} />
-          ))}
-        </div>
-        <div
-          style={{
-            position: "absolute", inset: 0, display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: 13, color: "var(--gold)",
-            background: scanning ? "rgba(232,200,74,0.15)" : "rgba(0,0,0,0.3)",
-            backdropFilter: "blur(2px)", transition: "background 0.3s",
-          }}
-        >
-          {scanning ? "🔍 Scanning..." : "Point camera at QR code"}
-        </div>
-      </div>
+    <div style={{ position: "relative", width: "100%", height: "100%", background: "#08080c" }}>
+      {/* html5-qrcode injects the <video> into this element */}
+      <div id={READER_ID} style={{ width: "100%", height: "100%" }} />
 
-      <p style={{ textAlign: "center", color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>
-        Or enter code manually below
-      </p>
-
-      <div className="input-group">
-        <label>Session Code</label>
-        <div className="input-wrap">
-          <span className="icon">🔑</span>
-          <input
-            className="inp"
-            placeholder="e.g. PHARM-0322-A1"
-            value={manualCode}
-            onChange={(e) => setManualCode(e.target.value)}
-          />
+      {status === "starting" && (
+        <div style={OVERLAY}>
+          <Loader2 className="sp-spinner" size={26} style={{ color: "#E8B84B" }} />
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 8 }}>
+            Starting camera…
+          </span>
         </div>
-      </div>
+      )}
 
-      <button className="btn btn-gold" onClick={simulateScan} disabled={scanning}>
-        {scanning ? "⏳ Processing..." : "✅ Check In Now"}
-      </button>
-
-      {/* Student info card */}
-      <div className="check-in-card" style={{ marginTop: 20 }}>
-        <div className="ci-info">
-          <div className="ci-avatar">👨‍🎓</div>
-          <div className="ci-meta">
-            <strong>Juan Dela Cruz</strong>
-            <span>2026-12345 · PharmA · 2nd Year</span>
-          </div>
+      {status === "error" && (
+        <div style={{ ...OVERLAY, padding: "16px" }}>
+          <AlertCircle size={24} color="var(--danger)" />
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", textAlign: "center", margin: "8px 0 12px", lineHeight: 1.4 }}>
+            Camera unavailable. Enter the event code manually.
+          </p>
+          <form onSubmit={submitManual} style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
+            <input
+              value={manualCode}
+              onChange={(e) => setManualCode(e.target.value)}
+              placeholder="Event code"
+              autoFocus
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", color: "#fff", fontSize: 13, textAlign: "center" }}
+            />
+            <button
+              type="submit"
+              style={{ width: "100%", padding: "8px", borderRadius: 8, border: "none", background: "#E8B84B", color: "#000", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+            >
+              Submit Code
+            </button>
+          </form>
         </div>
-        <div className="ci-time">{currentTime || "--:--:--"}</div>
-        <div className="ci-date">{currentDate}</div>
-      </div>
+      )}
+
+      <style>{`
+        #${READER_ID} video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+        }
+        #${READER_ID} img { display: none; }
+      `}</style>
     </div>
   );
 }
+
+const OVERLAY: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "rgba(8, 4, 22, 0.85)",
+  zIndex: 5,
+};

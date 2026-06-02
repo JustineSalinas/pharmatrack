@@ -38,6 +38,7 @@ export default function EventsManagement() {
   const [startTime, setStartTime] = useState("");
   const [lateTime, setLateTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [formError, setFormError] = useState("");
 
   const filteredEvents = events.filter(event => 
     event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -95,13 +96,37 @@ export default function EventsManagement() {
   async function handleCreateEvent(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
+    setFormError("");
+
+    // Build the timestamps from the facilitator's wall-clock input. Parsing
+    // without a trailing "Z" interprets the time in the browser's LOCAL zone
+    // (e.g. Asia/Manila), then .toISOString() converts it to the correct UTC
+    // instant for storage — so it reads back as the same local time. The old
+    // code appended "Z", mislabelling local times as UTC and causing drift.
+    const startDt = new Date(`${date}T${startTime}:00`);
+    const lateDt = new Date(`${date}T${lateTime}:00`);
+    const endDt = new Date(`${date}T${endTime}:00`);
+
+    if (isNaN(startDt.getTime()) || isNaN(lateDt.getTime()) || isNaN(endDt.getTime())) {
+      setFormError("Please provide a valid date and check-in times.");
+      return;
+    }
+    // Check-in window must be chronological: Start ≤ Mark-Late < Ends.
+    if (lateDt < startDt) {
+      setFormError("“Mark Late At” can’t be earlier than “Check-in Starts”.");
+      return;
+    }
+    if (endDt <= lateDt) {
+      setFormError("“Check-in Ends” must be later than “Mark Late At”.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Construct timestamps
-      const startTS = `${date}T${startTime}:00Z`;
-      const lateTS = `${date}T${lateTime}:00Z`;
-      const endTS = `${date}T${endTime}:00Z`;
+      const startTS = startDt.toISOString();
+      const lateTS = lateDt.toISOString();
+      const endTS = endDt.toISOString();
 
       if (editingEvent) {
         const { error } = await supabase
@@ -177,6 +202,7 @@ export default function EventsManagement() {
     setStartTime("");
     setLateTime("");
     setEndTime("");
+    setFormError("");
     setEditingEvent(null);
   }
 
@@ -195,6 +221,7 @@ export default function EventsManagement() {
     setStartTime(parseTime(event.check_in_start));
     setLateTime(parseTime(event.check_in_late));
     setEndTime(parseTime(event.check_in_end));
+    setFormError("");
     setShowModal(true);
   }
 
@@ -436,9 +463,16 @@ export default function EventsManagement() {
                 </div>
               </div>
 
+              {formError && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(220, 38, 38, 0.08)", border: "1px solid rgba(220, 38, 38, 0.3)", color: "#fca5a5", fontSize: "13px", padding: "10px 14px", borderRadius: "8px" }}>
+                  <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                  <span>{formError}</span>
+                </div>
+              )}
+
               <div style={{ marginTop: "4px", display: "flex", gap: "12px", justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: "20px" }}>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowModal(false)}
                   className="btn-ghost"
                   style={{ padding: "0 16px", height: "36px", fontSize: "13px", fontWeight: 500, borderRadius: "var(--radius-sm)", color: "var(--white-shade)", border: "1px solid var(--border)", background: "var(--surface2)", cursor: "pointer", transition: "all 0.15s ease" }}
