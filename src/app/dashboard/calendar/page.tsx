@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase, toLocalDateKey } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
   Loader2, ChevronLeft, ChevronRight, Calendar as CalendarIcon,
@@ -92,7 +92,7 @@ export default function CalendarPage() {
 
   const grid = useMemo(() => buildGrid(viewMonth), [viewMonth]);
   const selectedEvents = selectedDay
-    ? eventsByDay.get(selectedDay.toISOString().split("T")[0]) ?? []
+    ? eventsByDay.get(toLocalDateKey(selectedDay)) ?? []
     : [];
 
   function shift(delta: number) {
@@ -135,7 +135,7 @@ export default function CalendarPage() {
         </div>
         <div className="cal-grid">
           {grid.map(({ date, inMonth }, i) => {
-            const key = date.toISOString().split("T")[0];
+            const key = toLocalDateKey(date);
             const dayEvents = eventsByDay.get(key) ?? [];
             const isToday = isSameDay(date, today);
             const isSelected = selectedDay && isSameDay(date, selectedDay);

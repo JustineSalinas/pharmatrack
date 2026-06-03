@@ -50,3 +50,38 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
   },
 });
+
+/**
+ * Parses a YYYY-MM-DD date string as LOCAL midnight, avoiding the UTC-offset
+ * bug where `new Date("YYYY-MM-DD")` is treated as UTC midnight and renders
+ * one day behind in timezones ahead of UTC (e.g. Asia/Manila = UTC+8).
+ *
+ * ✅ Correct: parseDateLocal("2026-06-03") → June 3 @ 00:00 local time
+ * ❌ Wrong:   new Date("2026-06-03")       → June 2 @ 16:00 local (UTC-8 offset)
+ */
+export function parseDateLocal(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d); // month is 0-indexed; no timezone offset applied
+}
+
+/**
+ * Formats a YYYY-MM-DD date string to a locale-aware string, correctly
+ * treating the date as local time rather than UTC.
+ */
+export function formatDateLocal(
+  dateStr: string,
+  options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" }
+): string {
+  return parseDateLocal(dateStr).toLocaleDateString("en-US", options);
+}
+
+/**
+ * Produces a YYYY-MM-DD key from a local-timezone Date object without
+ * using .toISOString() (which converts to UTC and can shift the date).
+ */
+export function toLocalDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
