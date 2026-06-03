@@ -35,7 +35,7 @@ const SECTIONS_BY_YEAR: Record<string, string[]> = {
 };
 import Link from "next/link";
 import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
-import { supabase } from "@/lib/supabase";
+import { supabase, parseDateLocal } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import type { AttendanceSummary, PharmaUser, StudentProfile, Event } from "@/lib/schema";
@@ -245,9 +245,11 @@ function StudentDashboardContent() {
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (attendanceRate / 100) * circumference;
 
-  // Compute days until event
+  // Compute days until event — use parseDateLocal so a YYYY-MM-DD date is
+  // treated as local midnight, not UTC midnight (which causes a -1 day shift
+  // in UTC+8 / Asia:Manila).
   const daysUntil = upcomingEvent
-    ? Math.ceil((new Date(upcomingEvent.date).getTime() - new Date().setHours(0,0,0,0)) / 86400000)
+    ? Math.ceil((parseDateLocal(upcomingEvent.date).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000)
     : null;
 
   return (
@@ -444,10 +446,10 @@ function StudentDashboardContent() {
               <div className="sd-event-card">
                 <div className="sd-event-date-block">
                   <span className="sd-event-month">
-                    {new Date(upcomingEvent.date).toLocaleDateString("en-US", { month: "short" })}
+                    {parseDateLocal(upcomingEvent.date).toLocaleDateString("en-US", { month: "short" })}
                   </span>
                   <span className="sd-event-day">
-                    {new Date(upcomingEvent.date).toLocaleDateString("en-US", { day: "numeric" })}
+                    {parseDateLocal(upcomingEvent.date).toLocaleDateString("en-US", { day: "numeric" })}
                   </span>
                   {daysUntil !== null && (
                     <span className="sd-event-days-pill">

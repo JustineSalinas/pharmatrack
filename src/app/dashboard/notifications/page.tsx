@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-client";
-import { supabase } from "@/lib/supabase";
+import { supabase, parseDateLocal } from "@/lib/supabase";
 import { Loader2, Bell, CheckCheck, X, Calendar, CheckCircle2, Clock, AlertCircle, Info } from "lucide-react";
 import type { NotificationItem, PharmaUser, Event, AttendanceRecord } from "@/lib/schema";
 
@@ -23,15 +23,19 @@ function formatRelativeTime(iso: string): string {
 }
 
 function buildEventNotif(event: Event): NotificationItem {
+  // Use parseDateLocal so a YYYY-MM-DD date string is treated as local midnight,
+  // not UTC midnight — which would shift the displayed date by -1 day in UTC+8.
+  const localDate = parseDateLocal(event.date);
+  const displayDate = localDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return {
     id: `event-${event.id}`,
     icon: "📅",
     type: "info",
     title: event.name,
     body: [event.description, event.location ? `📍 ${event.location}` : null].filter(Boolean).join(" — ") || `Location: ${event.location}`,
-    time: formatRelativeTime(event.date),
+    time: displayDate,
     read: false,
-    sortKey: event.date,
+    sortKey: event.created_at, // Use created_at (proper ISO timestamp) for sort ordering
   };
 }
 

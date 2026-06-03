@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, parseDateLocal } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { 
   PlusCircle, 
@@ -321,7 +321,7 @@ export default function EventsManagement() {
                          }}>{status.label}</span>
                        </div>
                        <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "var(--dimmed)", fontSize: "12px" }}>
-                         <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={12} /> {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                         <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={12} /> {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                          <span style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}><MapPin size={12} /> {event.location}</span>
                        </div>
                      </div>
