@@ -143,17 +143,30 @@ export default function EventsManagement() {
 
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("events").insert({
-          name,
-          location,
-          date,
-          check_in_start: startTS,
-          check_in_late: lateTS,
-          check_in_end: endTS,
-          created_by: user.id
+        // Fetch current session token to authenticate request
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        const res = await fetch("/api/events", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            name,
+            location,
+            date,
+            check_in_start: startTS,
+            check_in_late: lateTS,
+            check_in_end: endTS,
+          }),
         });
 
-        if (error) throw error;
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error || "Failed to create event");
+        }
       }
 
       setShowModal(false);

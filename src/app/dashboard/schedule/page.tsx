@@ -21,7 +21,14 @@ type DayKey = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 const DAY_LABELS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const DAY_INDEX_MAP: Record<number, DayKey> = { 1: "MON", 2: "TUE", 3: "WED", 4: "THU", 5: "FRI", 6: "SAT", 0: "SUN" };
 
-interface SessionBlock { subject: string; time: string; sessionId: string; }
+interface SessionBlock {
+  sessionId: string;
+  subject: string;
+  time: string;
+  type: "session" | "event";
+  location?: string;
+  sortTime: number;
+}
 
 function fmtTime(iso: string) {
   try { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
@@ -52,14 +59,7 @@ export default function SchedulePage() {
         const profile = (u as PharmaUser & { student_profiles: StudentProfile | null }).student_profiles;
         if (!profile) { setGrouped({} as Record<DayKey, SessionBlock[]>); setLoading(false); return; }
         setStudentInfo({ section: profile.section, current_year: profile.current_year });
-        const { data: raw, error: err } = await supabase
-          .from("student_schedule")
-          .select("id, subject, section, date, expires_at, created_at")
-          .eq("section", profile.section)
-          .order("date", { ascending: true });
-        if (err) { setError("Failed to load events. Please try again."); return; }
-        const sessions = (raw as unknown as QRSessionRow[]) ?? [];
-        
+
         // Compute active events of the current week (Monday to Sunday)
         const now = new Date();
         const dayOfWeek = now.getDay();
@@ -90,8 +90,29 @@ export default function SchedulePage() {
         }
         setDates(dayDatesMap);
 
+        // Fetch student schedule (QR sessions)
+        const { data: raw, error: err } = await supabase
+          .from("student_schedule")
+          .select("id, subject, section, date, expires_at, created_at")
+          .eq("section", profile.section)
+          .order("date", { ascending: true });
+        if (err) { setError("Failed to load events. Please try again."); return; }
+        const sessions = (raw as unknown as QRSessionRow[]) ?? [];
+
+        // Fetch school events starting from beginning of the current week
+        const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, "0")}-${String(startOfWeek.getDate()).padStart(2, "0")}`;
+        const { data: eventsData, error: eventsErr } = await supabase
+          .from("events")
+          .select("*")
+          .gte("date", startOfWeekStr)
+          .order("date", { ascending: true })
+          .limit(40);
+        if (eventsErr) { setError("Failed to load school events. Please try again."); return; }
+
         const byDay: Record<DayKey, SessionBlock[]> = { MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: [] } as Record<DayKey, SessionBlock[]>;
         const subjectSet = new Set<string>();
+
+        // 1. Process QR Sessions
         for (const s of sessions) {
           const [y, m, d] = (s.date as string).split("-").map(Number);
           const date = new Date(y, m - 1, d);
@@ -103,21 +124,60 @@ export default function SchedulePage() {
           if (!key || !DAY_LABELS.includes(key)) continue;
 
           subjectSet.add(s.subject);
-          byDay[key].push({ subject: s.subject, time: fmtTime(s.expires_at), sessionId: s.id });
+
+          let sortTime = 0;
+          try { sortTime = new Date(s.expires_at).getTime(); } catch {}
+
+          byDay[key].push({
+            sessionId: s.id,
+            subject: s.subject,
+            time: fmtTime(s.expires_at),
+            type: "session",
+            sortTime
+          });
         }
+
+        // 2. Process School Events
+        const eventsList = eventsData ?? [];
+        for (const ev of eventsList) {
+          const [y, m, d] = (ev.date as string).split("-").map(Number);
+          const date = new Date(y, m - 1, d);
+
+          // Filter only for current week events
+          if (date < startOfWeek || date > endOfWeek) continue;
+
+          const key = DAY_INDEX_MAP[date.getDay()];
+          if (!key || !DAY_LABELS.includes(key)) continue;
+
+          const checkInStart = new Date(ev.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const checkInEnd = new Date(ev.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const timeRange = `${checkInStart} – ${checkInEnd}`;
+
+          let sortTime = 0;
+          try { sortTime = new Date(ev.check_in_start).getTime(); } catch {}
+
+          byDay[key].push({
+            sessionId: ev.id,
+            subject: ev.name,
+            time: timeRange,
+            type: "event",
+            location: ev.location,
+            sortTime
+          });
+        }
+
+        // 3. Sort each day's events by time
+        for (const key of DAY_LABELS) {
+          byDay[key].sort((a, b) => a.sortTime - b.sortTime);
+        }
+
         setGrouped(byDay);
         setSubjects(Array.from(subjectSet));
 
-        // Retrieve upcoming school events
+        // 4. Update upcoming school events for the bottom panel (today & onwards)
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-        const { data: upcomingEventsData } = await supabase
-          .from("events")
-          .select("*")
-          .gte("date", todayStr)
-          .order("date", { ascending: true })
-          .limit(20);
-
-        if (upcomingEventsData) setUpcomingEvents(upcomingEventsData);
+        const upcoming = eventsList.filter(ev => ev.date >= todayStr).slice(0, 20);
+        setUpcomingEvents(upcoming);
 
         // Default select today
         const todayDayKey = DAY_INDEX_MAP[now.getDay()];
@@ -192,6 +252,7 @@ export default function SchedulePage() {
               const isToday = day === today;
               const isSelected = selectedDay === day;
               const dayEvents = grouped[day] ?? [];
+              const hasOnlySchoolEvent = dayEvents.length > 0 && dayEvents.every((ev) => ev.type === "event");
               return (
                 <button
                   key={day}
@@ -204,17 +265,35 @@ export default function SchedulePage() {
                   ].filter(Boolean).join(" ")}
                   onClick={() => setSelectedDay(day)}
                 >
-                  <span className="cal-cell-num" style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                  <span className="cal-cell-num" style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    width: "100%",
+                    alignItems: "center",
+                    ...(hasOnlySchoolEvent ? { color: "var(--teal)" } : {})
+                  }}>
                     <span style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.05em" }}>{day}</span>
                     <span style={{ fontSize: "11px", color: isToday ? "rgba(232, 184, 75, 0.8)" : "var(--dimmed)", fontWeight: isToday ? "600" : "normal" }}>{dates[day]}</span>
                   </span>
                   {dayEvents.length > 0 && (
                     <span className="cal-cell-events" style={{ marginTop: "4px", width: "100%" }}>
-                      {dayEvents.slice(0, 2).map((ev) => (
-                        <span key={ev.sessionId} className="cal-cell-event-pill" title={ev.subject}>
-                          {ev.subject}
-                        </span>
-                      ))}
+                      {dayEvents.slice(0, 2).map((ev) => {
+                        const isSchoolEvent = ev.type === "event";
+                        return (
+                          <span
+                            key={ev.sessionId}
+                            className="cal-cell-event-pill"
+                            style={isSchoolEvent ? {
+                              background: "rgba(45, 212, 191, 0.08)",
+                              color: "var(--teal)",
+                              border: "1px solid rgba(45, 212, 191, 0.15)",
+                            } : undefined}
+                            title={ev.subject}
+                          >
+                            {ev.subject}
+                          </span>
+                        );
+                      })}
                       {dayEvents.length > 2 && (
                         <span className="cal-cell-more">+{dayEvents.length - 2} more</span>
                       )}
@@ -249,19 +328,42 @@ export default function SchedulePage() {
             </div>
           ) : (
             <div className="cal-drawer-list">
-              {grouped[selectedDay].map((ev) => (
-                <div key={ev.sessionId} className="cal-event-card">
-                  <h4 className="cal-event-name">{ev.subject}</h4>
-                  <div className="cal-event-meta-row">
-                    <span className="cal-event-meta-item">
-                      <Clock size={12} /> {ev.time}
-                    </span>
-                    <span className="cal-event-meta-item">
-                      <MapPin size={12} /> {studentInfo?.section ?? "—"}
-                    </span>
+              {grouped[selectedDay].map((ev) => {
+                const isSchoolEvent = ev.type === "event";
+                return (
+                  <div
+                    key={ev.sessionId}
+                    className="cal-event-card"
+                    style={isSchoolEvent ? { borderLeftColor: "var(--teal)" } : undefined}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "6px" }}>
+                      <h4 className="cal-event-name">{ev.subject}</h4>
+                      <span style={{
+                        fontSize: "9px",
+                        fontWeight: "700",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        background: isSchoolEvent ? "rgba(45, 212, 191, 0.1)" : "rgba(232, 184, 75, 0.1)",
+                        color: isSchoolEvent ? "var(--teal)" : "var(--gold)",
+                        border: isSchoolEvent ? "1px solid rgba(45, 212, 191, 0.2)" : "1px solid rgba(232, 184, 75, 0.2)",
+                        flexShrink: 0,
+                      }}>
+                        {isSchoolEvent ? "School Event" : "Class Session"}
+                      </span>
+                    </div>
+                    <div className="cal-event-meta-row">
+                      <span className="cal-event-meta-item">
+                        <Clock size={12} /> {ev.time}
+                      </span>
+                      <span className="cal-event-meta-item">
+                        <MapPin size={12} /> {isSchoolEvent ? (ev.location || "—") : (studentInfo?.section ?? "—")}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
