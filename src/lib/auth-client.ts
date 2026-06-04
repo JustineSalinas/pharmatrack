@@ -52,7 +52,7 @@ export async function registerStudent(input: StudentRegisterInput) {
     email: input.email,
     full_name: input.full_name,
     account_type: "student" as AccountType,
-    status: "approved",
+    status: "pending",
   });
   if (userErr) throw new Error(userErr.message);
 
@@ -143,7 +143,7 @@ export async function completeOnboarding(
   studentData?: { studentId: string, section: string, year: string }
 ) {
   // 1. Create User Record
-  const status = role === "student" ? "approved" : "pending";
+  const status = "pending";
   const { error: userErr } = await supabase.from("users").insert({
     id: userId,
     email: email,

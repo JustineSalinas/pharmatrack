@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = authData.user.id;
-    const status = account_type === "student" ? "approved" : "pending";
+    const status = "pending";
     console.log(`[Auth API] Auth user successfully created: id=${userId}, initial status=${status}`);
 
     const { error: userInsertErr } = await supabase.from("users").insert({

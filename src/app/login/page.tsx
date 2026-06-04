@@ -19,6 +19,7 @@ function LoginForm() {
   // Pending approval state for facilitators
   const [isPendingApproval, setIsPendingApproval] = useState(false);
   const [pendingUserName, setPendingUserName] = useState("");
+  const [pendingAccountType, setPendingAccountType] = useState<"student" | "facilitator" | "admin">("student");
   const [showPassword, setShowPassword] = useState(false);
 
   // Check for verification success from email callback
@@ -26,9 +27,13 @@ function LoginForm() {
     const verified = searchParams.get("verified");
     const err = searchParams.get("error");
     const reset = searchParams.get("reset");
+    const pending = searchParams.get("pending");
 
     if (verified === "true") {
       setSuccessMsg("Email verified successfully! You can now log in.");
+    }
+    if (pending === "true") {
+      setSuccessMsg("Registration complete! Your account is pending approval by the System Administrator.");
     }
     if (reset === "success") {
       setSuccessMsg("Password updated successfully! Please log in with your new password.");
@@ -96,6 +101,7 @@ function LoginForm() {
           await logoutUser();
           setIsPendingApproval(true);
           setPendingUserName(user.full_name);
+          setPendingAccountType("facilitator");
           setLoading(false);
           return;
         }
@@ -110,12 +116,30 @@ function LoginForm() {
         return;
       }
 
-      // Student (auto-approved)
-      const redirect = searchParams.get("redirect");
-      if (redirect === "checkin") {
-        router.push("/dashboard?checkin=true");
-      } else {
-        router.push("/dashboard");
+      if (user.account_type === "student") {
+        if (user.status === "pending") {
+          await logoutUser();
+          setIsPendingApproval(true);
+          setPendingUserName(user.full_name);
+          setPendingAccountType("student");
+          setLoading(false);
+          return;
+        }
+        if (user.status === "rejected") {
+          await logoutUser();
+          setError("Your student account has been rejected by the administrator. Please contact support for more information.");
+          setLoading(false);
+          return;
+        }
+
+        // Approved Student
+        const redirect = searchParams.get("redirect");
+        if (redirect === "checkin") {
+          router.push("/dashboard?checkin=true");
+        } else {
+          router.push("/dashboard");
+        }
+        return;
       }
 
     } catch (err: any) {
@@ -165,7 +189,7 @@ function LoginForm() {
                 </div>
 
                 <p style={{ color: "var(--white)", marginBottom: "16px", lineHeight: "1.6", fontSize: "0.95rem" }}>
-                  Your Facilitator account has been created and your email is verified.
+                  Your {pendingAccountType === "student" ? "Student" : "Facilitator"} account has been created and your email is verified.
                 </p>
                 <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", marginBottom: "10px", lineHeight: "1.6" }}>
                   However, it must be <strong style={{ color: "var(--gold)" }}>approved by the System Administrator</strong> before you can access the portal.

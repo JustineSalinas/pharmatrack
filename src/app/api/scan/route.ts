@@ -65,6 +65,18 @@ export async function POST(req: NextRequest) {
   const studentId = studentProfile.user_id;
   console.log(`[Scan API] Resolved QR code ${qr_code_id} to student ${studentId}`);
 
+  // Check if student account is approved
+  const { data: studentUser } = await supabase
+    .from("users")
+    .select("status")
+    .eq("id", studentId)
+    .single();
+
+  if (!studentUser || studentUser.status !== "approved") {
+    console.warn(`[Scan API] Scan rejected: student account ${studentId} is not approved (status: ${studentUser?.status || 'none'})`);
+    return NextResponse.json({ error: "Student account is pending approval or inactive" }, { status: 400 });
+  }
+
   // ── Fetch event & validate time window ──────────────────
   const { data: event, error: evErr } = await supabase
     .from("events")
