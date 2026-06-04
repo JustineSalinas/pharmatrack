@@ -124,7 +124,7 @@ export default function ScannerPage() {
           time_in,
           time_out,
           status,
-          users (
+          users!student_id (
             full_name,
             email,
             student_profiles (

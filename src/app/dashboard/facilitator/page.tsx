@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
@@ -33,8 +33,7 @@ export default function FacilitatorOverview() {
   const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchFacilitatorData() {
+  const fetchFacilitatorData = useCallback(async () => {
       try {
         const u = await getCurrentUser();
         setUser(u);
@@ -49,14 +48,16 @@ export default function FacilitatorOverview() {
           .select("*", { count: "exact", head: true })
           .eq("account_type", "student");
 
-        // 2. Active Events Today
-        const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+        // 2. Active Events Today — use LOCAL date (not UTC) to avoid timezone drift
+        //    in UTC+8 (Philippines) where toISOString() can return yesterday's date.
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
         const { count: activeEventsCount } = await supabase
           .from("events")
           .select("*", { count: "exact", head: true })
           .eq("date", todayStr);
 
-        // 3. Scans Today & Students Absent (client-side classification from attendance_records)
+        // 3. Scans Today & Students Absent
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
         const endOfToday = new Date();
@@ -96,7 +97,7 @@ export default function FacilitatorOverview() {
             status,
             created_at,
             events ( name ),
-            users ( 
+            users!student_id ( 
               id,
               full_name,
               student_profiles ( section )
@@ -108,17 +109,17 @@ export default function FacilitatorOverview() {
         const formatted = (recentAtt || []).map((r: any) => {
           const uData = r.users as any;
           const profiles = uData?.student_profiles;
-          const section = Array.isArray(profiles) 
-            ? profiles[0]?.section 
+          const section = Array.isArray(profiles)
+            ? profiles[0]?.section
             : (profiles?.section || "N/A");
-          
+
           return {
             id: r.id,
             name: uData?.full_name || "Unknown Student",
             section: section,
             timeIn: r.time_in ? new Date(r.time_in).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
             status: r.status || "present",
-            eventName: r.events?.name || "Event"
+            eventName: r.events?.name || "Event",
           };
         });
 
@@ -129,9 +130,30 @@ export default function FacilitatorOverview() {
       } finally {
         setLoading(false);
       }
-    }
+    }, []);
+
+  // Initial load
+  useEffect(() => {
     fetchFacilitatorData();
-  }, []);
+  }, [fetchFacilitatorData]);
+
+  // ── Real-time: refresh feed + stats whenever any attendance record changes ──
+  useEffect(() => {
+    const channel = supabase
+      .channel("facilitator-dashboard-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "attendance_records" },
+        () => {
+          fetchFacilitatorData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchFacilitatorData]);
 
   if (loading) {
     return (

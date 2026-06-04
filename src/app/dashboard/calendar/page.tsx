@@ -121,7 +121,11 @@ export default function CalendarPage() {
           <button className="cal-nav-btn" onClick={() => shift(1)} aria-label="Next month">
             <ChevronRight size={16} />
           </button>
-          <button className="cal-today-btn" onClick={() => setViewMonth(startOfMonth(new Date()))}>
+          <button className="cal-today-btn" onClick={() => {
+            const now = new Date();
+            setViewMonth(startOfMonth(now));
+            setSelectedDay(now);
+          }}>
             Today
           </button>
         </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Bell, Mail, Clock, Calendar, Timer, BarChart2,
   Shield, Save, AlertTriangle, Loader2, CheckCircle,
-  UserCheck, Lock, Database, RefreshCw,
+  UserCheck, Lock, Database, RefreshCw, Eye, EyeOff, Info,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { backfillEventStatuses } from "@/lib/attendance";
@@ -18,7 +18,13 @@ type ConfigKey =
   | "qrExpiry"
   | "minAttendance"
   | "twoFactorAuth"
-  | "registrationMode";
+  | "registrationMode"
+  | "smtpHost"
+  | "smtpPort"
+  | "smtpSecure"
+  | "smtpUser"
+  | "smtpPass"
+  | "smtpFrom";
 
 type Settings = Record<ConfigKey, string>;
 
@@ -31,6 +37,12 @@ const DEFAULTS: Settings = {
   minAttendance: "75%",
   twoFactorAuth: "false",
   registrationMode: "approval",
+  smtpHost: "smtp.gmail.com",
+  smtpPort: "587",
+  smtpSecure: "false",
+  smtpUser: "",
+  smtpPass: "",
+  smtpFrom: "PharmaTrack <your-email@gmail.com>",
 };
 
 // ─── Column definitions ───────────────────────────────────
@@ -123,42 +135,91 @@ export default function AdminSettings() {
   const [error, setError] = useState<string | null>(null);
   const [tableMissing, setTableMissing] = useState(false);
 
+  // SMTP Test States & Handler
+  const [testingSmtp, setTestingSmtp] = useState(false);
+  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
+  const [isSMTPManagedByEnv, setIsSMTPManagedByEnv] = useState(false);
+
+  const handleTestSmtp = async () => {
+    setTestingSmtp(true);
+    setSmtpTestResult(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const res = await fetch("/api/admin/test-smtp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          smtpHost: settings.smtpHost,
+          smtpPort: settings.smtpPort,
+          smtpSecure: settings.smtpSecure,
+          smtpUser: settings.smtpUser,
+          smtpPass: settings.smtpPass,
+          smtpFrom: settings.smtpFrom,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSmtpTestResult({
+          success: true,
+          message: data.message || "Test email sent successfully! Check your inbox."
+        });
+      } else {
+        setSmtpTestResult({
+          success: false,
+          message: data.error || "Failed to establish SMTP connection. Please verify settings."
+        });
+      }
+    } catch (err: any) {
+      setSmtpTestResult({
+        success: false,
+        message: err.message || "An unexpected error occurred during testing."
+      });
+    } finally {
+      setTestingSmtp(false);
+    }
+  };
+
   const isDirty = JSON.stringify(settings) !== JSON.stringify(initial);
 
-  // Load from Supabase on mount
+  // Load from Secure settings API on mount
   useEffect(() => {
     async function load() {
       try {
-        const { data, error } = await supabase
-          .from("system_config")
-          .select("key, value");
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
 
-        if (error) {
-          // Table doesn't exist yet — detect by error code or message
-          if (
-            error.code === "42P01" ||
-            error.message?.toLowerCase().includes("does not exist") ||
-            error.message?.toLowerCase().includes("relation") ||
-            error.code === "PGRST116"
-          ) {
-            setTableMissing(true);
-          } else {
-            setError("Failed to load settings: " + error.message);
-          }
-          return;
+        const res = await fetch("/api/admin/settings", {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {},
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP error ${res.status}`);
         }
 
-        if (data && data.length > 0) {
-          const loaded: Partial<Settings> = {};
-          data.forEach((row: { key: string; value: string }) => {
-            loaded[row.key as ConfigKey] = row.value;
-          });
-          const merged = { ...DEFAULTS, ...loaded } as Settings;
+        const data = await res.json();
+        if (data.success && data.settings) {
+          const merged = { ...DEFAULTS, ...data.settings } as Settings;
           setSettings(merged);
           setInitial(merged);
+          setIsSMTPManagedByEnv(!!data.isSMTPManagedByEnv);
         }
       } catch (err: any) {
-        setError("Unexpected error: " + err.message);
+        if (
+          err.message?.toLowerCase().includes("relation") ||
+          err.message?.toLowerCase().includes("does not exist")
+        ) {
+          setTableMissing(true);
+        } else {
+          setError("Failed to load settings: " + err.message);
+        }
       } finally {
         setLoading(false);
       }
@@ -171,38 +232,24 @@ export default function AdminSettings() {
   };
 
   const handleSave = async () => {
-    if (tableMissing) {
-      setError("Run the system_config SQL migration in Supabase first.");
-      return;
-    }
     setSaving(true);
     setError(null);
     try {
-      const upserts = (Object.keys(settings) as ConfigKey[]).map((key) => ({
-        key,
-        value: settings[key],
-        updated_at: new Date().toISOString(),
-      }));
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-      const { error: upsertError } = await supabase
-        .from("system_config")
-        .upsert(upserts, { onConflict: "key" });
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ settings }),
+      });
 
-      if (upsertError) {
-        throw new Error(upsertError.message || JSON.stringify(upsertError));
-      }
-
-      // Verify the save actually worked by reading back one key
-      const { data: check, error: checkError } = await supabase
-        .from("system_config")
-        .select("value")
-        .eq("key", "academicPeriod")
-        .single();
-
-      if (checkError || !check) {
-        throw new Error(
-          "Save appeared to succeed but verification failed. Check RLS policies — the admin policy on system_config may not be applied yet."
-        );
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to save settings");
       }
 
       setInitial({ ...settings });
@@ -591,6 +638,266 @@ export default function AdminSettings() {
               onUpdate={update}
             />
           ))}
+
+          {/* SMTP Server Configuration */}
+          <div>
+            <h3
+              style={{
+                fontSize: "11px",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "var(--dimmed)",
+                marginBottom: "12px",
+                fontWeight: 600,
+              }}
+            >
+              Email & SMTP Server
+            </h3>
+            <div
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+                padding: "24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "20px",
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <strong style={{ fontSize: "14px", fontWeight: 500, color: "var(--white)" }}>
+                  SMTP Configurations
+                </strong>
+                <p style={{ fontSize: "12px", color: "var(--dimmed)", margin: "0", lineHeight: 1.5 }}>
+                  Configure outgoing mail server details. These settings enable automatic email notifications when events are created.
+                </p>
+                {isSMTPManagedByEnv && (
+                  <div
+                    style={{
+                      background: "rgba(34, 197, 94, 0.06)",
+                      border: "1px solid rgba(34, 197, 94, 0.2)",
+                      borderRadius: "6px",
+                      padding: "10px 14px",
+                      display: "flex",
+                      gap: "10px",
+                      alignItems: "center",
+                      marginTop: "4px",
+                    }}
+                  >
+                    <Shield size={14} color="#22c55e" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: "11px", color: "#22c55e", lineHeight: 1.45, fontWeight: 500 }}>
+                      SMTP is securely configured via server environment variables. Database overrides are disabled.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Host and Port Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    SMTP Host
+                  </label>
+                  <input
+                    type="text"
+                    className="settings-input"
+                    placeholder="e.g. smtp.gmail.com"
+                    value={settings.smtpHost || ""}
+                    onChange={(e) => update("smtpHost", e.target.value)}
+                    disabled={isSMTPManagedByEnv}
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    SMTP Port
+                  </label>
+                  <input
+                    type="text"
+                    className="settings-input"
+                    placeholder="e.g. 587"
+                    value={settings.smtpPort || ""}
+                    onChange={(e) => update("smtpPort", e.target.value)}
+                    disabled={isSMTPManagedByEnv}
+                  />
+                </div>
+              </div>
+
+              {/* Connection Security */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  Connection Security
+                </label>
+                <select
+                  className="settings-input"
+                  value={settings.smtpSecure || "false"}
+                  onChange={(e) => update("smtpSecure", e.target.value)}
+                  style={{ cursor: isSMTPManagedByEnv ? "not-allowed" : "pointer" }}
+                  disabled={isSMTPManagedByEnv}
+                >
+                  <option value="false">STARTTLS (Port 587 - Recommended for Gmail)</option>
+                  <option value="true">SSL / TLS (Port 465)</option>
+                </select>
+              </div>
+
+              {/* Username (Gmail Address) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  SMTP Username / Email Address
+                </label>
+                <input
+                  type="email"
+                  className="settings-input"
+                  placeholder="e.g. your-email@gmail.com"
+                  value={settings.smtpUser || ""}
+                  onChange={(e) => update("smtpUser", e.target.value)}
+                  disabled={isSMTPManagedByEnv}
+                />
+              </div>
+
+              {/* Password / App Password */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  SMTP Password / Gmail App Password
+                </label>
+                <div style={{ position: "relative", width: "100%" }}>
+                  <input
+                    type={showSmtpPass ? "text" : "password"}
+                    className="settings-input"
+                    placeholder="Enter SMTP password or App Password"
+                    value={settings.smtpPass || ""}
+                    onChange={(e) => update("smtpPass", e.target.value)}
+                    style={{ paddingRight: "40px" }}
+                    disabled={isSMTPManagedByEnv}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSmtpPass(!showSmtpPass)}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      color: "var(--dimmed)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 0,
+                    }}
+                  >
+                    {showSmtpPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Sender Header */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  Sender Display Name (From Header)
+                </label>
+                <input
+                  type="text"
+                  className="settings-input"
+                  placeholder='e.g. "PharmaTrack Notification" <your-email@gmail.com>'
+                  value={settings.smtpFrom || ""}
+                  onChange={(e) => update("smtpFrom", e.target.value)}
+                  disabled={isSMTPManagedByEnv}
+                />
+              </div>
+
+              {/* Helpful Gmail SMTP Setup Info */}
+              <div
+                style={{
+                  background: "rgba(212, 175, 55, 0.04)",
+                  border: "1px solid rgba(212, 175, 55, 0.15)",
+                  borderRadius: "8px",
+                  padding: "12px 14px",
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "flex-start",
+                }}
+              >
+                <Info size={14} color="var(--gold)" style={{ flexShrink: 0, marginTop: "2px" }} />
+                <div style={{ fontSize: "11px", color: "var(--dimmed)", lineHeight: 1.5 }}>
+                  <strong style={{ color: "var(--gold)", fontWeight: 600 }}>Using Gmail SMTP?</strong>
+                  <ol style={{ margin: "4px 0 0 0", paddingLeft: "16px" }}>
+                    <li>Ensure <strong>2-Step Verification</strong> is enabled on your Gmail account.</li>
+                    <li>Go to your Google Account Settings &rarr; Security &rarr; App Passwords.</li>
+                    <li>Generate a new App Password (name it <em>PharmaTrack</em>) and use that 16-character code as the SMTP password above.</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* SMTP Connection Testing Action */}
+              <div
+                style={{
+                  borderTop: "1px solid var(--border)",
+                  paddingTop: "20px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "12px", color: "var(--dimmed)" }}>
+                    Verify credentials before saving changes
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleTestSmtp}
+                    disabled={testingSmtp || !settings.smtpHost || !settings.smtpUser || !settings.smtpPass}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      height: "36px",
+                      padding: "0 16px",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--border)",
+                      background: "var(--surface2)",
+                      color: "var(--white)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: (testingSmtp || !settings.smtpHost || !settings.smtpUser || !settings.smtpPass) ? "not-allowed" : "pointer",
+                      transition: "all 0.15s ease",
+                      opacity: (testingSmtp || !settings.smtpHost || !settings.smtpUser || !settings.smtpPass) ? 0.5 : 1,
+                    }}
+                  >
+                    {testingSmtp ? (
+                      <>
+                        <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
+                        Testing Connection…
+                      </>
+                    ) : (
+                      <>
+                        <Mail size={13} />
+                        Test Connection
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* SMTP Test Result Banner */}
+                {smtpTestResult && (
+                  <div
+                    style={{
+                      background: smtpTestResult.success ? "rgba(74, 222, 128, 0.06)" : "rgba(248, 113, 113, 0.06)",
+                      border: smtpTestResult.success ? "1px solid rgba(74, 222, 128, 0.2)" : "1px solid rgba(248, 113, 113, 0.2)",
+                      borderRadius: "6px",
+                      padding: "10px 14px",
+                      fontSize: "12px",
+                      color: smtpTestResult.success ? "#4ade80" : "#f87171",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {smtpTestResult.message}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -627,6 +934,13 @@ export default function AdminSettings() {
         .settings-input:focus {
           border-color: var(--gold);
           box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.12);
+        }
+        .settings-input:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          background: var(--surface);
+          border-color: var(--border);
+          color: var(--dimmed);
         }
       `}</style>
     </div>
