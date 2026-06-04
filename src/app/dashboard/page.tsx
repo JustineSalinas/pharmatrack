@@ -18,14 +18,10 @@ import {
   Award,
   Zap,
   X,
-  Loader2,
-  QrCode,
-  Scan,
   Info,
-  CheckCircle2,
   History,
 } from "lucide-react";
-import Scanner from "@/components/Scanner";
+
 
 const SECTIONS_BY_YEAR: Record<string, string[]> = {
   "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
@@ -45,7 +41,9 @@ function StudentDashboardContent() {
   const [user, setUser] = useState<(PharmaUser & { student_profiles: StudentProfile | null }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AttendanceSummary | null>(null);
-  const [upcomingEvent, setUpcomingEvent] = useState<Event | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [showAllEvents, setShowAllEvents] = useState(false);
+  const EVENTS_PREVIEW = 4;
   const [isRepairing, setIsRepairing] = useState(false);
   const qrWrapRef = useRef<HTMLDivElement>(null);
   const [showRepairModal, setShowRepairModal] = useState(false);
@@ -55,13 +53,9 @@ function StudentDashboardContent() {
   const [repairError, setRepairError] = useState("");
   const router = useRouter();
 
-  // Check-In Modal state
+  // Check-In Modal state — students can only present their QR ID.
+  // Scanning is restricted to Facilitators only.
   const [showCheckInModal, setShowCheckInModal] = useState(false);
-  const [checkInMode, setCheckInMode] = useState<"present" | "scan">("present");
-  const [checkInLoading, setCheckInLoading] = useState(false);
-  const [checkInScanSuccess, setCheckInScanSuccess] = useState(false);
-  const [checkInTime, setCheckInTime] = useState("");
-  const [checkInError, setCheckInError] = useState("");
   const modalQrWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -95,10 +89,9 @@ function StudentDashboardContent() {
             .select("*")
             .gte("date", today)
             .order("date", { ascending: true })
-            .limit(1)
-            .single();
+            .limit(8);
 
-          if (upcoming) setUpcomingEvent(upcoming);
+          if (upcoming) setUpcomingEvents(upcoming);
         }
       } catch (err) {
         console.error("Error loading student dashboard", err);
@@ -162,11 +155,6 @@ function StudentDashboardContent() {
   }
 
   const openCheckInModal = () => {
-    setCheckInMode("present");
-    setCheckInScanSuccess(false);
-    setCheckInLoading(false);
-    setCheckInTime("");
-    setCheckInError("");
     setShowCheckInModal(true);
   };
 
@@ -196,34 +184,7 @@ function StudentDashboardContent() {
     return null;
   }
 
-  const handleScanSuccess = async (code: string) => {
-    if (!user) return;
-    try {
-      setCheckInLoading(true);
-      
-      const { data: rpcRes, error: attErr } = await supabase.rpc("check_in_student", {
-        session_code: code
-      });
-      if (attErr) throw attErr;
 
-      // Update attendance summary stats immediately
-      const { data: updatedStats } = await supabase
-        .from("student_attendance_summary")
-        .select("*")
-        .eq("student_id", user.id)
-        .single();
-      if (updatedStats) setStats(updatedStats);
-
-      const now = new Date();
-      setCheckInTime(now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
-      setCheckInError("");
-      setCheckInScanSuccess(true);
-    } catch (err: any) {
-      setCheckInError(err.message || "Attendance check-in failed. Please try again.");
-    } finally {
-      setCheckInLoading(false);
-    }
-  };
 
   if (loading) return <DashboardSkeleton />;
 
@@ -249,12 +210,14 @@ function StudentDashboardContent() {
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (attendanceRate / 100) * circumference;
 
-  // Compute days until event — use parseDateLocal so a YYYY-MM-DD date is
-  // treated as local midnight, not UTC midnight (which causes a -1 day shift
-  // in UTC+8 / Asia:Manila).
-  const daysUntil = upcomingEvent
-    ? Math.ceil((parseDateLocal(upcomingEvent.date).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000)
-    : null;
+  // Helper: compute days until an event date (local-aware).
+  function daysUntilEvent(dateStr: string): number {
+    return Math.ceil(
+      (parseDateLocal(dateStr).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000
+    );
+  }
+
+  const visibleEvents = showAllEvents ? upcomingEvents : upcomingEvents.slice(0, EVENTS_PREVIEW);
 
   return (
     <div className="fade-in sd-root">
@@ -434,49 +397,94 @@ function StudentDashboardContent() {
         {/* COL B: Upcoming Event + Quick Links */}
         <div className="sd-right-col">
 
-          {/* Upcoming Event */}
+          {/* Upcoming Events */}
           <div className="sd-event-panel">
             <div className="sd-event-panel-header">
               <div>
                 <p className="sd-panel-label">Up Next</p>
-                <h2 className="sd-panel-title">Upcoming Activity</h2>
+                <h2 className="sd-panel-title">Upcoming Activities</h2>
               </div>
               <Link href="/dashboard/schedule" className="sd-see-all">
                 See all <ChevronRight size={13} />
               </Link>
             </div>
 
-            {upcomingEvent ? (
-              <div className="sd-event-card">
-                <div className="sd-event-date-block">
-                  <span className="sd-event-month">
-                    {parseDateLocal(upcomingEvent.date).toLocaleDateString("en-US", { month: "short" })}
-                  </span>
-                  <span className="sd-event-day">
-                    {parseDateLocal(upcomingEvent.date).toLocaleDateString("en-US", { day: "numeric" })}
-                  </span>
-                  {daysUntil !== null && (
-                    <span className="sd-event-days-pill">
-                      {daysUntil === 0 ? "Today" : daysUntil === 1 ? "Tomorrow" : `In ${daysUntil}d`}
-                    </span>
-                  )}
+            {upcomingEvents.length > 0 ? (
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {visibleEvents.map((event) => {
+                    const days = daysUntilEvent(event.date);
+                    return (
+                      <div key={event.id} className="sd-event-card" style={{ padding: "10px 12px" }}>
+                        <div className="sd-event-date-block" style={{ minWidth: "44px" }}>
+                          <span className="sd-event-month">
+                            {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short" })}
+                          </span>
+                          <span className="sd-event-day">
+                            {parseDateLocal(event.date).toLocaleDateString("en-US", { day: "numeric" })}
+                          </span>
+                          <span className="sd-event-days-pill" style={{
+                            fontSize: "9px",
+                            padding: "2px 5px",
+                            background: days === 0 ? "rgba(74,222,128,0.15)" : days === 1 ? "rgba(232,184,75,0.15)" : "rgba(255,255,255,0.06)",
+                            color: days === 0 ? "var(--success)" : days === 1 ? "var(--gold)" : "var(--dimmed)",
+                            border: days === 0 ? "1px solid rgba(74,222,128,0.25)" : days === 1 ? "1px solid rgba(232,184,75,0.25)" : "1px solid rgba(255,255,255,0.08)",
+                          }}>
+                            {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days}d`}
+                          </span>
+                        </div>
+                        <div className="sd-event-detail">
+                          <h3 className="sd-event-name" style={{ fontSize: "13px", marginBottom: "4px" }}>{event.name}</h3>
+                          <div className="sd-event-meta">
+                            <span className="sd-event-meta-item">
+                              <Clock size={11} />
+                              {new Date(event.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              {" – "}
+                              {new Date(event.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            <span className="sd-event-meta-item">
+                              <MapPin size={11} />
+                              {event.location}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="sd-event-detail">
-                  <h3 className="sd-event-name">{upcomingEvent.name}</h3>
-                  <div className="sd-event-meta">
-                    <span className="sd-event-meta-item">
-                      <Clock size={12} />
-                      {new Date(upcomingEvent.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      {" – "}
-                      {new Date(upcomingEvent.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                    <span className="sd-event-meta-item">
-                      <MapPin size={12} />
-                      {upcomingEvent.location}
-                    </span>
-                  </div>
-                </div>
-              </div>
+
+                {upcomingEvents.length > EVENTS_PREVIEW && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllEvents(!showAllEvents)}
+                    style={{
+                      marginTop: "10px",
+                      width: "100%",
+                      padding: "8px",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-sm)",
+                      color: "var(--gold)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(232,184,75,0.06)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  >
+                    {showAllEvents ? (
+                      <><ChevronRight size={13} style={{ transform: "rotate(-90deg)" }} /> Show Less</>
+                    ) : (
+                      <><ChevronRight size={13} style={{ transform: "rotate(90deg)" }} /> See {upcomingEvents.length - EVENTS_PREVIEW} More Event{upcomingEvents.length - EVENTS_PREVIEW > 1 ? "s" : ""}</>
+                    )}
+                  </button>
+                )}
+              </>
             ) : (
               <div className="sd-event-empty">
                 <Calendar size={28} color="var(--dimmed)" />
@@ -808,121 +816,48 @@ function StudentDashboardContent() {
             </button>
 
             <div className="sd-modal-header" style={{ marginBottom: "20px" }}>
-              <h2 className="checkin-modal-title">Attendance Check-In</h2>
+              <h2 className="checkin-modal-title">Present Your ID</h2>
               <p className="checkin-modal-sub">
-                Scan the event code or present your student ID pass.
+                Show your QR code to a Facilitator to be scanned for attendance.
               </p>
             </div>
 
-            {/* Mode Toggle */}
-            <div className="checkin-mode-toggle">
-              <button
-                type="button"
-                className={`checkin-mode-btn ${checkInMode === "present" ? "active" : ""}`}
-                onClick={() => { setCheckInMode("present"); setCheckInScanSuccess(false); setCheckInError(""); }}
-              >
-                <QrCode size={15} /> Present My ID
-              </button>
-              <button
-                type="button"
-                className={`checkin-mode-btn ${checkInMode === "scan" ? "active" : ""}`}
-                onClick={() => setCheckInMode("scan")}
-              >
-                <Scan size={15} /> Scan Event Code
-              </button>
-            </div>
-
-            {/* Main Panel Content */}
+            {/* QR Display — present-only mode for students */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-              {checkInMode === "present" ? (
-                <div className="sp-present-panel" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", width: "100%" }}>
-                  {qrCodeValue !== "NOT-FOUND" ? (
-                    <>
-                      <div className="sp-qr-wrapper" ref={modalQrWrapRef} style={{ background: "#fff", padding: "24px", borderRadius: "20px", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 16px 48px rgba(0, 0, 0, 0.3), 0 0 24px rgba(232, 184, 75, 0.1)" }}>
-                        <QRCodeSVG value={qrCodeValue} size={200} level="H" includeMargin={false} />
-                      </div>
-                      <p className="checkin-qr-code-label">{qrCodeValue}</p>
-                      <p className="checkin-qr-instruction">
-                        Present this to a Council Admin or Facilitator for scanning
-                      </p>
-                      <button
-                        type="button"
-                        className="checkin-qr-download-btn"
-                        onClick={() => downloadQRPng(modalQrWrapRef.current, `PharmaTrack_${qrCodeValue}.png`).catch((e) => alert("Download failed: " + e.message))}
-                      >
-                        <DownloadIcon size={12} /> Download QR
-                      </button>
-                      <div className="checkin-qr-hint-row">
-                        <Info size={12} />
-                        Keep screen brightness high for best scan results
-                      </div>
-                    </>
-                  ) : (
-                    <div className="sp-qr-error-state" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                      <div className="sp-error-icon-wrap" style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(248, 113, 113, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
-                        <AlertCircle size={28} color="var(--danger)" />
-                      </div>
-                      <h3 className="sp-error-title" style={{ fontSize: "16px", fontWeight: "700", color: "var(--white)", marginBottom: "8px" }}>QR Code Unavailable</h3>
-                      <p className="sp-error-body" style={{ fontSize: "13px", color: "var(--muted)" }}>
-                        We couldn't link a student profile to your account.
-                      </p>
+              <div className="sp-present-panel" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", width: "100%" }}>
+                {qrCodeValue !== "NOT-FOUND" ? (
+                  <>
+                    <div className="sp-qr-wrapper" ref={modalQrWrapRef} style={{ background: "#fff", padding: "24px", borderRadius: "20px", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 16px 48px rgba(0, 0, 0, 0.3), 0 0 24px rgba(232, 184, 75, 0.1)" }}>
+                      <QRCodeSVG value={qrCodeValue} size={200} level="H" includeMargin={false} />
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="sp-scan-panel" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-                  {!checkInScanSuccess ? (
-                    <>
-                      {checkInLoading ? (
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px" }}>
-                          <Loader2 className="sp-spinner" size={32} style={{ marginBottom: "12px", color: "#E8B84B" }} />
-                          <span className="checkin-processing-text">Processing attendance...</span>
-                        </div>
-                      ) : (
-                        <>
-                          {checkInError && (
-                            <div style={{ width: "100%", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: "10px", padding: "10px 14px", marginBottom: "14px", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#fca5a5" }}>
-                              <AlertCircle size={14} style={{ flexShrink: 0 }} />
-                              {checkInError}
-                            </div>
-                          )}
-                          <div className="sp-scanner-frame" style={{ width: "100%", maxWidth: "320px", aspectRatio: 1, border: "2px solid var(--gold-dim)", borderRadius: "16px", overflow: "hidden", marginBottom: "16px" }}>
-                            <Scanner onSuccess={handleScanSuccess} />
-                          </div>
-                          <p className="checkin-scan-hint">
-                            <Info size={13} /> Center the event QR code in the viewport
-                          </p>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <div className="sp-success-state fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "10px 0" }}>
-                      <div className="sp-success-icon" style={{ marginBottom: "16px" }}>
-                        <CheckCircle2 size={40} color="var(--success)" />
-                      </div>
-                      <h3 className="checkin-success-title">Attendance Recorded!</h3>
-                      <p className="checkin-success-body">
-                        Your check-in was confirmed at <span className="sp-success-time" style={{ color: "#E8B84B", fontWeight: "600" }}>{checkInTime}</span>
-                      </p>
-                      <div className="sp-success-actions" style={{ display: "flex", gap: "12px", width: "100%" }}>
-                        <button className="sp-rescan-btn" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "10px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", cursor: "pointer", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--white-shade)" }} onClick={() => setCheckInScanSuccess(false)}>
-                          <Scan size={14} /> Scan Another
-                        </button>
-                        <button
-                          className="sp-history-btn"
-                          style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "10px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", cursor: "pointer", background: "#E8B84B", border: "1px solid #E8B84B", color: "#000" }}
-                          onClick={() => {
-                            closeCheckInModal();
-                            router.push("/dashboard/records");
-                          }}
-                        >
-                          View Records
-                        </button>
-                      </div>
+                    <p className="checkin-qr-code-label">{qrCodeValue}</p>
+                    <p className="checkin-qr-instruction">
+                      Present this to a Council Admin or Facilitator for scanning
+                    </p>
+                    <button
+                      type="button"
+                      className="checkin-qr-download-btn"
+                      onClick={() => downloadQRPng(modalQrWrapRef.current, `PharmaTrack_${qrCodeValue}.png`).catch((e) => alert("Download failed: " + e.message))}
+                    >
+                      <DownloadIcon size={12} /> Download QR
+                    </button>
+                    <div className="checkin-qr-hint-row">
+                      <Info size={12} />
+                      Keep screen brightness high for best scan results
                     </div>
-                  )}
-                </div>
-              )}
+                  </>
+                ) : (
+                  <div className="sp-qr-error-state" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <div className="sp-error-icon-wrap" style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(248, 113, 113, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                      <AlertCircle size={28} color="var(--danger)" />
+                    </div>
+                    <h3 className="sp-error-title" style={{ fontSize: "16px", fontWeight: "700", color: "var(--white)", marginBottom: "8px" }}>QR Code Unavailable</h3>
+                    <p className="sp-error-body" style={{ fontSize: "13px", color: "var(--muted)" }}>
+                      We couldn't link a student profile to your account.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
