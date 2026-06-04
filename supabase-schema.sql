@@ -412,3 +412,45 @@ grant select on public.student_schedule to authenticated;
 -- ============================================================
 -- TO BE RUN MANUALLY: 
 -- update public.users set account_type = 'admin', status = 'approved' where email = 'your-admin@email.com';
+
+-- ============================================================
+-- SYSTEM CONFIGURATION
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.system_config (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admin manages config" ON public.system_config;
+DROP POLICY IF EXISTS "Allow authenticated read of non-sensitive config" ON public.system_config;
+
+-- Allow authenticated users to read non-sensitive configurations (e.g. late threshold, qr session expiry default)
+CREATE POLICY "Allow authenticated read of non-sensitive config" ON public.system_config
+  FOR SELECT TO authenticated
+  USING (key NOT IN ('smtpHost', 'smtpPort', 'smtpSecure', 'smtpUser', 'smtpPass', 'smtpFrom'));
+
+-- Allow admins to manage all config (routed through secure server-side settings endpoint)
+CREATE POLICY "Admin manages config" ON public.system_config
+  FOR ALL USING (public.is_admin());
+
+-- Seed default values (safe to re-run — ON CONFLICT DO NOTHING)
+INSERT INTO public.system_config (key, value) VALUES
+  ('absenceNotifications', 'true'),
+  ('weeklyReports',        'true'),
+  ('lateThreshold',        '7:35 AM'),
+  ('academicPeriod',       '2025–2026 · 2nd Semester'),
+  ('qrExpiry',             '10 min'),
+  ('minAttendance',        '75%'),
+  ('twoFactorAuth',        'false'),
+  ('registrationMode',     'approval'),
+  ('smtpHost',             'smtp.gmail.com'),
+  ('smtpPort',             '587'),
+  ('smtpSecure',           'false'),
+  ('smtpUser',             ''),
+  ('smtpPass',             ''),
+  ('smtpFrom',             'PharmaTrack <your-email@gmail.com>')
+ON CONFLICT (key) DO NOTHING;
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { downloadQRPng } from "@/lib/downloadQR";
 import {
@@ -58,6 +58,16 @@ function StudentDashboardContent() {
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const modalQrWrapRef = useRef<HTMLDivElement>(null);
 
+  // Fetch only the attendance stats (used on initial load and realtime refresh)
+  const fetchStats = useCallback(async (studentId: string) => {
+    const { data } = await supabase
+      .from("student_attendance_summary")
+      .select("*")
+      .eq("student_id", studentId)
+      .single();
+    setStats(data);
+  }, []);
+
   useEffect(() => {
     async function loadDashboard() {
       try {
@@ -72,12 +82,7 @@ function StudentDashboardContent() {
         setUser(u);
 
         if (u.account_type === "student") {
-          const { data } = await supabase
-            .from("student_attendance_summary")
-            .select("*")
-            .eq("student_id", u.id)
-            .single();
-          setStats(data);
+          await fetchStats(u.id);
 
           // Use local date (not UTC) so that the filter matches correctly in
           // Asia/Manila (UTC+8). new Date().toISOString() returns the UTC date,
@@ -100,7 +105,33 @@ function StudentDashboardContent() {
       }
     }
     loadDashboard();
-  }, [router]);
+  }, [router, fetchStats]);
+
+  // ── Real-time: re-fetch stats whenever THIS student's attendance changes ──
+  // Triggers on scan check-in AND check-out so the donut + tiles stay live.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`student-stats-rt-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "attendance_records",
+          filter: `student_id=eq.${user.id}`,
+        },
+        () => {
+          fetchStats(user.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchStats]);
 
   useEffect(() => {
     if (searchParams.get("checkin") === "true") {

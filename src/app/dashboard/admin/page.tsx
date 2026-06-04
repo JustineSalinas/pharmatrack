@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { 
   Search, 
@@ -32,84 +32,103 @@ export default function AdminDashboard() {
   const [showNotifs, setShowNotifs] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    async function fetchDashboard() {
-      try {
-        const u = await getCurrentUser();
-        if (!u) {
-          // Let root DashboardLayout handle redirect to login to avoid hydration race conditions
-          return;
+  const fetchDashboard = useCallback(async (silent = false) => {
+    try {
+      const u = await getCurrentUser();
+      if (!u) return;
+      if (u.account_type !== "admin") {
+        if (u.account_type === "facilitator") {
+          router.push("/dashboard/facilitator");
+        } else {
+          router.push("/dashboard");
         }
-        if (u.account_type !== "admin") {
-          if (u.account_type === "facilitator") {
-            router.push("/dashboard/facilitator");
-          } else {
-            router.push("/dashboard");
-          }
-          return;
-        }
-
-        // Silently auto-mark Absent / Incomplete for past events (throttled
-        // to once per hour per browser so it doesn't run on every page load).
-        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatuses).catch(() => {});
-
-        // Total Students
-        const { count: studentCount } = await supabase
-          .from("users")
-          .select("*", { count: "exact", head: true })
-          .eq("account_type", "student");
-
-        // Total Facilitators (all, approved or not)
-        const { count: facilitatorCount } = await supabase
-          .from("users")
-          .select("*", { count: "exact", head: true })
-          .eq("account_type", "facilitator");
-
-        // Pending Approvals (facilitators not yet approved)
-        const { count: pendingCount } = await supabase
-          .from("users")
-          .select("*", { count: "exact", head: true })
-          .eq("account_type", "facilitator")
-          .eq("status", "pending");
-
-        // Attendance Rate
-        const { data: allAtt } = await supabase
-          .from("attendance_records")
-          .select("id, created_at, status");
-
-        let presentLateCount = 0;
-        let totalLogs = 0;
-        if (allAtt && allAtt.length > 0) {
-          totalLogs = allAtt.length;
-          allAtt.forEach(att => {
-            if (att.status === "present" || att.status === "late") presentLateCount++;
-          });
-        }
-        const rate = totalLogs > 0 ? parseFloat(((presentLateCount / totalLogs) * 100).toFixed(1)) : 0;
-
-        setStats({
-          totalStudents: studentCount || 0,
-          totalFacilitators: facilitatorCount || 0,
-          pendingApprovals: pendingCount || 0,
-          attendanceRate: rate,
-        });
-
-        // Live Activity Feed
-        const { data: recentAtt } = await supabase
-          .from("attendance_records")
-          .select(`id, time_in, status, events ( name ), users ( full_name )`)
-          .order("created_at", { ascending: false })
-          .limit(8);
-
-        setRecentScans(recentAtt || []);
-      } catch (err) {
-        console.error("Dashboard error", err);
-      } finally {
-        setLoading(false);
+        return;
       }
+
+      // Silently auto-mark Absent / Incomplete for past events (throttled
+      // to once per hour per browser so it doesn't run on every page load).
+      if (!silent) {
+        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatuses).catch(() => {});
+      }
+
+      // Total Students
+      const { count: studentCount } = await supabase
+        .from("users")
+        .select("*", { count: "exact", head: true })
+        .eq("account_type", "student");
+
+      // Total Facilitators (all, approved or not)
+      const { count: facilitatorCount } = await supabase
+        .from("users")
+        .select("*", { count: "exact", head: true })
+        .eq("account_type", "facilitator");
+
+      // Pending Approvals (facilitators not yet approved)
+      const { count: pendingCount } = await supabase
+        .from("users")
+        .select("*", { count: "exact", head: true })
+        .eq("account_type", "facilitator")
+        .eq("status", "pending");
+
+      // Attendance Rate
+      const { data: allAtt } = await supabase
+        .from("attendance_records")
+        .select("id, created_at, status");
+
+      let presentLateCount = 0;
+      let totalLogs = 0;
+      if (allAtt && allAtt.length > 0) {
+        totalLogs = allAtt.length;
+        allAtt.forEach(att => {
+          if (att.status === "present" || att.status === "late") presentLateCount++;
+        });
+      }
+      const rate = totalLogs > 0 ? parseFloat(((presentLateCount / totalLogs) * 100).toFixed(1)) : 0;
+
+      setStats({
+        totalStudents: studentCount || 0,
+        totalFacilitators: facilitatorCount || 0,
+        pendingApprovals: pendingCount || 0,
+        attendanceRate: rate,
+      });
+
+      // Live Activity Feed — join events so event name shows correctly
+      const { data: recentAtt } = await supabase
+        .from("attendance_records")
+        .select(`id, time_in, status, events ( name ), users!student_id ( full_name )`)
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      setRecentScans(recentAtt || []);
+    } catch (err) {
+      console.error("Dashboard error", err);
+    } finally {
+      setLoading(false);
     }
-    fetchDashboard();
   }, [router]);
+
+  // Initial load
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  // ── Real-time: refresh feed + stats whenever any attendance record changes ──
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-dashboard-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "attendance_records" },
+        () => {
+          fetchDashboard(true); // silent — don't reset loading state
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchDashboard]);
 
   if (loading) {
     return (

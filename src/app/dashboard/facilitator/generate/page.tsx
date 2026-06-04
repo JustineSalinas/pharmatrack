@@ -176,7 +176,7 @@ export default function QRGeneratorPage() {
           id,
           time_in,
           status,
-          users (
+          users!student_id (
             full_name,
             student_profiles (
               student_id_number
