@@ -1,8 +1,6 @@
 import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
-import { createClient } from "@supabase/supabase-js";
-
 export interface EventBroadcastInput {
   name: string;
   location: string;
@@ -13,9 +11,8 @@ export interface EventBroadcastInput {
   recipients: Array<{ email: string; full_name: string }>;
 }
 
-// Helper to fetch SMTP config from DB with env fallback
+// Helper to fetch SMTP config from environment variables
 export async function getSMTPConfig() {
-  // 1. Read environment variables first
   const envHost = process.env.SMTP_HOST;
   const envPort = process.env.SMTP_PORT || "587";
   const envSecure = process.env.SMTP_SECURE || "false";
@@ -23,73 +20,17 @@ export async function getSMTPConfig() {
   const envPass = process.env.SMTP_PASS;
   const envFrom = process.env.SMTP_FROM || "";
 
-  // Check if standard credentials are fully configured in the environment
-  const isManagedByEnv = !!(envHost && envUser && envPass);
-
-  if (isManagedByEnv) {
-    return {
-      host: envHost,
-      port: Number(envPort),
-      secure: envSecure === "true",
-      user: envUser,
-      pass: envPass,
-      from: envFrom || (envUser ? `"PharmaTrack" <${envUser}>` : ""),
-      isSMTPConfigured: true,
-      isManagedByEnv: true,
-    };
-  }
-
-  // 2. If not fully set in the environment, read from system_config DB table as fallback
-  let host = "";
-  let port = "587";
-  let secure = "false";
-  let user = "";
-  let pass = "";
-  let from = "";
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (supabaseUrl && serviceKey) {
-    try {
-      const supabase = createClient(supabaseUrl, serviceKey);
-      const { data, error } = await supabase
-        .from("system_config")
-        .select("key, value")
-        .in("key", ["smtpHost", "smtpPort", "smtpSecure", "smtpUser", "smtpPass", "smtpFrom"]);
-
-      if (!error && data && data.length > 0) {
-        const configMap = new Map(data.map((item) => [item.key, item.value]));
-        
-        host = configMap.get("smtpHost") || "";
-        port = configMap.get("smtpPort") || "587";
-        secure = configMap.get("smtpSecure") || "false";
-        user = configMap.get("smtpUser") || "";
-        pass = configMap.get("smtpPass") || "";
-        from = configMap.get("smtpFrom") || "";
-      }
-    } catch (err: any) {
-      console.error("[Email Service] Database lookup failed:", err.message);
-    }
-  }
-
-  // Fallback to whatever env values exist (even partials) if database lacks settings
-  const finalHost = host || envHost || "";
-  const finalPort = port || envPort || "587";
-  const finalSecure = secure || envSecure || "false";
-  const finalUser = user || envUser || "";
-  const finalPass = pass || envPass || "";
-  const finalFrom = from || envFrom || "";
+  const isSMTPConfigured = !!(envHost && envUser && envPass);
 
   return {
-    host: finalHost,
-    port: Number(finalPort),
-    secure: finalSecure === "true",
-    user: finalUser,
-    pass: finalPass,
-    from: finalFrom || (finalUser ? `"PharmaTrack" <${finalUser}>` : ""),
-    isSMTPConfigured: !!(finalHost && finalUser && finalPass),
-    isManagedByEnv: false,
+    host: envHost || "",
+    port: Number(envPort),
+    secure: envSecure === "true",
+    user: envUser || "",
+    pass: envPass || "",
+    from: envFrom || (envUser ? `"PharmaTrack" <${envUser}>` : ""),
+    isSMTPConfigured,
+    isManagedByEnv: true,
   };
 }
 

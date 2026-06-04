@@ -38,65 +38,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden: Admins only" }, { status: 403 });
     }
 
-    // 3. Parse and validate SMTP payload
-    let body: any;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    // 3. Load SMTP settings from server configuration (Option 1: environment variables only)
+    const config = await getSMTPConfig();
+    if (!config.isSMTPConfigured) {
+      return NextResponse.json({ error: "SMTP is not configured on the server. Please define SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables." }, { status: 400 });
     }
 
-    const { smtpHost, smtpPort, smtpSecure, smtpUser, smtpPass, smtpFrom } = body;
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
-      return NextResponse.json({ error: "Missing required SMTP connection parameters" }, { status: 400 });
-    }
-
-    let hostToTest = smtpHost;
-    let portToTest = Number(smtpPort);
-    let secureToTest = smtpSecure === "true" || smtpSecure === true;
-    let userToTest = smtpUser;
-    let passToTest = smtpPass;
-    let fromToTest = smtpFrom;
-
-    // Resolve masked password on the server
-    if (passToTest === "••••••••") {
-      const activeConfig = await getSMTPConfig();
-      if (activeConfig.isSMTPConfigured) {
-        passToTest = activeConfig.pass;
-        // Fallback other values if they match active config user/host
-        if (userToTest === activeConfig.user || !userToTest) {
-          userToTest = activeConfig.user;
-        }
-        if (hostToTest === activeConfig.host || !hostToTest) {
-          hostToTest = activeConfig.host;
-        }
-        if (Number(smtpPort) === activeConfig.port || !smtpPort) {
-          portToTest = activeConfig.port;
-        }
-        if ((smtpSecure === "true" || smtpSecure === true) === activeConfig.secure || smtpSecure === undefined) {
-          secureToTest = activeConfig.secure;
-        }
-        if (!fromToTest) {
-          fromToTest = activeConfig.from;
-        }
-      } else {
-        return NextResponse.json({ error: "SMTP is not configured on the server yet" }, { status: 400 });
-      }
-    }
-
-    console.log(`[TestSMTP API] Admin ${caller.email} testing SMTP connection at ${hostToTest}:${portToTest} (Secure: ${secureToTest})`);
+    console.log(`[TestSMTP API] Admin ${caller.email} testing server SMTP connection to ${config.host}:${config.port}`);
 
     // 4. Configure nodemailer transporter
     const transporter = nodemailer.createTransport({
-      host: hostToTest,
-      port: portToTest,
-      secure: secureToTest,
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
       auth: {
-        user: userToTest,
-        pass: passToTest,
+        user: config.user,
+        pass: config.pass,
       },
       tls: {
-        rejectUnauthorized: false, // ensures high compatibility with common networks
+        rejectUnauthorized: false,
       },
     });
 
@@ -113,7 +73,7 @@ export async function POST(req: NextRequest) {
 
     // 5. Send a styled test HTML email to the administrator
     const testMailOptions = {
-      from: fromToTest || `"PharmaTrack" <${userToTest}>`,
+      from: config.from,
       to: callerProfile.email,
       subject: "PharmaTrack: SMTP Connection Test Successful",
       html: `
@@ -129,7 +89,7 @@ export async function POST(req: NextRequest) {
           
           <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 4px; color: #14532d;">
             <strong style="display: block; font-size: 15px; margin-bottom: 4px;">✓ Connection Verified!</strong>
-            The server successfully connected to <strong>${hostToTest}:${portToTest}</strong> and completed authentication for user <strong>${userToTest}</strong>.
+            The server successfully connected to <strong>${config.host}:${config.port}</strong> and completed authentication for user <strong>${config.user}</strong>.
           </div>
 
           <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;">
@@ -139,15 +99,15 @@ export async function POST(req: NextRequest) {
             </tr>
             <tr style="border-bottom: 1px solid #eaeaea;">
               <td style="padding: 8px 0; color: #666666;">Mail Server / Host:</td>
-              <td style="padding: 8px 0; color: #1e1432;">${hostToTest}</td>
+              <td style="padding: 8px 0; color: #1e1432;">${config.host}</td>
             </tr>
             <tr style="border-bottom: 1px solid #eaeaea;">
               <td style="padding: 8px 0; color: #666666;">Secure SSL/TLS:</td>
-              <td style="padding: 8px 0; color: #1e1432;">${secureToTest ? "Yes (SSL/TLS)" : "No (STARTTLS)"}</td>
+              <td style="padding: 8px 0; color: #1e1432;">${config.secure ? "Yes (SSL/TLS)" : "No (STARTTLS)"}</td>
             </tr>
             <tr style="border-bottom: 1px solid #eaeaea;">
               <td style="padding: 8px 0; color: #666666;">Sender Display:</td>
-              <td style="padding: 8px 0; color: #1e1432;">${fromToTest || userToTest}</td>
+              <td style="padding: 8px 0; color: #1e1432;">${config.from}</td>
             </tr>
           </table>
           

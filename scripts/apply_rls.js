@@ -27,16 +27,18 @@ async function main() {
       DROP POLICY IF EXISTS "Allow public read of non-sensitive config" ON public.system_config;
       DROP POLICY IF EXISTS "Allow authenticated read of non-sensitive config" ON public.system_config;
 
-      -- 2. Allow authenticated users to read non-sensitive configurations (fixes facilitator QR expiry default load)
+      -- 2. Allow authenticated users to read configurations
       CREATE POLICY "Allow authenticated read of non-sensitive config" ON public.system_config
         FOR SELECT TO authenticated
-        USING (key NOT IN ('smtpHost', 'smtpPort', 'smtpSecure', 'smtpUser', 'smtpPass', 'smtpFrom'));
+        USING (true);
 
       -- 3. Re-create admin all-access policy
       CREATE POLICY "Admin manages config" ON public.system_config
         FOR ALL USING (public.is_admin());
-        
-      console.log('RLS policies updated successfully!');
+
+      -- 4. Purge legacy SMTP configurations
+      DELETE FROM public.system_config 
+        WHERE key IN ('smtpHost', 'smtpPort', 'smtpSecure', 'smtpUser', 'smtpPass', 'smtpFrom');
     `;
 
     // We split statements or run them as a transaction
@@ -49,12 +51,18 @@ async function main() {
     await client.query(`
       CREATE POLICY "Allow authenticated read of non-sensitive config" ON public.system_config
         FOR SELECT TO authenticated
-        USING (key NOT IN ('smtpHost', 'smtpPort', 'smtpSecure', 'smtpUser', 'smtpPass', 'smtpFrom'));
+        USING (true);
     `);
     
     await client.query(`
       CREATE POLICY "Admin manages config" ON public.system_config
         FOR ALL USING (public.is_admin());
+    `);
+
+    // Purge legacy SMTP configs from live DB
+    await client.query(`
+      DELETE FROM public.system_config 
+        WHERE key IN ('smtpHost', 'smtpPort', 'smtpSecure', 'smtpUser', 'smtpPass', 'smtpFrom');
     `);
     
     await client.query('COMMIT');

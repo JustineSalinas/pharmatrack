@@ -398,7 +398,7 @@ DROP POLICY IF EXISTS "Allow authenticated read of non-sensitive config" ON publ
 -- Allow authenticated users to read non-sensitive configurations (e.g. late threshold, qr session expiry default)
 CREATE POLICY "Allow authenticated read of non-sensitive config" ON public.system_config
   FOR SELECT TO authenticated
-  USING (key NOT IN ('smtpHost', 'smtpPort', 'smtpSecure', 'smtpUser', 'smtpPass', 'smtpFrom'));
+  USING (true);
 
 -- Allow admins to manage all config (routed through secure server-side settings endpoint)
 CREATE POLICY "Admin manages config" ON public.system_config
@@ -413,11 +413,6 @@ INSERT INTO public.system_config (key, value) VALUES
   ('qrExpiry',             '10 min'),
   ('minAttendance',        '75%'),
   ('twoFactorAuth',        'false'),
-  ('registrationMode',     'approval'),
-  ('smtpHost',             'smtp.gmail.com'),
-  ('smtpPort',             '587'),
-  ('smtpSecure',           'false'),
-  ('smtpUser',             ''),
-  ('smtpPass',             ''),
-  ('smtpFrom',             'PharmaTrack <your-email@gmail.com>')
+  ('registrationMode',     'approval')
 ON CONFLICT (key) DO NOTHING;
+
