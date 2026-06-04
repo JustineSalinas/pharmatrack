@@ -18,13 +18,7 @@ type ConfigKey =
   | "qrExpiry"
   | "minAttendance"
   | "twoFactorAuth"
-  | "registrationMode"
-  | "smtpHost"
-  | "smtpPort"
-  | "smtpSecure"
-  | "smtpUser"
-  | "smtpPass"
-  | "smtpFrom";
+  | "registrationMode";
 
 type Settings = Record<ConfigKey, string>;
 
@@ -37,12 +31,6 @@ const DEFAULTS: Settings = {
   minAttendance: "75%",
   twoFactorAuth: "false",
   registrationMode: "approval",
-  smtpHost: "smtp.gmail.com",
-  smtpPort: "587",
-  smtpSecure: "false",
-  smtpUser: "",
-  smtpPass: "",
-  smtpFrom: "PharmaTrack <your-email@gmail.com>",
 };
 
 // ─── Column definitions ───────────────────────────────────
@@ -138,7 +126,6 @@ export default function AdminSettings() {
   // SMTP Test States & Handler
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [showSmtpPass, setShowSmtpPass] = useState(false);
   const [isSMTPManagedByEnv, setIsSMTPManagedByEnv] = useState(false);
 
   const handleTestSmtp = async () => {
@@ -154,14 +141,6 @@ export default function AdminSettings() {
           "Content-Type": "application/json",
           ...(token ? { "Authorization": `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({
-          smtpHost: settings.smtpHost,
-          smtpPort: settings.smtpPort,
-          smtpSecure: settings.smtpSecure,
-          smtpUser: settings.smtpUser,
-          smtpPass: settings.smtpPass,
-          smtpFrom: settings.smtpFrom,
-        }),
       });
 
       const data = await res.json();
@@ -651,7 +630,7 @@ export default function AdminSettings() {
                 fontWeight: 600,
               }}
             >
-              Email & SMTP Server
+              Email Notification Server
             </h3>
             <div
               style={{
@@ -666,12 +645,12 @@ export default function AdminSettings() {
             >
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <strong style={{ fontSize: "14px", fontWeight: 500, color: "var(--white)" }}>
-                  SMTP Configurations
+                  SMTP Connection Status
                 </strong>
                 <p style={{ fontSize: "12px", color: "var(--dimmed)", margin: "0", lineHeight: 1.5 }}>
-                  Configure outgoing mail server details. These settings enable automatic email notifications when events are created.
+                  Email broadcasts to students are managed securely on the server via environment variables. Admin dashboard UI overrides are disabled for security.
                 </p>
-                {isSMTPManagedByEnv && (
+                {isSMTPManagedByEnv ? (
                   <div
                     style={{
                       background: "rgba(34, 197, 94, 0.06)",
@@ -686,148 +665,28 @@ export default function AdminSettings() {
                   >
                     <Shield size={14} color="#22c55e" style={{ flexShrink: 0 }} />
                     <span style={{ fontSize: "11px", color: "#22c55e", lineHeight: 1.45, fontWeight: 500 }}>
-                      SMTP is securely configured via server environment variables. Database overrides are disabled.
+                      Operational: SMTP configuration detected in server environment variables.
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      background: "rgba(239, 68, 68, 0.06)",
+                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                      borderRadius: "6px",
+                      padding: "10px 14px",
+                      display: "flex",
+                      gap: "10px",
+                      alignItems: "center",
+                      marginTop: "4px",
+                    }}
+                  >
+                    <Info size={14} color="#ef4444" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: "11px", color: "#ef4444", lineHeight: 1.45, fontWeight: 500 }}>
+                      Inactive: No server SMTP environment variables detected.
                     </span>
                   </div>
                 )}
-              </div>
-
-              {/* Host and Port Grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                    SMTP Host
-                  </label>
-                  <input
-                    type="text"
-                    className="settings-input"
-                    placeholder="e.g. smtp.gmail.com"
-                    value={settings.smtpHost || ""}
-                    onChange={(e) => update("smtpHost", e.target.value)}
-                    disabled={isSMTPManagedByEnv}
-                  />
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                    SMTP Port
-                  </label>
-                  <input
-                    type="text"
-                    className="settings-input"
-                    placeholder="e.g. 587"
-                    value={settings.smtpPort || ""}
-                    onChange={(e) => update("smtpPort", e.target.value)}
-                    disabled={isSMTPManagedByEnv}
-                  />
-                </div>
-              </div>
-
-              {/* Connection Security */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  Connection Security
-                </label>
-                <select
-                  className="settings-input"
-                  value={settings.smtpSecure || "false"}
-                  onChange={(e) => update("smtpSecure", e.target.value)}
-                  style={{ cursor: isSMTPManagedByEnv ? "not-allowed" : "pointer" }}
-                  disabled={isSMTPManagedByEnv}
-                >
-                  <option value="false">STARTTLS (Port 587 - Recommended for Gmail)</option>
-                  <option value="true">SSL / TLS (Port 465)</option>
-                </select>
-              </div>
-
-              {/* Username (Gmail Address) */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  SMTP Username / Email Address
-                </label>
-                <input
-                  type="email"
-                  className="settings-input"
-                  placeholder="e.g. your-email@gmail.com"
-                  value={settings.smtpUser || ""}
-                  onChange={(e) => update("smtpUser", e.target.value)}
-                  disabled={isSMTPManagedByEnv}
-                />
-              </div>
-
-              {/* Password / App Password */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  SMTP Password / Gmail App Password
-                </label>
-                <div style={{ position: "relative", width: "100%" }}>
-                  <input
-                    type={showSmtpPass ? "text" : "password"}
-                    className="settings-input"
-                    placeholder="Enter SMTP password or App Password"
-                    value={settings.smtpPass || ""}
-                    onChange={(e) => update("smtpPass", e.target.value)}
-                    style={{ paddingRight: "40px" }}
-                    disabled={isSMTPManagedByEnv}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSmtpPass(!showSmtpPass)}
-                    style={{
-                      position: "absolute",
-                      right: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "none",
-                      border: "none",
-                      color: "var(--dimmed)",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: 0,
-                    }}
-                  >
-                    {showSmtpPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Sender Header */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  Sender Display Name (From Header)
-                </label>
-                <input
-                  type="text"
-                  className="settings-input"
-                  placeholder='e.g. "PharmaTrack Notification" <your-email@gmail.com>'
-                  value={settings.smtpFrom || ""}
-                  onChange={(e) => update("smtpFrom", e.target.value)}
-                  disabled={isSMTPManagedByEnv}
-                />
-              </div>
-
-              {/* Helpful Gmail SMTP Setup Info */}
-              <div
-                style={{
-                  background: "rgba(212, 175, 55, 0.04)",
-                  border: "1px solid rgba(212, 175, 55, 0.15)",
-                  borderRadius: "8px",
-                  padding: "12px 14px",
-                  display: "flex",
-                  gap: "10px",
-                  alignItems: "flex-start",
-                }}
-              >
-                <Info size={14} color="var(--gold)" style={{ flexShrink: 0, marginTop: "2px" }} />
-                <div style={{ fontSize: "11px", color: "var(--dimmed)", lineHeight: 1.5 }}>
-                  <strong style={{ color: "var(--gold)", fontWeight: 600 }}>Using Gmail SMTP?</strong>
-                  <ol style={{ margin: "4px 0 0 0", paddingLeft: "16px" }}>
-                    <li>Ensure <strong>2-Step Verification</strong> is enabled on your Gmail account.</li>
-                    <li>Go to your Google Account Settings &rarr; Security &rarr; App Passwords.</li>
-                    <li>Generate a new App Password (name it <em>PharmaTrack</em>) and use that 16-character code as the SMTP password above.</li>
-                  </ol>
-                </div>
               </div>
 
               {/* SMTP Connection Testing Action */}
@@ -842,12 +701,12 @@ export default function AdminSettings() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: "12px", color: "var(--dimmed)" }}>
-                    Verify credentials before saving changes
+                    Send a test email to verify credentials
                   </span>
                   <button
                     type="button"
                     onClick={handleTestSmtp}
-                    disabled={testingSmtp || !settings.smtpHost || !settings.smtpUser || !settings.smtpPass}
+                    disabled={testingSmtp || !isSMTPManagedByEnv}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -860,20 +719,20 @@ export default function AdminSettings() {
                       color: "var(--white)",
                       fontSize: "12px",
                       fontWeight: 600,
-                      cursor: (testingSmtp || !settings.smtpHost || !settings.smtpUser || !settings.smtpPass) ? "not-allowed" : "pointer",
+                      cursor: (testingSmtp || !isSMTPManagedByEnv) ? "not-allowed" : "pointer",
                       transition: "all 0.15s ease",
-                      opacity: (testingSmtp || !settings.smtpHost || !settings.smtpUser || !settings.smtpPass) ? 0.5 : 1,
+                      opacity: (testingSmtp || !isSMTPManagedByEnv) ? 0.5 : 1,
                     }}
                   >
                     {testingSmtp ? (
                       <>
                         <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
-                        Testing Connection…
+                        Sending Test…
                       </>
                     ) : (
                       <>
                         <Mail size={13} />
-                        Test Connection
+                        Send Test Email
                       </>
                     )}
                   </button>
