@@ -21,6 +21,15 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+type ScannedStudent = {
+  userId: string;
+  fullName: string;
+  studentIdNumber: string;
+  currentYear: string;
+  section: string;
+  qrCodeId: string;
+};
+
 export default function FacilitatorScannerPage() {
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -30,6 +39,10 @@ export default function FacilitatorScannerPage() {
   const [loading, setLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState<any[]>([]);
+  // Phase-1: student profile fetched on scan, shown for verification before attendance is written
+  const [verifiedStudent, setVerifiedStudent] = useState<ScannedStudent | null>(null);
+  const [verifyingStudent, setVerifyingStudent] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const router = useRouter();
 
@@ -201,109 +214,145 @@ export default function FacilitatorScannerPage() {
     }
   };
 
+  // ── PHASE 1: Lookup — fetch student profile, show verification card ──
   async function onScanSuccess(decodedText: string) {
     if (!selectedEventId || !facilitator) return;
 
-    // Pause camera scanning
     await stopCamera();
-    setScanResult({ success: true, message: "Verifying credentials...", submessage: `Code: ${decodedText}` });
+    setVerifyingStudent(true);
+    setVerifiedStudent(null);
+    setScanResult(null);
 
     try {
-      // 1. Find the student by QR Code ID
       const { data: student, error: studentErr } = await supabase
         .from("student_profiles")
-        .select("*, users(full_name)")
+        .select("user_id, student_id_number, section, current_year, qr_code_id, users(full_name)")
         .eq("qr_code_id", decodedText)
         .maybeSingle();
 
       if (studentErr || !student) {
-        setScanResult({ 
-          success: false, 
-          message: "Invalid QR Code", 
-          submessage: "Student record not found in the system database." 
+        setVerifyingStudent(false);
+        setScanResult({
+          success: false,
+          message: "Invalid QR Code",
+          submessage: "Student record not found in the system database.",
         });
         return;
       }
 
-      const studentName = (student.users as any).full_name;
-      const studentUserId = student.user_id;
+      setVerifyingStudent(false);
+      setVerifiedStudent({
+        userId: student.user_id,
+        fullName: (student.users as any)?.full_name ?? "Unknown Student",
+        studentIdNumber: student.student_id_number,
+        currentYear: student.current_year,
+        section: student.section,
+        qrCodeId: student.qr_code_id,
+      });
+    } catch (err: any) {
+      console.error(err);
+      setVerifyingStudent(false);
+      setScanResult({ success: false, message: "Scan Failed", submessage: err.message });
+    }
+  }
 
-      // 2. Fetch the event details
-      const { data: event } = await supabase.from("events").select("*").eq("id", selectedEventId).single();
+  // ── PHASE 2: Confirm — facilitator clicks Confirm Check-In, writes attendance ──
+  async function confirmCheckIn() {
+    if (!verifiedStudent || !selectedEventId || !facilitator) return;
+    setConfirmLoading(true);
+
+    try {
+      const { data: event } = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", selectedEventId)
+        .single();
       if (!event) throw new Error("Event not found");
 
-      // 3. Logic for Posting Attendance
       const now = new Date();
       let status = "present";
 
-      // Time threshold checks
-      if (now > new Date(event.check_in_late)) {
-        status = "late";
-      }
+      if (now > new Date(event.check_in_late)) status = "late";
+
       if (now > new Date(event.check_in_end)) {
-         setScanResult({ 
-           success: false, 
-           message: "Check-in Closed", 
-           submessage: `Attendance window ended at ${new Date(event.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-         });
-         return;
+        setVerifiedStudent(null);
+        setScanResult({
+          success: false,
+          message: "Check-in Closed",
+          submessage: `Attendance window ended at ${new Date(event.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`,
+        });
+        return;
       }
 
-      // Check if already checked in
       const { data: existingRecord } = await supabase
         .from("attendance_records")
         .select("*")
-        .eq("student_id", studentUserId)
+        .eq("student_id", verifiedStudent.userId)
         .eq("event_id", selectedEventId)
         .maybeSingle();
 
       if (existingRecord) {
-        // Handle Check-out
         if (!existingRecord.time_out) {
-           const { error: outErr } = await supabase
-             .from("attendance_records")
-             .update({ time_out: now.toISOString() })
-             .eq("id", existingRecord.id);
-           
-           if (outErr) throw outErr;
-           setScanResult({ 
-             success: true, 
-             message: "Check-out Recorded!", 
-             submessage: `${studentName} has checked out successfully.` 
-           });
+          const { error: outErr } = await supabase
+            .from("attendance_records")
+            .update({ time_out: now.toISOString() })
+            .eq("id", existingRecord.id);
+          if (outErr) throw outErr;
+          setScanResult({
+            success: true,
+            message: "Check-out Recorded!",
+            submessage: `${verifiedStudent.fullName} has checked out successfully.`,
+          });
         } else {
-           setScanResult({ 
-             success: false, 
-             message: "Already Logged", 
-             submessage: `${studentName} has already recorded both check-in and check-out.` 
-           });
+          setScanResult({
+            success: false,
+            message: "Already Logged",
+            submessage: `${verifiedStudent.fullName} has already recorded both check-in and check-out.`,
+          });
         }
       } else {
-        // Perform Check-in
         const { error: insErr } = await supabase
           .from("attendance_records")
           .insert({
-            student_id: studentUserId,
+            student_id: verifiedStudent.userId,
             event_id: selectedEventId,
-            status: status,
+            status,
             time_in: now.toISOString(),
-            scanned_by: facilitator.id
+            scanned_by: facilitator.id,
           });
-
         if (insErr) throw insErr;
-        setScanResult({ 
-          success: true, 
-          message: `${status.toUpperCase()}!`, 
-          submessage: `${studentName} checked in successfully.` 
+        setScanResult({
+          success: true,
+          message: `${status.toUpperCase()}!`,
+          submessage: `${verifiedStudent.fullName} checked in successfully.`,
         });
       }
-      
-      // Refresh list
+
       fetchRecentScans(selectedEventId);
     } catch (err: any) {
       console.error(err);
-      setScanResult({ success: false, message: "Scan Failed", submessage: err.message });
+      setScanResult({ success: false, message: "Confirmation Failed", submessage: err.message });
+    } finally {
+      setVerifiedStudent(null);
+      setConfirmLoading(false);
     }
+  }
+
+  // Helper: generate initials avatar background colour from name
+  function avatarColor(name: string): string {
+    const palette = [
+      "#4f46e5", "#0891b2", "#059669", "#d97706",
+      "#dc2626", "#7c3aed", "#db2777", "#0284c7",
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return palette[Math.abs(hash) % palette.length];
+  }
+
+  function initials(name: string): string {
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
   function onScanFailure(error: any) {
@@ -421,20 +470,19 @@ export default function FacilitatorScannerPage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Active Camera Viewport / Results Screen */}
+        {/* RIGHT COLUMN: Active Camera Viewport / Verification Card / Results Screen */}
         <div className="viewport-column">
-          
+
           {/* CAMERA FEED PLACEHOLDER */}
-          {!isScanning && !scanResult && (
+          {!isScanning && !scanResult && !verifiedStudent && !verifyingStudent && (
             <div className="viewport-placeholder">
               <div className="pulse-circle">
                 <QrCode size={40} className="placeholder-icon" />
               </div>
               <h3 className="placeholder-title">Scanner Standby</h3>
               <p className="placeholder-text">Please verify the selected target event details, then click below to launch the camera session.</p>
-              
-              <button 
-                onClick={startCamera} 
+              <button
+                onClick={startCamera}
                 className="btn-start-scanner"
                 disabled={!selectedEventId}
               >
@@ -452,17 +500,86 @@ export default function FacilitatorScannerPage() {
                 <div className="corner-bracket top-right" />
                 <div className="corner-bracket bottom-left" />
                 <div className="corner-bracket bottom-right" />
-                
                 <div id="reader" />
                 <div className="laser-beam" />
               </div>
-              
-              <button 
-                onClick={stopCamera} 
-                className="btn-pause-scanner"
-              >
+              <button onClick={stopCamera} className="btn-pause-scanner">
                 <span>Disconnect Stream</span>
               </button>
+            </div>
+          )}
+
+          {/* PHASE 1: Brief lookup spinner between scan and card render */}
+          {verifyingStudent && (
+            <div className="viewport-result">
+              <div className="verify-loading">
+                <Loader2 className="verify-spinner" size={32} />
+                <p className="verify-loading-text">Retrieving student profile…</p>
+              </div>
+            </div>
+          )}
+
+          {/* PHASE 1: Student Verification Card — shown before attendance is written */}
+          {verifiedStudent && !confirmLoading && (
+            <div className="viewport-result">
+              <div className="verify-card">
+                {/* Header badge */}
+                <div className="verify-header-badge">
+                  <Users size={13} />
+                  <span>Student Identified — Please Verify</span>
+                </div>
+
+                {/* Avatar initials */}
+                <div
+                  className="verify-avatar"
+                  style={{ background: avatarColor(verifiedStudent.fullName) }}
+                >
+                  {initials(verifiedStudent.fullName)}
+                </div>
+
+                {/* Name */}
+                <h2 className="verify-name">{verifiedStudent.fullName}</h2>
+
+                {/* ID + Section row */}
+                <div className="verify-meta-row">
+                  <span className="verify-id-badge">{verifiedStudent.studentIdNumber}</span>
+                  <span className="verify-dot">·</span>
+                  <span className="verify-section-badge">{verifiedStudent.section}</span>
+                </div>
+
+                {/* Year level */}
+                <div className="verify-year-pill">
+                  {verifiedStudent.currentYear} Year
+                </div>
+
+                {/* Action buttons */}
+                <div className="verify-actions">
+                  <button
+                    className="btn-confirm-checkin"
+                    onClick={confirmCheckIn}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>Confirm Check-In</span>
+                  </button>
+                  <button
+                    className="btn-cancel-scan"
+                    onClick={() => { setVerifiedStudent(null); startCamera(); }}
+                  >
+                    <XCircle size={15} />
+                    <span>Wrong Student</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PHASE 2: Confirm loading spinner */}
+          {confirmLoading && (
+            <div className="viewport-result">
+              <div className="verify-loading">
+                <Loader2 className="verify-spinner" size={32} />
+                <p className="verify-loading-text">Recording attendance…</p>
+              </div>
             </div>
           )}
 
@@ -471,22 +588,16 @@ export default function FacilitatorScannerPage() {
             <div className="viewport-result">
               <div className="result-card">
                 <div className={`status-icon-wrap ${scanResult.success ? "success" : "error"}`}>
-                  {scanResult.success ? (
-                    <CheckCircle2 size={44} />
-                  ) : (
-                    <XCircle size={44} />
-                  )}
+                  {scanResult.success ? <CheckCircle2 size={44} /> : <XCircle size={44} />}
                 </div>
-                
                 <div className="result-text-block">
                   <h2 className={`result-headline ${scanResult.success ? "success" : "error"}`}>
                     {scanResult.message}
                   </h2>
                   <p className="result-explanation">{scanResult.submessage}</p>
                 </div>
-                
-                <button 
-                  onClick={() => { setScanResult(null); startCamera(); }} 
+                <button
+                  onClick={() => { setScanResult(null); startCamera(); }}
                   className="btn-next-scan"
                 >
                   <Sparkles size={16} />
@@ -1108,6 +1219,180 @@ export default function FacilitatorScannerPage() {
           background: rgba(220, 38, 38, 0.1) !important;
           color: #dc2626 !important;
           border: 1px solid rgba(220, 38, 38, 0.2) !important;
+        }
+
+        /* ── VERIFICATION CARD ── */
+        .qr-scanner-terminal-page .verify-card {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 18px !important;
+          text-align: center !important;
+          animation: resultSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          width: 100% !important;
+          max-width: 340px !important;
+        }
+
+        .qr-scanner-terminal-page .verify-header-badge {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          background: rgba(79, 70, 229, 0.08) !important;
+          border: 1px solid rgba(79, 70, 229, 0.18) !important;
+          border-radius: 999px !important;
+          padding: 5px 14px !important;
+          font-size: 11.5px !important;
+          font-weight: 600 !important;
+          color: #4f46e5 !important;
+          letter-spacing: 0.02em !important;
+        }
+
+        .qr-scanner-terminal-page .verify-avatar {
+          width: 88px !important;
+          height: 88px !important;
+          border-radius: 50% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 30px !important;
+          font-weight: 800 !important;
+          color: #ffffff !important;
+          letter-spacing: -0.02em !important;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.18) !important;
+          flex-shrink: 0 !important;
+        }
+
+        .qr-scanner-terminal-page .verify-name {
+          font-size: 22px !important;
+          font-weight: 700 !important;
+          color: #111827 !important;
+          letter-spacing: -0.03em !important;
+          margin: 0 !important;
+          line-height: 1.2 !important;
+        }
+
+        .qr-scanner-terminal-page .verify-meta-row {
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          flex-wrap: wrap !important;
+          justify-content: center !important;
+        }
+
+        .qr-scanner-terminal-page .verify-id-badge {
+          font-family: monospace !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          color: #374151 !important;
+          background: #f3f4f6 !important;
+          border: 1px solid #e5e7eb !important;
+          border-radius: 4px !important;
+          padding: 2px 8px !important;
+        }
+
+        .qr-scanner-terminal-page .verify-dot {
+          color: #9ca3af !important;
+          font-size: 14px !important;
+        }
+
+        .qr-scanner-terminal-page .verify-section-badge {
+          background: rgba(79, 70, 229, 0.06) !important;
+          border: 1px solid rgba(79, 70, 229, 0.15) !important;
+          border-radius: 4px !important;
+          padding: 2px 8px !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          color: #4f46e5 !important;
+        }
+
+        .qr-scanner-terminal-page .verify-year-pill {
+          background: rgba(22, 163, 74, 0.07) !important;
+          border: 1px solid rgba(22, 163, 74, 0.18) !important;
+          border-radius: 999px !important;
+          padding: 4px 16px !important;
+          font-size: 12.5px !important;
+          font-weight: 600 !important;
+          color: #16a34a !important;
+        }
+
+        .qr-scanner-terminal-page .verify-actions {
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 10px !important;
+          width: 100% !important;
+          margin-top: 4px !important;
+        }
+
+        .qr-scanner-terminal-page .btn-confirm-checkin {
+          width: 100% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px !important;
+          background: #16a34a !important;
+          color: #ffffff !important;
+          border: none !important;
+          border-radius: 8px !important;
+          padding: 13px 20px !important;
+          font-size: 14px !important;
+          font-weight: 700 !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25) !important;
+          letter-spacing: 0.01em !important;
+        }
+
+        .qr-scanner-terminal-page .btn-confirm-checkin:hover {
+          filter: brightness(1.08) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 20px rgba(22, 163, 74, 0.35) !important;
+        }
+
+        .qr-scanner-terminal-page .btn-cancel-scan {
+          width: 100% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px !important;
+          background: transparent !important;
+          color: #6b7280 !important;
+          border: 1px solid #e5e7eb !important;
+          border-radius: 8px !important;
+          padding: 11px 20px !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          transition: all 0.15s ease !important;
+        }
+
+        .qr-scanner-terminal-page .btn-cancel-scan:hover {
+          background: rgba(220, 38, 38, 0.05) !important;
+          border-color: rgba(220, 38, 38, 0.25) !important;
+          color: #dc2626 !important;
+        }
+
+        /* Lookup / confirm loading state */
+        .qr-scanner-terminal-page .verify-loading {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 14px !important;
+        }
+
+        .qr-scanner-terminal-page .verify-spinner {
+          color: #4f46e5 !important;
+          animation: spin 0.8s linear infinite !important;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .qr-scanner-terminal-page .verify-loading-text {
+          font-size: 14px !important;
+          color: #6b7280 !important;
+          font-weight: 500 !important;
+          margin: 0 !important;
         }
       `}</style>
     </div>

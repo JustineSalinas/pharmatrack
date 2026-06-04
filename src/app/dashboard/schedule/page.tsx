@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-client";
-import { supabase } from "@/lib/supabase";
+import { supabase, parseDateLocal } from "@/lib/supabase";
 import {
-  Loader2, Calendar, AlertTriangle, Clock, MapPin, X,
+  Loader2, Calendar, AlertTriangle, Clock, MapPin, X, ChevronRight,
 } from "lucide-react";
-import type { StudentProfile, PharmaUser } from "@/lib/schema";
+import type { StudentProfile, PharmaUser, Event } from "@/lib/schema";
 
 interface QRSessionRow {
   id: string;
@@ -38,6 +38,9 @@ export default function SchedulePage() {
   const [dates, setDates] = useState<Record<DayKey, string>>({} as Record<DayKey, string>);
   const [weekRange, setWeekRange] = useState("");
   const [selectedDay, setSelectedDay] = useState<DayKey | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [showAllEvents, setShowAllEvents] = useState(false);
+  const EVENTS_PREVIEW = 4;
   const [startOfWeekDate, setStartOfWeekDate] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -105,6 +108,17 @@ export default function SchedulePage() {
         setGrouped(byDay);
         setSubjects(Array.from(subjectSet));
 
+        // Retrieve upcoming school events
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        const { data: upcomingEventsData } = await supabase
+          .from("events")
+          .select("*")
+          .gte("date", todayStr)
+          .order("date", { ascending: true })
+          .limit(20);
+
+        if (upcomingEventsData) setUpcomingEvents(upcomingEventsData);
+
         // Default select today
         const todayDayKey = DAY_INDEX_MAP[now.getDay()];
         const defaultSelected = (todayDayKey && DAY_LABELS.includes(todayDayKey)) ? todayDayKey : "MON";
@@ -128,6 +142,14 @@ export default function SchedulePage() {
     d.setDate(startOfWeekDate.getDate() + dayIndex);
     return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   }
+
+  function daysUntilEvent(dateStr: string): number {
+    return Math.ceil(
+      (parseDateLocal(dateStr).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000
+    );
+  }
+
+  const visibleEvents = showAllEvents ? upcomingEvents : upcomingEvents.slice(0, EVENTS_PREVIEW);
 
   if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
 
@@ -244,6 +266,100 @@ export default function SchedulePage() {
           )}
         </div>
       )}
+
+      {/* ── Upcoming School Events ── */}
+      <div className="sd-event-panel" style={{ marginTop: "32px" }}>
+        <div className="sd-event-panel-header">
+          <div>
+            <p className="sd-panel-label">School Events</p>
+            <h2 className="sd-panel-title">Upcoming &amp; Future Events</h2>
+          </div>
+        </div>
+
+        {upcomingEvents.length > 0 ? (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+              {visibleEvents.map((event) => {
+                const days = daysUntilEvent(event.date);
+                return (
+                  <div key={event.id} className="sd-event-card">
+                    <div className="sd-event-date-block" style={{ minWidth: "44px" }}>
+                      <span className="sd-event-month">
+                        {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short" })}
+                      </span>
+                      <span className="sd-event-day">
+                        {parseDateLocal(event.date).toLocaleDateString("en-US", { day: "numeric" })}
+                      </span>
+                      <span className="sd-event-days-pill" style={{
+                        fontSize: "9px",
+                        padding: "2px 5px",
+                        background: days === 0 ? "rgba(74,222,128,0.15)" : days === 1 ? "rgba(232,184,75,0.15)" : "rgba(255,255,255,0.06)",
+                        color: days === 0 ? "var(--success)" : days === 1 ? "var(--gold)" : "var(--dimmed)",
+                        border: days === 0 ? "1px solid rgba(74,222,128,0.25)" : days === 1 ? "1px solid rgba(232,184,75,0.25)" : "1px solid rgba(255,255,255,0.08)",
+                      }}>
+                        {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days}d`}
+                      </span>
+                    </div>
+                    <div className="sd-event-detail">
+                      <h3 className="sd-event-name" style={{ fontSize: "13px", marginBottom: "4px" }}>{event.name}</h3>
+                      <div className="sd-event-meta">
+                        <span className="sd-event-meta-item">
+                          <Clock size={11} />
+                          {new Date(event.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          {" – "}
+                          {new Date(event.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span className="sd-event-meta-item">
+                          <MapPin size={11} />
+                          {event.location}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {upcomingEvents.length > EVENTS_PREVIEW && (
+              <button
+                type="button"
+                onClick={() => setShowAllEvents(!showAllEvents)}
+                style={{
+                  marginTop: "16px",
+                  width: "100%",
+                  padding: "10px",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-sm)",
+                  color: "var(--gold)",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(232,184,75,0.06)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+              >
+                {showAllEvents ? (
+                  <><ChevronRight size={14} style={{ transform: "rotate(-90deg)" }} /> Show Less</>
+                ) : (
+                  <><ChevronRight size={14} style={{ transform: "rotate(90deg)" }} /> See {upcomingEvents.length - EVENTS_PREVIEW} More Event{upcomingEvents.length - EVENTS_PREVIEW > 1 ? "s" : ""}</>
+                )}
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="sd-event-empty">
+            <Calendar size={28} color="var(--dimmed)" />
+            <p>No upcoming school events right now.</p>
+            <span>Check back later or enjoy your free time!</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
