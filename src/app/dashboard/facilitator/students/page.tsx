@@ -161,7 +161,7 @@ export default function StudentsPage() {
   const staticFallback = Object.values(SECTIONS_BY_YEAR).flat();
 
   // 3. Combine them
-  const availableSectionsList = Array.from(new Set([...dynamicSections, ...staticFallback]));
+  const availableSectionsList = Array.from(new Set([...dynamicSections, ...staticFallback])).sort();
 
   const filtered = students.filter(s =>
     (sectionFilter === "All" || s.section === sectionFilter) &&
@@ -203,7 +203,7 @@ export default function StudentsPage() {
       >
         {[
           { label: "Present Today", count: presentToday, color: "#4ade80", bg: "rgba(74, 222, 128, 0.03)", border: "rgba(74, 222, 128, 0.15)", icon: <CheckCircle size={16} color="#4ade80" /> },
-          { label: "Late Today", count: lateToday, color: "var(--gold)", bg: "rgba(232, 184, 75, 0.03)", border: "rgba(232, 184, 75, 0.15)", icon: <Clock size={16} color="var(--gold)" /> },
+          { label: "Late Today", count: lateToday, color: "#d97706", bg: "rgba(217, 119, 6, 0.03)", border: "rgba(217, 119, 6, 0.15)", icon: <Clock size={16} color="#d97706" /> },
           { label: "Absent Today", count: absentToday, color: "#f87171", bg: "rgba(248, 113, 113, 0.03)", border: "rgba(248, 113, 113, 0.15)", icon: <AlertCircle size={16} color="#f87171" /> },
           { label: "Total Students", count: students.length, color: "#a78bfa", bg: "rgba(167, 139, 250, 0.03)", border: "rgba(167, 139, 250, 0.15)", icon: <Users size={16} color="#a78bfa" /> }
         ].map((item) => (

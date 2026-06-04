@@ -1642,10 +1642,8 @@ html {
 .sidebar {
   width: 100%;
   height: 100%;
-  /* Opaque: a faint indigo tint layered over the solid surface so the panel
-     never goes see-through when it's fixed over page content on mobile. */
-  background: linear-gradient(var(--gold-dim), var(--gold-dim)), var(--surface);
-  border-right: 1px solid rgba(79, 70, 229, 0.12);
+  background: linear-gradient(180deg, #1e0c38 0%, #0c041a 100%);
+  border-right: 1px solid rgba(139, 92, 246, 0.15);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1678,8 +1676,8 @@ html {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: var(--gold-dim);
-  border: 1px solid rgba(79, 70, 229, 0.18);
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1689,7 +1687,7 @@ html {
 .sidebar-brand-name {
   font-size: 16px;
   font-weight: 700;
-  color: var(--white);
+  color: #ffffff !important;
   letter-spacing: -0.02em;
 }
 
@@ -1711,7 +1709,7 @@ html {
 .nav-group-label {
   font-size: 11px;
   font-weight: 600;
-  color: var(--dimmed);
+  color: rgba(192, 132, 252, 0.7);
   letter-spacing: 0.04em;
   padding: 16px 8px 8px;
   margin: 0;
@@ -1727,7 +1725,7 @@ html {
   border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--white-shade);
+  color: rgba(255, 255, 255, 0.75);
   text-decoration: none;
   white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease;
@@ -1735,19 +1733,20 @@ html {
 }
 
 .nav-link:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--white);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
 }
 
 /* Active nav link — filled pill */
 .nav-link--active {
-  background: var(--gold) !important;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
   color: #ffffff !important;
   font-weight: 600;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35) !important;
 }
 
 .nav-link--active:hover {
-  background: var(--gold) !important;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
   color: #ffffff !important;
 }
 
@@ -1759,7 +1758,7 @@ html {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
-  opacity: 0.55;
+  opacity: 0.75;
   transition: opacity 0.15s ease;
 }
 
@@ -1785,7 +1784,7 @@ html {
 .sidebar-footer {
   flex-shrink: 0;
   padding: 12px 12px 20px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1799,8 +1798,8 @@ html {
   padding: 10px 12px;
   border-radius: 10px;
   border: none;
-  background: rgba(0, 0, 0, 0.02);
-  color: var(--white-shade);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 14px;
   font-weight: 500;
   font-family: var(--font-sans);
@@ -1811,8 +1810,8 @@ html {
 }
 
 .sidebar-support-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--white);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .sidebar-logout-btn {
@@ -1824,7 +1823,7 @@ html {
   border-radius: 10px;
   border: none;
   background: transparent;
-  color: var(--danger);
+  color: #fda4af;
   font-size: 14px;
   font-weight: 500;
   font-family: var(--font-sans);
@@ -1835,8 +1834,8 @@ html {
 }
 
 .sidebar-logout-btn:hover {
-  background: rgba(220, 38, 38, 0.08);
-  color: #b91c1c;
+  background: rgba(244, 63, 94, 0.08);
+  color: #f43f5e;
 }
 
 /* Main Content Area */
@@ -2146,7 +2145,7 @@ html {
 }
 
 .pill-late {
-  background-color: #eab308;
+  background-color: #d97706;
   color: white;
 }
 
@@ -2473,9 +2472,9 @@ html {
 }
 
 .status-badge.late {
-  background: rgba(180, 83, 9, 0.08);
-  color: var(--gold);
-  border: 1px solid rgba(180, 83, 9, 0.15);
+  background: rgba(217, 119, 6, 0.08);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.15);
 }
 
 .status-badge.absent {
