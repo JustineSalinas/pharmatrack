@@ -147,7 +147,7 @@ export default function ProfilePage() {
               {[
                 { label: "Total Events", value: stats.total_records || 0, color: "var(--white-shade)" },
                 { label: "Present", value: stats.present_count || 0, color: "var(--success)" },
-                { label: "Late", value: stats.late_count || 0, color: "var(--gold)" },
+                { label: "Late", value: stats.late_count || 0, color: "#d97706" },
                 { label: "Absent", value: stats.absent_count || 0, color: "var(--danger)" },
                 { label: "Rate", value: `${stats.attendance_rate || 0}%`, color: stats.attendance_rate >= 75 ? "var(--success)" : "var(--gold)" },
               ].map((s) => (

@@ -59,7 +59,6 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
       items: [
         { href: "/dashboard/facilitator", label: "Dashboard", icon: <Home size={18} /> },
         { href: "/dashboard/facilitator/events", label: "Manage Events", icon: <Calendar size={18} /> },
-        { href: "/dashboard/facilitator/generate", label: "Generate QR", icon: <QrCode size={18} /> },
         { href: "/dashboard/facilitator/scanner", label: "QR Scanner", icon: <Camera size={18} /> },
         { href: "/dashboard/facilitator/attendance", label: "Attendance Logs", icon: <ClipboardList size={18} /> },
         { href: "/dashboard/facilitator/students", label: "Students", icon: <Users size={18} /> },
@@ -241,13 +240,13 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
         {/* Footer */}
         <div className="sidebar-footer">
           {(role === "admin" || role === "facilitator") && (
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", background: "rgba(0, 0, 0, 0.02)", borderRadius: "10px", border: "1px solid var(--border)", marginBottom: "8px" }}>
-              <div style={{ background: "var(--surface2)", borderRadius: "50%", padding: "2px", display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", background: "rgba(255, 255, 255, 0.03)", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)", marginBottom: "8px" }}>
+              <div style={{ background: "rgba(255, 255, 255, 0.06)", borderRadius: "50%", padding: "2px", display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", flexShrink: 0 }}>
                 <img src="/usa.png" alt="USA Logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "50%" }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--white-shade)", lineHeight: 1.2, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{userName}</span>
-                <span style={{ fontSize: "11px", color: "var(--dimmed)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{userSub}</span>
+                <span style={{ fontSize: "13px", fontWeight: 600, color: "#ffffff", lineHeight: 1.2, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{userName}</span>
+                <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{userSub}</span>
               </div>
             </div>
           )}

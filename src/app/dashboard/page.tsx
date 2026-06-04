@@ -329,13 +329,13 @@ function StudentDashboardContent() {
           </div>
 
           <div className="sd-stat-tile sd-tile-late">
-            <div className="sd-tile-icon-wrap" style={{ background: "rgba(232,184,75,0.12)", color: "var(--gold)" }}>
+            <div className="sd-tile-icon-wrap" style={{ background: "rgba(217,119,6,0.12)", color: "#d97706" }}>
               <Clock size={18} />
             </div>
             <div className="sd-tile-number">{stats?.late_count ?? 0}</div>
             <div className="sd-tile-label">Late</div>
             <div className="sd-tile-bar">
-              <div className="sd-tile-bar-fill" style={{ width: `${stats?.total_records ? (stats.late_count / stats.total_records) * 100 : 0}%`, background: "var(--gold)" }} />
+              <div className="sd-tile-bar-fill" style={{ width: `${stats?.total_records ? (stats.late_count / stats.total_records) * 100 : 0}%`, background: "#d97706" }} />
             </div>
           </div>
 

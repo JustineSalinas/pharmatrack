@@ -373,7 +373,7 @@ export default function FacilitatorAttendance() {
       <div className="summary-cards-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "32px" }}>
         {[
           { label: "Present", count: present, color: "#4ade80", bg: "rgba(74, 222, 128, 0.03)", border: "rgba(74, 222, 128, 0.15)", icon: <CheckCircle size={16} color="#4ade80" /> },
-          { label: "Late", count: late, color: "var(--gold)", bg: "rgba(232, 184, 75, 0.03)", border: "rgba(232, 184, 75, 0.15)", icon: <Clock size={16} color="var(--gold)" /> },
+          { label: "Late", count: late, color: "#d97706", bg: "rgba(217, 119, 6, 0.03)", border: "rgba(217, 119, 6, 0.15)", icon: <Clock size={16} color="#d97706" /> },
           { label: "Absent", count: absent, color: "#f87171", bg: "rgba(248, 113, 113, 0.03)", border: "rgba(248, 113, 113, 0.15)", icon: <AlertCircle size={16} color="#f87171" /> },
           { label: "Total Filtered", count: filtered.length, color: "#a78bfa", bg: "rgba(167, 139, 250, 0.03)", border: "rgba(167, 139, 250, 0.15)", icon: <Activity size={16} color="#a78bfa" /> },
         ].map((item) => (

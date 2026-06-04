@@ -44,7 +44,7 @@ function StudentModal({ onClose, allStudents }: { onClose: () => void, allStuden
     return { color: "#dc2626", bg: "rgba(220, 38, 38, 0.08)", border: "rgba(220, 38, 38, 0.15)" };
   };
 
-  const sectionsList = Array.from(new Set(allStudents.map(s => s.section))).filter(Boolean);
+  const sectionsList = Array.from(new Set(allStudents.map(s => s.section))).filter(Boolean).sort();
 
   return (
     <div className="reports-modal-overlay">

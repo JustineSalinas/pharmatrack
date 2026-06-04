@@ -209,7 +209,7 @@ export default function AdminAttendance() {
       <div style={{ display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px 24px", marginBottom: "32px" }}>
         {[
           { label: "Present", count: present, color: "var(--success)" },
-          { label: "Late", count: late, color: "var(--gold)" },
+          { label: "Late", count: late, color: "#d97706" },
           { label: "Absent", count: absent, color: "var(--danger)" },
           { label: "Total Filtered", count: filtered.length, color: "var(--white)" },
         ].map((item) => (
