@@ -98,6 +98,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
+  // If Student is pending or rejected, show restricted view
+  if (user?.account_type === "student" && user?.status !== "approved") {
+    const isRejected = user?.status === "rejected";
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center" }}>
+        <div className="card" style={{ maxWidth: "500px" }}>
+          <h2 style={{ color: isRejected ? "var(--danger)" : "var(--gold)" }}>
+            {isRejected ? "Account Rejected" : "Approval Pending"}
+          </h2>
+          <p style={{ margin: "20px 0" }}>
+            {isRejected
+              ? "Your student account has been rejected. Please contact the System Administrator for more information."
+              : "Your student account is currently awaiting verification by an administrator. You will be granted access once approved."}
+          </p>
+          <button onClick={handleLogout} className="btn btn-outline" style={{ width: "100%" }}>Log Out</button>
+        </div>
+      </div>
+    );
+  }
+
   const role = user?.account_type || "student";
   const userName = user?.full_name || "User";
   const userSub = role === "admin" ? "System Admin" : role === "facilitator" ? "Facilitator" : "Student";

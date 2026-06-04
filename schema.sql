@@ -82,6 +82,16 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 
+  -- Ensure student account is approved
+  IF NOT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = v_student_id
+    AND account_type = 'student'
+    AND status = 'approved'
+  ) THEN
+    RAISE EXCEPTION 'Your student account is pending approval or inactive.';
+  END IF;
+
   SELECT * INTO v_session
   FROM public.qr_sessions
   WHERE code = session_code;
@@ -153,6 +163,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies to avoid conflicts
+-- Drop existing policies to avoid conflicts
 DO $$ 
 DECLARE 
     pol record;
@@ -165,10 +176,7 @@ END $$;
 CREATE POLICY "allow_signup" ON public.users FOR INSERT WITH CHECK (
   auth.uid() = id 
   AND account_type IN ('student', 'facilitator') 
-  AND (
-    (account_type = 'student' AND status = 'approved') OR
-    (account_type = 'facilitator' AND status = 'pending')
-  )
+  AND status = 'pending'
 );
 CREATE POLICY "allow_own_read" ON public.users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "allow_own_update" ON public.users FOR UPDATE USING (auth.uid() = id);

@@ -75,6 +75,16 @@ begin
     raise exception 'Unauthorized';
   end if;
 
+  -- Ensure student account is approved
+  if not exists (
+    select 1 from public.users
+    where id = v_student_id
+    and account_type = 'student'
+    and status = 'approved'
+  ) then
+    raise exception 'Your student account is pending approval or inactive.';
+  end if;
+
   select * into v_session
   from public.qr_sessions
   where code = session_code;
@@ -158,10 +168,7 @@ end $$;
 create policy "allow_signup" on public.users for insert with check (
   auth.uid() = id 
   and account_type in ('student', 'facilitator') 
-  and (
-    (account_type = 'student' and status = 'approved') or
-    (account_type = 'facilitator' and status = 'pending')
-  )
+  and status = 'pending'
 );
 create policy "allow_own_read" on public.users for select using (auth.uid() = id);
 create policy "allow_own_update" on public.users for update using (auth.uid() = id);

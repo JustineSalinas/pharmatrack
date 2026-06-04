@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getAuthUser, completeOnboarding } from "@/lib/auth-client";
+import { getAuthUser, completeOnboarding, logoutUser } from "@/lib/auth-client";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -51,12 +51,9 @@ export default function OnboardingPage() {
         role === "student" ? { studentId, section, year } : undefined
       );
 
-      // Redirect based on role
-      if (role === "student") {
-        router.push("/dashboard");
-      } else {
-        router.push("/dashboard/facilitator");
-      }
+      // Sign out since registration is pending approval
+      await logoutUser();
+      router.push("/login?pending=true");
     } catch (err: any) {
       setError(err.message || "Failed to complete profile.");
       setLoading(false);

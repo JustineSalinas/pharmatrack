@@ -18,7 +18,8 @@ import {
   LogOut,
   HeadphonesIcon,
   AlertTriangle,
-  Mail
+  Mail,
+  ShoppingBag
 } from "lucide-react";
 
 interface NavItem { href: string; label: string; icon: React.ReactNode; }
@@ -41,6 +42,7 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
         { href: "/dashboard/records", label: "My Records", icon: <ClipboardList size={18} /> },
         { href: "/dashboard/calendar", label: "Calendar", icon: <Calendar size={18} /> },
         { href: "/dashboard/schedule", label: "Schedule", icon: <Calendar size={18} /> },
+        { href: "/dashboard/merch", label: "Merch Catalogue", icon: <ShoppingBag size={18} /> },
       ],
     },
     {
@@ -62,6 +64,7 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
         { href: "/dashboard/facilitator/attendance", label: "Attendance Logs", icon: <ClipboardList size={18} /> },
         { href: "/dashboard/facilitator/students", label: "Students", icon: <Users size={18} /> },
         { href: "/dashboard/facilitator/reports", label: "Reports", icon: <BarChart size={18} /> },
+        { href: "/dashboard/merch", label: "Merch Catalogue", icon: <ShoppingBag size={18} /> },
       ],
     },
     {
@@ -74,6 +77,7 @@ const navByRole: Record<string, { section: string; items: NavItem[] }[]> = {
       section: "Main",
       items: [
         { href: "/dashboard/admin", label: "Dashboard", icon: <Home size={18} /> },
+        { href: "/dashboard/merch", label: "Merch Catalogue", icon: <ShoppingBag size={18} /> },
       ],
     },
     {
