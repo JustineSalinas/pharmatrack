@@ -85,7 +85,11 @@ function StudentDashboardContent() {
             .single();
           setStats(data);
 
-          const today = new Date().toISOString().split("T")[0];
+          // Use local date (not UTC) so that the filter matches correctly in
+          // Asia/Manila (UTC+8). new Date().toISOString() returns the UTC date,
+          // which can be one day behind local time and exclude today's events.
+          const now = new Date();
+          const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
           const { data: upcoming } = await supabase
             .from("events")
             .select("*")
