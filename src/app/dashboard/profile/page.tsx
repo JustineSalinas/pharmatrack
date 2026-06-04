@@ -4,17 +4,17 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
-  Loader2, User, Lock, Mail, Hash, BookOpen,
-  Layers, Save, CheckCircle2, ShieldCheck, AlertCircle,
-  TrendingUp, ChevronRight, Calendar, Clock,
+  Loader2, User, Mail, Hash, BookOpen,
+  Layers, CheckCircle2, ShieldCheck, AlertCircle,
+  TrendingUp, Calendar, Clock,
 } from "lucide-react";
+import ChangePassword from "@/components/ChangePassword";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ full_name: "", email: "", student_id_number: "", section: "", current_year: "" });
-  const [passForm, setPassForm] = useState({ newPassword: "", confirmPassword: "" });
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -67,8 +67,6 @@ export default function ProfilePage() {
 
   const setF = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
-  const setP = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setPassForm((f) => ({ ...f, [k]: e.target.value }));
 
   const handleSaveProfile = async () => {
     setSaving(true); setError("");
@@ -87,20 +85,7 @@ export default function ProfilePage() {
     finally { setSaving(false); }
   };
 
-  const handleSavePassword = async () => {
-    setError("");
-    if (passForm.newPassword !== passForm.confirmPassword) { setError("Passwords do not match"); return; }
-    if (passForm.newPassword.length < 8) { setError("Password must be at least 8 characters"); return; }
-    setSaving(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: passForm.newPassword });
-      if (error) throw error;
-      setSaved(true);
-      setPassForm({ newPassword: "", confirmPassword: "" });
-      setTimeout(() => setSaved(false), 2500);
-    } catch (err: any) { setError(err.message || "Failed to update password"); }
-    finally { setSaving(false); }
-  };
+
 
   if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
 
@@ -259,35 +244,7 @@ export default function ProfilePage() {
               </div>
             </div>
           ) : (
-            <div className="sp-form-body">
-              <div className="sp-form-section-title">
-                <Lock size={15} color="var(--gold)" /> Change Password
-              </div>
-
-              <div className="sp-input-group">
-                <label className="sp-input-label">New Password</label>
-                <div className="sp-input-wrap">
-                  <Lock size={15} className="sp-input-icon" />
-                  <input className="sp-input" type="password" placeholder="Min. 8 characters" value={passForm.newPassword} onChange={setP("newPassword")} />
-                </div>
-              </div>
-              <div className="sp-input-group">
-                <label className="sp-input-label">Confirm New Password</label>
-                <div className="sp-input-wrap">
-                  <Lock size={15} className="sp-input-icon" />
-                  <input className="sp-input" type="password" placeholder="Repeat new password" value={passForm.confirmPassword} onChange={setP("confirmPassword")} />
-                </div>
-              </div>
-
-              <div className="sp-security-hint">
-                <ShieldCheck size={14} color="var(--teal)" />
-                <p>Use at least 8 characters. Changing your password will sign you out of other devices.</p>
-              </div>
-
-              <button className="sp-save-btn" onClick={handleSavePassword} disabled={saving}>
-                {saving ? <><Loader2 size={15} className="sp-spinner-sm" /> Updating…</> : saved ? <><CheckCircle2 size={15} /> Updated!</> : <><Lock size={15} /> Update Password</>}
-              </button>
-            </div>
+            <ChangePassword />
           )}
         </div>
       </div>
