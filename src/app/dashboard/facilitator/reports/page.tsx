@@ -132,6 +132,73 @@ function StudentModal({ onClose, allStudents }: { onClose: () => void, allStuden
     </div>
   );
 }
+const TrendChart = ({ data }: { data: { month: string, rate: number }[] }) => {
+  const width = 600;
+  const height = 220;
+  const paddingX = 48;
+  const chartWidth = width - paddingX * 2;
+  const yTicks = [60, 70, 80, 90, 100];
+
+  const getY = (rate: number) => {
+    const min = 50;
+    const max = 100;
+    const clamped = Math.max(min, Math.min(max, rate));
+    const topLimit = 25;
+    const bottomLimit = 170;
+    return bottomLimit - ((clamped - min) / (max - min)) * (bottomLimit - topLimit);
+  };
+
+  const getX = (index: number) => {
+    if (data.length <= 1) return width / 2;
+    return paddingX + (index / (data.length - 1)) * chartWidth;
+  };
+
+  const points = data.map((d, i) => `${getX(i)},${getY(d.rate)}`).join(" ");
+  const areaPoints = data.length > 1 ? `${getX(0)},170 ${points} ${getX(data.length - 1)},170` : "";
+
+  return (
+    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{ overflow: "visible" }}>
+      {/* Grid lines and Y labels */}
+      {yTicks.map(tick => {
+        const y = getY(tick);
+        return (
+          <g key={tick}>
+            <text x={paddingX - 12} y={y + 7} fill="#4b5563" fontSize="22" fontWeight="700" textAnchor="end" fontFamily="var(--font-sans)">{tick}%</text>
+            <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="rgba(0,0,0,0.05)" strokeWidth="1" strokeDasharray="4 4" />
+          </g>
+        );
+      })}
+      
+      {/* Area under line */}
+      {data.length > 1 && <polygon points={areaPoints} fill="url(#chartGrad)" opacity={0.3} />}
+      
+      {/* The Line */}
+      {data.length > 1 && <polyline points={points} fill="none" stroke="#4f46e5" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
+      
+      {/* Data points and X labels */}
+      {data.map((d, i) => {
+        const x = getX(i);
+        const y = getY(d.rate);
+        return (
+          <g key={d.month}>
+            <circle cx={x} cy={y} r="5.5" fill="#ffffff" stroke="#4f46e5" strokeWidth="3" />
+            {/* Value label above the dot */}
+            <text x={x} y={y - 14} fill="#4f46e5" fontSize="20" fontWeight="700" textAnchor="middle" fontFamily="var(--font-sans)">{d.rate}%</text>
+            {/* Month label below the dot */}
+            <text x={x} y={208} fill="#4b5563" fontSize="22" textAnchor="middle" fontFamily="var(--font-sans)" fontWeight="700">{d.month}</text>
+          </g>
+        );
+      })}
+
+      <defs>
+        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(79, 70, 229, 0.25)" />
+          <stop offset="100%" stopColor="rgba(79, 70, 229, 0.0)" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+};
 
 export default function FacultyReports() {
   const [loading, setLoading] = useState(true);
@@ -143,7 +210,6 @@ export default function FacultyReports() {
   const [perfectCount, setPerfectCount] = useState(0);
   const [avgAttendanceRate, setAvgAttendanceRate] = useState(0);
   const [attendanceTrend, setAttendanceTrend] = useState<any[]>([]);
-  
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<SubTabKey>("students");
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,9 +219,29 @@ export default function FacultyReports() {
     async function fetchReports() {
       try {
         setLoading(true);
-        // 1. Fetch Students
-        const { data: summaryData, error: sErr } = await supabase.from("student_attendance_summary").select("*");
+        // 1. Fetch Students, Events, Attendance Records, and Sessions
+        const [
+          { data: summaryData, error: sErr },
+          { data: events, error: eErr },
+          { data: records, error: rErr },
+          { data: sessions, error: sessErr }
+        ] = await Promise.all([
+          supabase.from("student_attendance_summary").select("*"),
+          supabase.from("events").select("id, name, location, date"),
+          supabase.from("attendance_records").select(`
+            id,
+            event_id,
+            status,
+            created_at,
+            events ( name, location, date )
+          `),
+          supabase.from("qr_sessions").select(`date, section, attendance_records(status)`)
+        ]);
+
         if (sErr) throw sErr;
+        if (eErr) throw eErr;
+        if (rErr) throw rErr;
+        if (sessErr) throw sessErr;
 
         const parsedStudents = (summaryData || []).map((s: any) => ({
           id: s.student_id_number || s.student_id.substring(0, 8),
@@ -169,23 +255,7 @@ export default function FacultyReports() {
           incomplete_count: s.incomplete_count || 0,
         }));
         setAllStudents(parsedStudents);
-
-        // 2. Fetch Events
-        const { data: events, error: eErr } = await supabase.from("events").select("id, name, location, date");
-        if (eErr) throw eErr;
         setTotalEvents(events?.length || 0);
-
-        // 3. Fetch Records
-        const { data: records, error: rErr } = await supabase
-          .from("attendance_records")
-          .select(`
-            id,
-            event_id,
-            status,
-            created_at,
-            events ( name, location, date )
-          `);
-        if (rErr) throw rErr;
 
         // Group records to calculate Most Attended Events dynamically
         const eventStatsMap: Record<string, { id: string, name: string, location: string, date: string, attended: number, total: number }> = {};
@@ -250,32 +320,36 @@ export default function FacultyReports() {
         const overallAvgRate = totalOverallRecords > 0 ? Math.round((totalOverallAttended / totalOverallRecords) * 100) : 0;
         setAvgAttendanceRate(overallAvgRate);
 
-        // Group records by date to calculate daily trend
-        const dateStatsMap: Record<string, { dateStr: string, attended: number, total: number }> = {};
-        records?.forEach((r: any) => {
-          if (!r.events?.date) return;
-          const dateVal = r.events.date; // YYYY-MM-DD
-          if (!dateStatsMap[dateVal]) {
-            dateStatsMap[dateVal] = {
-              dateStr: dateVal,
-              attended: 0,
-              total: 0
-            };
-          }
-          dateStatsMap[dateVal].total += 1;
-          if (r.status === "present" || r.status === "late") {
-            dateStatsMap[dateVal].attended += 1;
+        // Monthly Trend
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthlyStats: Record<string, { total: number, attended: number }> = {};
+        
+        const validSessions = sessions || [];
+        validSessions.forEach(s => {
+          if (!s.date) return;
+          const date = new Date(s.date);
+          const m = months[date.getMonth()];
+          if (!monthlyStats[m]) monthlyStats[m] = { total: 0, attended: 0 };
+          
+          const recs = s.attendance_records as any[];
+          if (recs) {
+            recs.forEach(r => {
+              monthlyStats[m].total++;
+              if (r.status === "present" || r.status === "late") monthlyStats[m].attended++;
+            });
           }
         });
 
-        const calculatedTrend = Object.values(dateStatsMap)
-          .map(d => ({
-            date: d.dateStr,
-            displayDate: new Date(d.dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-            rate: d.total > 0 ? Math.round((d.attended / d.total) * 100) : 0
-          }))
-          .sort((a, b) => a.date.localeCompare(b.date))
-          .slice(-6); // Last 6 events/dates for trend
+        const monthKeys = Object.keys(monthlyStats).sort((a,b) => months.indexOf(a) - months.indexOf(b));
+        const finalMonthly = monthKeys.length > 0 ? monthKeys.map(m => ({
+          month: m,
+          rate: monthlyStats[m].total > 0 ? Math.round((monthlyStats[m].attended / monthlyStats[m].total) * 100) : 0
+        })) : [{ month: months[new Date().getMonth()], rate: 0 }];
+
+        const calculatedTrend = finalMonthly.map(d => ({
+          month: d.month,
+          rate: d.rate
+        }));
         
         setAttendanceTrend(calculatedTrend);
 
@@ -465,26 +539,7 @@ export default function FacultyReports() {
 
   const hasRecords = allStudents.some(s => s.total_records > 0);
 
-  const svgWidth = 480;
-  const svgHeight = 150;
-  const paddingX = 40;
-  const paddingY = 20;
 
-  const points = attendanceTrend.map((d, i) => {
-    const x = paddingX + (i * (svgWidth - paddingX * 2)) / (attendanceTrend.length - 1 || 1);
-    const y = svgHeight - paddingY - (d.rate / 100) * (svgHeight - paddingY * 2);
-    return { x, y, displayDate: d.displayDate, rate: d.rate };
-  });
-
-  let pathD = "";
-  let areaD = "";
-  if (points.length > 0) {
-    pathD = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      pathD += ` L ${points[i].x} ${points[i].y}`;
-    }
-    areaD = `${pathD} L ${points[points.length - 1].x} ${svgHeight - paddingY} L ${points[0].x} ${svgHeight - paddingY} Z`;
-  }
 
   if (loading) {
     return (
@@ -575,64 +630,31 @@ export default function FacultyReports() {
       {hasRecords ? (
         <div className="reports-visual-grid" style={{ display: "grid", gap: "20px", marginBottom: "24px" }}>
           
-          {/* Card A: Attendance Trend */}
-          <div className="reports-card" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", height: "260px" }}>
+          {/* Card A: Monthly Attendance Trend */}
+          <div className="reports-card" style={{ padding: "24px", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 className="card-title" style={{ fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <TrendingUp size={16} color="#4f46e5" />
-                Attendance Trend
-              </h3>
-              <span style={{ fontSize: "11px", color: "#6b7280", background: "rgba(79, 70, 229, 0.05)", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
-                Last {attendanceTrend.length} Events
-              </span>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#111827", margin: 0 }}>Monthly Attendance Trend</h3>
+              <span style={{ fontSize: "11px", color: "#6b7280" }}>Academic Year 2026</span>
             </div>
             
-            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ height: "220px", width: "100%" }}>
               {attendanceTrend.length < 2 ? (
-                <div style={{ color: "#6b7280", fontSize: "12px", textAlign: "center" }}>
-                  Not enough historical event data to render trend.
+                <div style={{ color: "#6b7280", fontSize: "12px", textAlign: "center", paddingTop: "50px" }}>
+                  Not enough historical monthly data to render trend.
                 </div>
               ) : (
-                <svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none" style={{ overflow: "visible" }}>
-                  <defs>
-                    <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="rgba(79, 70, 229, 0.25)" />
-                      <stop offset="100%" stopColor="rgba(79, 70, 229, 0.0)" />
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Grid Lines */}
-                  {[0, 25, 50, 75, 100].map((level) => {
-                    const y = svgHeight - paddingY - (level / 100) * (svgHeight - paddingY * 2);
-                    return (
-                      <g key={level}>
-                        <line x1={paddingX} y1={y} x2={svgWidth - paddingX} y2={y} stroke="rgba(0,0,0,0.05)" strokeDasharray="4 4" />
-                        <text x={paddingX - 10} y={y + 3} textAnchor="end" fontSize={9} fill="#9ca3af">{level}%</text>
-                      </g>
-                    );
-                  })}
-                  
-                  {/* Area Fill */}
-                  {areaD && <path d={areaD} fill="url(#chartGrad)" />}
-                  
-                  {/* Line Curve */}
-                  {pathD && <path d={pathD} fill="none" stroke="#4f46e5" strokeWidth={2.5} strokeLinecap="round" />}
-                  
-                  {/* Dots & Labels */}
-                  {points.map((p, idx) => (
-                    <g key={idx}>
-                      <circle cx={p.x} cy={p.y} r={4} fill="#4f46e5" stroke="#ffffff" strokeWidth={1.5} style={{ transition: "all 0.15s ease", cursor: "pointer" }} />
-                      <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#4f46e5">{p.rate}%</text>
-                      <text x={p.x} y={svgHeight - paddingY + 12} textAnchor="middle" fontSize={9.5} fill="#6b7280" fontWeight={500}>{p.displayDate}</text>
-                    </g>
-                  ))}
-                </svg>
+                <TrendChart data={attendanceTrend} />
               )}
+            </div>
+
+            <div style={{ marginTop: "16px", padding: "16px 0 0", borderTop: "1px solid rgba(0, 0, 0, 0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "13px", color: "#6b7280" }}>Semester Average Participation</span>
+              <strong style={{ fontSize: "14px", color: "#4f46e5" }}>{avgAttendanceRate}%</strong>
             </div>
           </div>
           
           {/* Card B: Section Ranking Bar Chart */}
-          <div className="reports-card" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", height: "260px" }}>
+          <div className="reports-card" style={{ padding: "24px", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 className="card-title" style={{ fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
                 <Award size={16} color="#16a34a" />
