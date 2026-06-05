@@ -36,6 +36,10 @@ next-env.d.ts
 # typescript
 *.tsbuildinfo
 
+# qa screenshots and playwright artifacts
+qa-*.png
+.playwright-mcp/
+
 # misc
 .DS_Store
 *.pem
