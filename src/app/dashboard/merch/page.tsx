@@ -132,6 +132,13 @@ export default function MerchCataloguePage() {
         </div>
       </header>
 
+      {/* Info Banner */}
+      <div className="mc-info-banner">
+        <Info size={16} className="mc-info-icon" />
+        <span className="mc-info-text">
+          <strong>Showcase Only:</strong> Browse our exclusive College of Pharmacy merchandise. Items marked &quot;Coming Soon&quot; will be available for pre-order at the department office.
+        </span>
+      </div>
 
       {/* Controls Bar */}
       <div className="mc-controls">
@@ -210,16 +217,17 @@ export default function MerchCataloguePage() {
 
               {/* Info Frame */}
               <div className="mc-card-info">
-                <div className="mc-card-header">
-                  <span className="mc-card-category">{item.category.toUpperCase()}</span>
-                  <span className="mc-card-price">{item.pricePlaceholder}</span>
+                <div className="mc-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                  <span className="mc-card-category" style={{ fontSize: "10px", fontWeight: 700, color: "#7c3aed", background: "rgba(124, 58, 237, 0.06)", padding: "3px 9px", borderRadius: "99px", letterSpacing: "0.5px" }}>{item.category.toUpperCase()}</span>
+                  <span className="mc-card-price" style={{ fontSize: "13px", fontWeight: 700, color: "#7c3aed", letterSpacing: "-0.01em" }}>{item.pricePlaceholder}</span>
                 </div>
                 <h3 className="mc-card-title">{item.name}</h3>
                 <p className="mc-card-desc">{item.description}</p>
-                <div className="mc-card-action">
-                  <span>View Product Details</span>
-                  <span className="mc-card-arrow">→</span>
-                </div>
+                
+                <button className="mc-card-btn">
+                  <Search size={13} />
+                  <span>View Details</span>
+                </button>
               </div>
             </div>
           ))}
@@ -323,8 +331,8 @@ export default function MerchCataloguePage() {
         .mc-info-banner {
           display: flex;
           gap: 12px;
-          background: var(--gold-dim);
-          border: 1px solid rgba(79, 70, 229, 0.15);
+          background: rgba(124, 58, 237, 0.05);
+          border: 1px solid rgba(124, 58, 237, 0.15);
           border-radius: var(--radius);
           padding: 16px 20px;
           margin-bottom: 24px;
@@ -332,7 +340,7 @@ export default function MerchCataloguePage() {
         }
 
         .mc-info-icon {
-          color: var(--gold);
+          color: #7c3aed;
           flex-shrink: 0;
           margin-top: 2px;
         }
@@ -343,7 +351,7 @@ export default function MerchCataloguePage() {
         }
 
         .mc-info-text strong {
-          color: var(--gold);
+          color: #7c3aed;
           font-weight: 700;
           margin-right: 4px;
         }
@@ -386,14 +394,14 @@ export default function MerchCataloguePage() {
 
         .mc-filter-btn:hover {
           color: var(--white-shade);
-          border-color: rgba(79, 70, 229, 0.25);
+          border-color: rgba(124, 58, 237, 0.25);
           background: var(--surface2);
         }
 
         .mc-filter-btn.active {
-          color: var(--gold);
-          border-color: rgba(79, 70, 229, 0.3);
-          background: var(--gold-dim);
+          color: #7c3aed;
+          border-color: rgba(124, 58, 237, 0.3);
+          background: rgba(124, 58, 237, 0.05);
           font-weight: 600;
         }
 
@@ -431,8 +439,8 @@ export default function MerchCataloguePage() {
         }
 
         .mc-search-input:focus {
-          border-color: rgba(79, 70, 229, 0.4);
-          box-shadow: 0 0 12px rgba(79, 70, 229, 0.08);
+          border-color: rgba(124, 58, 237, 0.4);
+          box-shadow: 0 0 12px rgba(124, 58, 237, 0.08);
         }
 
         .mc-grid {
@@ -456,8 +464,8 @@ export default function MerchCataloguePage() {
 
         .mc-card:hover {
           transform: translateY(-4px);
-          border-color: rgba(79, 70, 229, 0.25);
-          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08), 0 0 20px rgba(79, 70, 229, 0.03);
+          border-color: rgba(124, 58, 237, 0.25);
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08), 0 0 20px rgba(124, 58, 237, 0.03);
         }
 
         .mc-card:focus-visible {
@@ -567,31 +575,27 @@ export default function MerchCataloguePage() {
           overflow: hidden;
         }
 
-        .mc-card-action {
-          font-size: 12px;
+        .mc-card-btn {
+          width: 100%;
+          height: 38px;
+          border-radius: var(--radius-sm);
+          border: none;
+          background: rgba(124, 58, 237, 0.05);
+          color: #7c3aed;
+          font-size: 12.5px;
           font-weight: 600;
-          color: var(--muted);
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          border-top: 1px solid var(--border);
-          padding-top: 12px;
-          margin-top: auto;
+          justify-content: center;
+          gap: 6px;
+          cursor: pointer;
           transition: all 0.2s ease;
+          margin-top: 12px;
         }
 
-        .mc-card:hover .mc-card-action {
-          color: var(--gold);
-        }
-
-        .mc-card-arrow {
-          font-family: monospace;
-          font-size: 14px;
-          transition: transform 0.2s ease;
-        }
-
-        .mc-card:hover .mc-card-arrow {
-          transform: translateX(3px);
+        .mc-card:hover .mc-card-btn {
+          background: #7c3aed !important;
+          color: #ffffff !important;
         }
 
         .mc-empty-state {
@@ -680,13 +684,13 @@ export default function MerchCataloguePage() {
         }
 
         .mc-modal-close:hover {
-          color: var(--gold);
-          border-color: rgba(79, 70, 229, 0.25);
+          color: #7c3aed;
+          border-color: rgba(124, 58, 237, 0.25);
         }
 
         .mc-modal-grid {
           display: grid;
-          grid-template-columns: 1.1fr 1.2fr;
+          grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
         }
 
         @media (max-width: 768px) {
@@ -700,17 +704,18 @@ export default function MerchCataloguePage() {
         .mc-modal-visual {
           position: relative;
           background: var(--surface2);
-          aspect-ratio: 1;
           display: flex;
           align-items: center;
           justify-content: center;
           border-right: 1px solid var(--border);
+          min-width: 0;
         }
 
         @media (max-width: 768px) {
           .mc-modal-visual {
             border-right: none;
             border-bottom: 1px solid var(--border);
+            aspect-ratio: 1;
           }
         }
 
@@ -743,6 +748,7 @@ export default function MerchCataloguePage() {
           display: flex;
           flex-direction: column;
           gap: 18px;
+          min-width: 0;
         }
 
         @media (max-width: 768px) {
@@ -754,7 +760,7 @@ export default function MerchCataloguePage() {
         .mc-modal-category {
           font-size: 11px;
           font-weight: 700;
-          color: var(--gold);
+          color: #7c3aed;
           letter-spacing: 1.5px;
           margin-bottom: 6px;
           display: block;
@@ -771,9 +777,9 @@ export default function MerchCataloguePage() {
         .mc-modal-price {
           font-size: 16px;
           font-weight: 700;
-          color: var(--gold);
-          background: var(--gold-dim);
-          border: 1px solid rgba(79, 70, 229, 0.15);
+          color: #7c3aed;
+          background: rgba(124, 58, 237, 0.05);
+          border: 1px solid rgba(124, 58, 237, 0.15);
           padding: 4px 10px;
           border-radius: 6px;
           width: fit-content;
@@ -852,12 +858,12 @@ export default function MerchCataloguePage() {
           display: flex;
           align-items: center;
           gap: 8px;
-          background: rgba(220, 38, 38, 0.05);
-          border: 1px solid rgba(220, 38, 38, 0.12);
+          background: rgba(124, 58, 237, 0.05);
+          border: 1px solid rgba(124, 58, 237, 0.12);
           border-radius: var(--radius-sm);
           padding: 10px 14px;
           font-size: 12px;
-          color: var(--danger);
+          color: #7c3aed;
           margin-top: 8px;
         }
 

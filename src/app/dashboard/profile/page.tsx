@@ -147,7 +147,7 @@ export default function ProfilePage() {
               {[
                 { label: "Total Events", value: stats.total_records || 0, color: "var(--white-shade)" },
                 { label: "Present", value: stats.present_count || 0, color: "var(--success)" },
-                { label: "Late", value: stats.late_count || 0, color: "var(--gold)" },
+                { label: "Late", value: stats.late_count || 0, color: "#d97706" },
                 { label: "Absent", value: stats.absent_count || 0, color: "var(--danger)" },
                 { label: "Rate", value: `${stats.attendance_rate || 0}%`, color: stats.attendance_rate >= 75 ? "var(--success)" : "var(--gold)" },
               ].map((s) => (
@@ -179,43 +179,44 @@ export default function ProfilePage() {
                 <User size={15} color="var(--gold)" /> Account Details
               </div>
 
-              <div className="sp-input-group">
-                <label className="sp-input-label">Full Display Name</label>
-                <div className="sp-input-wrap">
-                  <User size={15} className="sp-input-icon" />
-                  <input className="sp-input" value={form.full_name} disabled style={{ opacity: 0.5 }} />
+              <div className="sp-two-col">
+                <div className="sp-input-group">
+                  <label className="sp-input-label">Full Display Name</label>
+                  <div className="sp-input-wrap">
+                    <User size={15} className="sp-input-icon" />
+                    <input className="sp-input" value={form.full_name} disabled style={{ opacity: 0.5 }} />
+                  </div>
+                  <p className="sp-input-hint">Name is managed by the institution and cannot be changed.</p>
                 </div>
-              </div>
 
-              <div className="sp-input-group">
-                <label className="sp-input-label">Institutional Email</label>
-                <div className="sp-input-wrap">
-                  <Mail size={15} className="sp-input-icon" />
-                  <input className="sp-input" type="email" value={form.email} disabled style={{ opacity: 0.5 }} />
+                <div className="sp-input-group">
+                  <label className="sp-input-label">Institutional Email</label>
+                  <div className="sp-input-wrap">
+                    <Mail size={15} className="sp-input-icon" />
+                    <input className="sp-input" type="email" value={form.email} disabled style={{ opacity: 0.5 }} />
+                  </div>
+                  <p className="sp-input-hint">Email is managed by the institution and cannot be changed.</p>
                 </div>
-                <p className="sp-input-hint">Email is managed by the institution and cannot be changed.</p>
               </div>
 
               {isStudent && (
-                <>
-                  <div className="sp-two-col">
-                    <div className="sp-input-group">
-                      <label className="sp-input-label">Student ID</label>
-                      <div className="sp-input-wrap">
-                        <Hash size={15} className="sp-input-icon" />
-                        <input className="sp-input" value={form.student_id_number} disabled style={{ opacity: 0.5 }} />
-                      </div>
+                <div className="sp-three-col">
+                  <div className="sp-input-group">
+                    <label className="sp-input-label">Student ID</label>
+                    <div className="sp-input-wrap">
+                      <Hash size={15} className="sp-input-icon" />
+                      <input className="sp-input" value={form.student_id_number} disabled style={{ opacity: 0.5 }} />
                     </div>
-                    <div className="sp-input-group">
-                      <label className="sp-input-label">Year Level</label>
-                      <div className="sp-input-wrap">
-                        <Layers size={15} className="sp-input-icon" />
-                        <select className="sp-input sp-select" value={form.current_year} disabled style={{ opacity: 0.5 }}>
-                          {["1st Year", "2nd Year", "3rd Year", "4th Year"].map((y) => (
-                            <option key={y} value={y}>{y}</option>
-                          ))}
-                        </select>
-                      </div>
+                  </div>
+                  <div className="sp-input-group">
+                    <label className="sp-input-label">Year Level</label>
+                    <div className="sp-input-wrap">
+                      <Layers size={15} className="sp-input-icon" />
+                      <select className="sp-input sp-select" value={form.current_year} disabled style={{ opacity: 0.5 }}>
+                        {["1st Year", "2nd Year", "3rd Year", "4th Year"].map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <div className="sp-input-group">
@@ -225,7 +226,7 @@ export default function ProfilePage() {
                       <input className="sp-input" value={form.section} disabled style={{ opacity: 0.5 }} />
                     </div>
                   </div>
-                </>
+                </div>
               )}
 
               {/* Profile fields are read-only; no save changes button is needed here */}
