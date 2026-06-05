@@ -4666,6 +4666,7 @@ html {
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 24px;
+  align-items: start;
 }
 
 @media (max-width: 800px) {
@@ -4893,6 +4894,12 @@ input[type="password"]::-ms-clear {
 .sp-two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.sp-three-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
@@ -5754,22 +5761,22 @@ input[type="password"]::-ms-clear {
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  gap: 12px;
 }
 
 .cal-cell {
-  min-height: 88px;
-  padding: 8px;
+  min-height: 130px;
+  padding: 12px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   text-align: left;
   color: var(--white-shade);
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   overflow: hidden;
 }
 
@@ -5811,18 +5818,18 @@ input[type="password"]::-ms-clear {
 .cal-cell-events {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .cal-cell-event-pill {
   display: block;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   background: rgba(217, 119, 6, 0.08);
   color: #b45309;
   border: 1px solid rgba(217, 119, 6, 0.15);
-  border-radius: 4px;
-  padding: 2px 6px;
+  border-radius: 6px;
+  padding: 3px 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -6358,6 +6365,9 @@ input[type="password"]::-ms-clear {
     grid-template-columns: 1fr !important;
   }
   .sp-two-col {
+    grid-template-columns: 1fr !important;
+  }
+  .sp-three-col {
     grid-template-columns: 1fr !important;
   }
 
