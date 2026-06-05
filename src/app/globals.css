@@ -2835,7 +2835,7 @@ html {
     overflow-x: clip !important;
     max-width: 100% !important;
     padding: 12px !important;
-    background-color: #1a0b36 !important;
+    background-color: transparent !important;
     width: 100% !important;
     touch-action: pan-y;
   }

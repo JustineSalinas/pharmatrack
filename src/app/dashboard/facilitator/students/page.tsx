@@ -59,6 +59,10 @@ export default function StudentsPage() {
   const [sectionFilter, setSectionFilter] = useState("All");
   const [selected, setSelected] = useState<string | null>(null);
 
+  // Sorting state
+  const [sortField, setSortField] = useState<"name" | "section" | "id" | "rate" | "year">("name");
+  const [sortAsc, setSortAsc] = useState(true);
+
   // Detail panel state
   const [detailStudent, setDetailStudent] = useState<any>(null);
   const [detailRecords, setDetailRecords] = useState<any[]>([]);
@@ -107,7 +111,6 @@ export default function StudentsPage() {
           todayStatus:  todayStatusMap[s.student_id] || null,
         }));
 
-        parsed.sort((a, b) => a.name.localeCompare(b.name));
         setStudents(parsed);
 
         const uniqueSections = Array.from(new Set(parsed.map(s => s.section))).filter(Boolean).sort() as string[];
@@ -166,7 +169,29 @@ export default function StudentsPage() {
   const filtered = students.filter(s =>
     (sectionFilter === "All" || s.section === sectionFilter) &&
     (s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase()))
-  );
+  ).sort((a, b) => {
+    let comparison = 0;
+    if (sortField === "name") comparison = a.name.localeCompare(b.name);
+    else if (sortField === "section") comparison = a.section.localeCompare(b.section);
+    else if (sortField === "id") comparison = a.id.localeCompare(b.id);
+    else if (sortField === "rate") comparison = a.rate - b.rate;
+    else if (sortField === "year") comparison = String(a.year).localeCompare(String(b.year));
+    return sortAsc ? comparison : -comparison;
+  });
+
+  const handleSort = (field: "name" | "section" | "id" | "rate" | "year") => {
+    if (sortField === field) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortField(field);
+      setSortAsc(true);
+    }
+  };
+
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) return null;
+    return <span style={{ marginLeft: 4 }}>{sortAsc ? "↑" : "↓"}</span>;
+  };
 
   const presentToday = students.filter(s => s.todayStatus === "present").length;
   const absentToday  = students.filter(s => s.todayStatus === "absent").length;
@@ -243,38 +268,23 @@ export default function StudentsPage() {
             className="search-input"
           />
         </div>
-        <div className="section-filters" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div className="section-filters" style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
           <button
             onClick={() => { setSectionFilter("All"); }}
             className={`filter-chip ${sectionFilter === "All" ? "active" : ""}`}
           >
-            All
+            All Sections
           </button>
 
-          <select 
-            value={sectionFilter} 
-            onChange={(e) => setSectionFilter(e.target.value)}
-            className="filter-select"
-            style={{
-              padding: "7px 14px",
-              borderRadius: "7px",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-              border: "1px solid #d1d5db",
-              background: "#ffffff",
-              color: "#374151",
-              outline: "none",
-              transition: "all 0.15s ease",
-              boxSizing: "border-box",
-              height: "33px"
-            }}
-          >
-            <option value="All">All Sections</option>
-            {availableSectionsList.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+          {availableSectionsList.map(s => (
+            <button
+              key={s}
+              onClick={() => { setSectionFilter(s); }}
+              className={`filter-chip ${sectionFilter === s ? "active" : ""}`}
+            >
+              {s}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -295,11 +305,11 @@ export default function StudentsPage() {
             <table className="students-table">
               <thead>
                 <tr>
-                  <th style={{ paddingLeft: "20px" }}>Student</th>
-                  <th>Student ID</th>
-                  <th>Section</th>
-                  <th>Year</th>
-                  <th>Overall Rate</th>
+                  <th style={{ paddingLeft: "20px", cursor: "pointer" }} onClick={() => handleSort("name")}>Student{renderSortIcon("name")}</th>
+                  <th style={{ cursor: "pointer" }} onClick={() => handleSort("id")}>Student ID{renderSortIcon("id")}</th>
+                  <th style={{ cursor: "pointer" }} onClick={() => handleSort("section")}>Section{renderSortIcon("section")}</th>
+                  <th style={{ cursor: "pointer" }} onClick={() => handleSort("year")}>Year{renderSortIcon("year")}</th>
+                  <th style={{ cursor: "pointer" }} onClick={() => handleSort("rate")}>Overall Rate{renderSortIcon("rate")}</th>
                   <th>Today</th>
                   <th></th>
                 </tr>
