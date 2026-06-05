@@ -379,15 +379,6 @@ export default function FacilitatorScannerPage() {
           <p className="sd-header-eyebrow">Real-Time Attendance Monitoring</p>
           <h1 className="sd-header-title">QR Scanner Terminal</h1>
         </div>
-        <div>
-          <button 
-            onClick={() => router.push("/dashboard/facilitator")} 
-            className="btn-back"
-          >
-            <ArrowLeft size={15} />
-            <span>Return to Dashboard</span>
-          </button>
-        </div>
       </header>
 
       {/* TWO-COLUMN SCANNER PANEL GRID */}
@@ -970,9 +961,7 @@ export default function FacilitatorScannerPage() {
           display: flex !important;
           flex-direction: column !important;
           align-items: center !important;
-          justify-content: center !important;
-          flex: 1 !important;
-          min-height: 360px !important;
+          justify-content: flex-start !important;
         }
 
         .qr-scanner-terminal-page .viewfinder-frame {
