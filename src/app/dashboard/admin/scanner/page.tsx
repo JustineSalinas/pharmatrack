@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { 
   ScanLine, 
-  ArrowLeft, 
   CheckCircle2, 
   XCircle, 
   Loader2, 
@@ -330,19 +329,10 @@ export default function ScannerPage() {
       
       {/* PAGE HEADER */}
       <header className="sd-header">
-        <div>
-          <p className="sd-header-eyebrow">Real-Time Attendance Monitoring</p>
-          <h1 className="sd-header-title">QR Scanner Terminal</h1>
-        </div>
-        <div>
-          <button 
-            onClick={() => router.push("/dashboard/admin")} 
-            className="btn-back"
-          >
-            <ArrowLeft size={15} />
-            <span>Return to Dashboard</span>
-          </button>
-        </div>
+         <div>
+           <p className="sd-header-eyebrow">Real-Time Attendance Monitoring</p>
+           <h1 className="sd-header-title">QR Scanner Terminal</h1>
+         </div>
       </header>
 
       {/* TWO-COLUMN SCANNER PANEL GRID */}
@@ -406,23 +396,6 @@ export default function ScannerPage() {
             )}
           </div>
 
-          {/* LIVE METRICS PANEL */}
-          <div className="metrics-card">
-            <div className="metric-box">
-              <span className="metric-num-total">{recentScans.length}</span>
-              <span className="metric-title">Total Logs</span>
-            </div>
-            <div className="metric-sep" />
-            <div className="metric-box">
-              <span className="metric-num-present">{punctualCount}</span>
-              <span className="metric-title">Punctual</span>
-            </div>
-            <div className="metric-sep" />
-            <div className="metric-box">
-              <span className="metric-num-late">{lateCount}</span>
-              <span className="metric-title">Tardy / Late</span>
-            </div>
-          </div>
         </div>
 
         {/* RIGHT COLUMN: Active Camera Viewport / Results Screen */}
@@ -499,6 +472,24 @@ export default function ScannerPage() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* LIVE METRICS PANEL */}
+      <div className="metrics-card" style={{ marginTop: "12px" }}>
+        <div className="metric-box">
+          <span className="metric-num-total">{recentScans.length}</span>
+          <span className="metric-title">Total Logs</span>
+        </div>
+        <div className="metric-sep" />
+        <div className="metric-box">
+          <span className="metric-num-present">{punctualCount}</span>
+          <span className="metric-title">Punctual</span>
+        </div>
+        <div className="metric-sep" />
+        <div className="metric-box">
+          <span className="metric-num-late">{lateCount}</span>
+          <span className="metric-title">Tardy / Late</span>
         </div>
       </div>
 

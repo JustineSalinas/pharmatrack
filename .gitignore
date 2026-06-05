@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+docs/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -34,6 +35,10 @@ next-env.d.ts
 
 # typescript
 *.tsbuildinfo
+
+# qa screenshots and playwright artifacts
+qa-*.png
+.playwright-mcp/
 
 # misc
 .DS_Store
