@@ -82,14 +82,13 @@ export async function POST(req: NextRequest) {
       .from("users")
       .select("email, full_name")
       .eq("account_type", "student")
-      .eq("status", "approved");
+      .eq("status", "approved")
+      .ilike("email", "%@usa.edu.ph");
 
     if (studentsErr) {
       console.error("[Events API] Failed to fetch student recipients for broadcast:", studentsErr.message);
     } else if (students && students.length > 0) {
-      // Trigger the email broadcast asynchronously in the background so API response is fast
-      // (errors are caught inside the helper to prevent API crash)
-      sendEventBroadcast({
+      await sendEventBroadcast({
         name,
         location,
         date,
@@ -98,7 +97,7 @@ export async function POST(req: NextRequest) {
         checkInEnd: check_in_end,
         recipients: students,
       }).catch((broadcastErr) => {
-        console.error("[Events API] Background email broadcast failed:", broadcastErr.message);
+        console.error("[Events API] Email broadcast failed:", broadcastErr.message);
       });
     } else {
       console.log("[Events API] No approved students found to broadcast to.");

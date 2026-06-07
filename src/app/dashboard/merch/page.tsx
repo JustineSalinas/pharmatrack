@@ -132,14 +132,6 @@ export default function MerchCataloguePage() {
         </div>
       </header>
 
-      {/* Info Banner */}
-      <div className="mc-info-banner">
-        <Info size={16} className="mc-info-icon" />
-        <span className="mc-info-text">
-          <strong>Showcase Only:</strong> Browse our exclusive College of Pharmacy merchandise. Items marked &quot;Coming Soon&quot; will be available for pre-order at the department office.
-        </span>
-      </div>
-
       {/* Controls Bar */}
       <div className="mc-controls">
         {/* Category Filters */}
@@ -328,34 +320,6 @@ export default function MerchCataloguePage() {
 
       {/* Styled JSX */}
       <style jsx>{`
-        .mc-info-banner {
-          display: flex;
-          gap: 12px;
-          background: rgba(124, 58, 237, 0.05);
-          border: 1px solid rgba(124, 58, 237, 0.15);
-          border-radius: var(--radius);
-          padding: 16px 20px;
-          margin-bottom: 24px;
-          line-height: 1.5;
-        }
-
-        .mc-info-icon {
-          color: #7c3aed;
-          flex-shrink: 0;
-          margin-top: 2px;
-        }
-
-        .mc-info-text {
-          font-size: 13.5px;
-          color: var(--white-shade);
-        }
-
-        .mc-info-text strong {
-          color: #7c3aed;
-          font-weight: 700;
-          margin-right: 4px;
-        }
-
         .mc-controls {
           display: flex;
           justify-content: space-between;
