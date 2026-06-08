@@ -124,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const avatarInitials = typeof userName === "string" ? userName.substring(0, 2).toUpperCase() : "U";
 
   return (
-    <div className="dash-layout">
+    <div className={`dash-layout dash-layout--${role}`}>
       {/* Mobile toggle FAB */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}

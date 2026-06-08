@@ -1610,6 +1610,10 @@ html {
   scrollbar-color: #D1D5DB #F7F8FA;
 }
 
+.dash-layout--student {
+  --bg: #F0EDE5; /* Pantone Coconut Milk */
+}
+
 /* Dashboard-specific scrollbar styling */
 .dash-layout ::-webkit-scrollbar {
   width: 5px;
@@ -1642,7 +1646,10 @@ html {
 .sidebar {
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg, #1e0c38 0%, #0c041a 100%);
+  background: radial-gradient(circle 320px at 0% 0%, rgba(156, 123, 182, 0.95) 0%, transparent 100%),
+              radial-gradient(circle 420px at 100% 100%, rgba(142, 107, 187, 0.95) 0%, transparent 100%),
+              radial-gradient(circle 350px at 0% 55%, rgba(15, 10, 30, 0.98) 0%, transparent 100%),
+              #1c1033;
   border-right: 1px solid rgba(139, 92, 246, 0.15);
   display: flex;
   flex-direction: column;
@@ -3636,8 +3643,8 @@ html {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px 14px;
-  min-width: 60px;
+  padding: 10px 8px;
+  width: 96px;
   flex-shrink: 0;
   gap: 2px;
 }
@@ -6771,9 +6778,4 @@ input[type="password"]::-ms-clear {
   .support-footer {
     flex-direction: column;
   }
-  .support-send-btn,
-  .support-cancel-btn {
-    flex: none;
-    width: 100%;
-  }
-}
+}

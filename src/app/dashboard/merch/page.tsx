@@ -160,11 +160,24 @@ export default function MerchCataloguePage() {
         </div>
 
         {/* Search */}
-        <div className="mc-search-wrap">
-          <Search size={16} className="mc-search-icon" />
+        <div className="mc-search-wrap" style={{ position: "relative" }}>
+          <Search 
+            size={16} 
+            className="mc-search-icon" 
+            style={{ 
+              position: "absolute", 
+              left: "12px", 
+              top: "50%", 
+              transform: "translateY(-50%)", 
+              color: "#000000", 
+              pointerEvents: "none",
+              zIndex: 10
+            }} 
+          />
           <input
             type="text"
             className="mc-search-input"
+            style={{ paddingLeft: "36px", paddingRight: "12px" }}
             placeholder="Search merchandise..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -380,19 +393,20 @@ export default function MerchCataloguePage() {
           }
         }
 
-        .mc-search-icon {
+        :global(.mc-search-icon) {
           position: absolute;
           left: 12px;
+          right: auto;
           top: 50%;
           transform: translateY(-50%);
-          color: var(--dimmed);
+          color: #000000 !important;
           pointer-events: none;
         }
 
         .mc-search-input {
           width: 100%;
           height: 38px;
-          padding: 0 12px 0 38px;
+          padding: 0 12px 0 36px;
           border-radius: var(--radius-sm);
           border: 1px solid var(--border);
           background: var(--surface);
