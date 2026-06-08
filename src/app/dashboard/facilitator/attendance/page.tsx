@@ -377,7 +377,7 @@ export default function FacilitatorAttendance() {
           { label: "Absent", count: absent, color: "#f87171", bg: "rgba(248, 113, 113, 0.03)", border: "rgba(248, 113, 113, 0.15)", icon: <AlertCircle size={16} color="#f87171" /> },
           { label: "Total Filtered", count: filtered.length, color: "#a78bfa", bg: "rgba(167, 139, 250, 0.03)", border: "rgba(167, 139, 250, 0.15)", icon: <Activity size={16} color="#a78bfa" /> },
         ].map((item) => (
-          <div key={item.label} className="stat-card" style={{ display: "flex", flexDirection: "column", background: item.bg, border: `1px solid ${item.border}`, borderRadius: "var(--radius)", padding: "18px 20px", transition: "transform 0.15s ease, box-shadow 0.15s ease" }}>
+          <div key={item.label} className="stat-card" style={{ display: "flex", flexDirection: "column", background: "var(--surface)", border: `1px solid ${item.border}`, borderRadius: "var(--radius)", padding: "18px 20px", transition: "transform 0.15s ease, box-shadow 0.15s ease" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
               <div style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{item.label}</div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "50%", background: `${item.color}12` }}>

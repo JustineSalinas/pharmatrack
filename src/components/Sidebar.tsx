@@ -194,7 +194,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
               role="button"
               style={{ cursor: "pointer" }}
             >
-              PharmaTrack
+              PHARMATRACK
             </span>
           </div>
 
