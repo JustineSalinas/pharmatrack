@@ -268,24 +268,18 @@ export default function StudentsPage() {
             className="search-input"
           />
         </div>
-        <div className="section-filters" style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
-          <button
-            onClick={() => { setSectionFilter("All"); }}
-            className={`filter-chip ${sectionFilter === "All" ? "active" : ""}`}
-          >
-            All Sections
-          </button>
-
+        <select
+          value={sectionFilter}
+          onChange={e => setSectionFilter(e.target.value)}
+          className="filter-select"
+        >
+          <option value="All">All Sections</option>
           {availableSectionsList.map(s => (
-            <button
-              key={s}
-              onClick={() => { setSectionFilter(s); }}
-              className={`filter-chip ${sectionFilter === s ? "active" : ""}`}
-            >
+            <option key={s} value={s}>
               {s}
-            </button>
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
       {/* MAIN GRID: TABLE + DETAIL PANEL */}
@@ -553,9 +547,9 @@ export default function StudentsPage() {
           color: #ffffff !important;
         }
         .students-page .filter-select {
-          padding: 7px 14px;
+          padding: 9px 32px 9px 14px;
           border-radius: 7px;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           border: 1px solid #d1d5db;
@@ -563,6 +557,7 @@ export default function StudentsPage() {
           color: #374151;
           outline: none;
           transition: all 0.15s ease;
+          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
         .students-page .filter-select option {
           color: #374151 !important;
