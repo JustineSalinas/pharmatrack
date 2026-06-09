@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ShoppingBag, 
   Shirt, 
@@ -10,8 +10,12 @@ import {
   Search, 
   Layers, 
   Grid,
-  Info
+  Info,
+  Plus,
+  Pencil,
+  Trash2
 } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth-client";
 
 interface MerchItem {
   id: string;
@@ -19,6 +23,7 @@ interface MerchItem {
   category: "apparel" | "accessories";
   pricePlaceholder: string;
   image: string;
+  images?: string[];
   description: string;
   status: "Showcase Only" | "Coming Soon";
   details: {
@@ -111,11 +116,209 @@ const MERCH_ITEMS: MerchItem[] = [
 ];
 
 export default function MerchCataloguePage() {
+  const [merchItems, setMerchItems] = useState<MerchItem[]>(MERCH_ITEMS);
   const [filter, setFilter] = useState<"all" | "apparel" | "accessories">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<MerchItem | null>(null);
+  const [user, setUser] = useState<any>(null);
 
-  const filteredItems = MERCH_ITEMS.filter((item) => {
+  // Add product form states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newCategory, setNewCategory] = useState<"apparel" | "accessories">("apparel");
+  const [newPrice, setNewPrice] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newStatus, setNewStatus] = useState<"Showcase Only" | "Coming Soon">("Showcase Only");
+  const [newMaterial, setNewMaterial] = useState("");
+  const [newSizes, setNewSizes] = useState("");
+  const [newColors, setNewColors] = useState("");
+  const [newFeatures, setNewFeatures] = useState("");
+  const [newImagesList, setNewImagesList] = useState<string[]>([]);
+
+  // Edit product form states
+  const [editingItem, setEditingItem] = useState<MerchItem | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState<"apparel" | "accessories">("apparel");
+  const [editPrice, setEditPrice] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editStatus, setEditStatus] = useState<"Showcase Only" | "Coming Soon">("Showcase Only");
+  const [editMaterial, setEditMaterial] = useState("");
+  const [editSizes, setEditSizes] = useState("");
+  const [editColors, setEditColors] = useState("");
+  const [editFeatures, setEditFeatures] = useState("");
+  const [editImagesList, setEditImagesList] = useState<string[]>([]);
+
+  // Lightbox carousel state
+  const [activeImage, setActiveImage] = useState<string>("");
+
+  const getItemImages = (item: MerchItem): string[] => {
+    if (item.images && item.images.length > 0) {
+      return item.images;
+    }
+    return [item.image];
+  };
+
+  useEffect(() => {
+    if (selectedItem) {
+      const imgs = getItemImages(selectedItem);
+      setActiveImage(imgs[0]);
+    } else {
+      setActiveImage("");
+    }
+  }, [selectedItem]);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const u = await getCurrentUser();
+        setUser(u);
+      } catch (err) {
+        console.error("Failed to load user in merch catalogue", err);
+      }
+    }
+    loadUser();
+  }, []);
+
+  const isFacilitator = user?.account_type === "facilitator";
+
+  const handleAddImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const urls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        urls.push(URL.createObjectURL(files[i]));
+      }
+      setNewImagesList([...newImagesList, ...urls]);
+    }
+  };
+
+  const handleAddPresetImage = (url: string) => {
+    if (url && !newImagesList.includes(url)) {
+      setNewImagesList([...newImagesList, url]);
+    }
+  };
+
+  const handleEditImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const urls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        urls.push(URL.createObjectURL(files[i]));
+      }
+      setEditImagesList([...editImagesList, ...urls]);
+    }
+  };
+
+  const handleEditPresetImage = (url: string) => {
+    if (url && !editImagesList.includes(url)) {
+      setEditImagesList([...editImagesList, url]);
+    }
+  };
+
+  const handleAddProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!newName.trim()) return;
+
+    const details = {
+      material: newMaterial || "N/A",
+      sizes: newSizes ? newSizes.split(",").map(s => s.trim()).filter(Boolean) : undefined,
+      colors: newColors ? newColors.split(",").map(c => c.trim()).filter(Boolean) : ["N/A"],
+      features: newFeatures ? newFeatures.split("\n").map(f => f.trim()).filter(Boolean) : ["N/A"]
+    };
+
+    let finalImages = newImagesList.length > 0 ? newImagesList : ["/merch/shirt.png"];
+    let primaryImage = finalImages[0];
+
+    const newItem: MerchItem = {
+      id: `custom-${Date.now()}`,
+      name: newName,
+      category: newCategory,
+      pricePlaceholder: newPrice ? (newPrice.toUpperCase().startsWith("PHP") ? newPrice : `PHP ${newPrice}`) : "PHP 0.00",
+      image: primaryImage,
+      images: finalImages,
+      description: newDescription || "No description provided.",
+      status: newStatus,
+      details
+    };
+
+    setMerchItems([newItem, ...merchItems]);
+
+    // Reset Form
+    setNewName("");
+    setNewCategory("apparel");
+    setNewPrice("");
+    setNewDescription("");
+    setNewStatus("Showcase Only");
+    setNewMaterial("");
+    setNewSizes("");
+    setNewColors("");
+    setNewFeatures("");
+    setNewImagesList([]);
+
+    // Close Modal
+    setShowAddModal(false);
+  };
+
+  const handleEditProductClick = (item: MerchItem) => {
+    setEditingItem(item);
+    setEditName(item.name);
+    setEditCategory(item.category);
+    setEditPrice(item.pricePlaceholder);
+    setEditDescription(item.description);
+    setEditStatus(item.status);
+    setEditMaterial(item.details.material);
+    setEditSizes(item.details.sizes ? item.details.sizes.join(", ") : "");
+    setEditColors(item.details.colors.join(", "));
+    setEditFeatures(item.details.features.join("\n"));
+    setEditImagesList(item.images && item.images.length > 0 ? item.images : [item.image]);
+  };
+
+  const handleEditProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    const details = {
+      material: editMaterial || "N/A",
+      sizes: editSizes ? editSizes.split(",").map(s => s.trim()).filter(Boolean) : undefined,
+      colors: editColors ? editColors.split(",").map(c => c.trim()).filter(Boolean) : ["N/A"],
+      features: editFeatures ? editFeatures.split("\n").map(f => f.trim()).filter(Boolean) : ["N/A"]
+    };
+
+    let finalImages = editImagesList.length > 0 ? editImagesList : ["/merch/shirt.png"];
+    let primaryImage = finalImages[0];
+
+    const updatedItem: MerchItem = {
+      ...editingItem,
+      name: editName,
+      category: editCategory,
+      pricePlaceholder: editPrice ? (editPrice.toUpperCase().startsWith("PHP") ? editPrice : `PHP ${editPrice}`) : "PHP 0.00",
+      image: primaryImage,
+      images: finalImages,
+      description: editDescription || "No description provided.",
+      status: editStatus,
+      details
+    };
+
+    setMerchItems(merchItems.map(item => item.id === editingItem.id ? updatedItem : item));
+    
+    if (selectedItem?.id === editingItem.id) {
+      setSelectedItem(updatedItem);
+    }
+
+    setEditingItem(null);
+  };
+
+  const handleDeleteProductClick = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this product from the showcase?")) {
+      setMerchItems(merchItems.filter(item => item.id !== id));
+      if (selectedItem?.id === id) {
+        setSelectedItem(null);
+      }
+    }
+  };
+
+  const filteredItems = merchItems.filter((item) => {
     const matchesFilter = filter === "all" || item.category === filter;
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -159,29 +362,37 @@ export default function MerchCataloguePage() {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="mc-search-wrap" style={{ position: "relative" }}>
-          <Search 
-            size={16} 
-            className="mc-search-icon" 
-            style={{ 
-              position: "absolute", 
-              left: "12px", 
-              top: "50%", 
-              transform: "translateY(-50%)", 
-              color: "#000000", 
-              pointerEvents: "none",
-              zIndex: 10
-            }} 
-          />
-          <input
-            type="text"
-            className="mc-search-input"
-            style={{ paddingLeft: "36px", paddingRight: "12px" }}
-            placeholder="Search merchandise..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        {/* Search & Actions */}
+        <div className="mc-search-actions-group">
+          <div className="mc-search-wrap" style={{ position: "relative" }}>
+            <Search 
+              size={16} 
+              className="mc-search-icon" 
+              style={{ 
+                position: "absolute", 
+                left: "12px", 
+                top: "50%", 
+                transform: "translateY(-50%)", 
+                color: "#000000", 
+                pointerEvents: "none",
+                zIndex: 10
+              }} 
+            />
+            <input
+              type="text"
+              className="mc-search-input"
+              style={{ paddingLeft: "36px", paddingRight: "12px" }}
+              placeholder="Search merchandise..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {isFacilitator && (
+            <button className="mc-add-btn" onClick={() => setShowAddModal(true)}>
+              <Plus size={15} />
+              <span>Add new product</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -218,6 +429,31 @@ export default function MerchCataloguePage() {
                   <Sparkles size={11} />
                   <span>{item.status}</span>
                 </span>
+
+                {isFacilitator && (
+                  <div className="mc-card-actions" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                      className="mc-card-action-btn edit-btn"
+                      title="Edit Product"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditProductClick(item);
+                      }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button 
+                      className="mc-card-action-btn delete-btn"
+                      title="Delete Product"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteProductClick(item.id);
+                      }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Info Frame */}
@@ -261,16 +497,41 @@ export default function MerchCataloguePage() {
             {/* Modal Content Grid */}
             <div className="mc-modal-grid">
               {/* Product Visual */}
-              <div className="mc-modal-visual">
-                <img 
-                  src={selectedItem.image} 
-                  alt={selectedItem.name} 
-                  className="mc-modal-image"
-                />
-                <span className={`mc-modal-status ${selectedItem.status === "Coming Soon" ? "status-soon" : "status-showcase"}`}>
-                  <Sparkles size={12} />
-                  <span>{selectedItem.status}</span>
-                </span>
+              <div className="mc-modal-visual" style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ position: "relative", width: "100%", flexGrow: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <img 
+                    src={activeImage} 
+                    alt={selectedItem.name} 
+                    className="mc-modal-image"
+                  />
+                  <span className={`mc-modal-status ${selectedItem.status === "Coming Soon" ? "status-soon" : "status-showcase"}`}>
+                    <Sparkles size={12} />
+                    <span>{selectedItem.status}</span>
+                  </span>
+                </div>
+                {getItemImages(selectedItem).length > 1 && (
+                  <div className="mc-thumbnails-row" style={{ display: "flex", gap: "8px", padding: "12px", background: "rgba(0,0,0,0.02)", borderTop: "1px solid var(--border)", width: "100%", justifyContent: "center", flexWrap: "wrap" }}>
+                    {getItemImages(selectedItem).map((imgUrl: string, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setActiveImage(imgUrl)}
+                        style={{
+                          width: "48px",
+                          height: "48px",
+                          borderRadius: "6px",
+                          border: activeImage === imgUrl ? "2px solid #7c3aed" : "1px solid var(--border)",
+                          background: "var(--surface)",
+                          padding: 0,
+                          overflow: "hidden",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        <img src={imgUrl} alt={`Thumbnail ${index + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Product Specs */}
@@ -327,6 +588,434 @@ export default function MerchCataloguePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Product Modal */}
+      {showAddModal && (
+        <div className="mc-modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="mc-form-card" onClick={(e) => e.stopPropagation()}>
+            <div className="mc-form-header">
+              <h2 className="mc-form-title">Add New Product</h2>
+              <button 
+                className="mc-modal-close" 
+                style={{ position: "static", width: "32px", height: "32px" }}
+                onClick={() => setShowAddModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddProductSubmit}>
+              <div className="mc-form-body">
+                <div className="mc-form-group">
+                  <label>Product Name</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="e.g. Pharmacy Premium Jacket" 
+                    value={newName} 
+                    onChange={e => setNewName(e.target.value)} 
+                    className="mc-form-input" 
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="mc-form-group">
+                    <label>Category</label>
+                    <select 
+                      value={newCategory} 
+                      onChange={e => setNewCategory(e.target.value as any)} 
+                      className="mc-form-select"
+                    >
+                      <option value="apparel">Apparel</option>
+                      <option value="accessories">Accessories</option>
+                    </select>
+                  </div>
+                  <div className="mc-form-group">
+                    <label>Price / Value</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. PHP 899.00" 
+                      value={newPrice} 
+                      onChange={e => setNewPrice(e.target.value)} 
+                      className="mc-form-input" 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="mc-form-group">
+                    <label>Showcase Status</label>
+                    <select 
+                      value={newStatus} 
+                      onChange={e => setNewStatus(e.target.value as any)} 
+                      className="mc-form-select"
+                    >
+                      <option value="Showcase Only">Showcase Only</option>
+                      <option value="Coming Soon">Coming Soon</option>
+                    </select>
+                  </div>
+                  <div className="mc-form-group">
+                    <label>Material / Quality</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 100% Combed Cotton" 
+                      value={newMaterial} 
+                      onChange={e => setNewMaterial(e.target.value)} 
+                      className="mc-form-input" 
+                    />
+                  </div>
+                </div>
+
+                <div className="mc-form-group">
+                  <label>Description</label>
+                  <textarea 
+                    placeholder="Enter short description of the item..." 
+                    value={newDescription} 
+                    onChange={e => setNewDescription(e.target.value)} 
+                    className="mc-form-textarea" 
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="mc-form-group">
+                    <label>Available Sizes (comma-separated)</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. S, M, L, XL" 
+                      value={newSizes} 
+                      onChange={e => setNewSizes(e.target.value)} 
+                      className="mc-form-input" 
+                    />
+                  </div>
+                  <div className="mc-form-group">
+                    <label>Color Options (comma-separated)</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. White, Forest Green" 
+                      value={newColors} 
+                      onChange={e => setNewColors(e.target.value)} 
+                      className="mc-form-input" 
+                    />
+                  </div>
+                </div>
+
+                <div className="mc-form-group">
+                  <label>Design Features (one per line)</label>
+                  <textarea 
+                    placeholder="e.g. Spacious front pocket&#10;Water-resistant fabric" 
+                    value={newFeatures} 
+                    onChange={e => setNewFeatures(e.target.value)} 
+                    className="mc-form-textarea" 
+                  />
+                </div>
+
+                <div className="mc-form-group">
+                  <label>Product Showcase Pictures (First picture will be the primary cover)</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {newImagesList.length > 0 && (
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", padding: "10px", background: "var(--surface2)", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                        {newImagesList.map((imgUrl, index) => (
+                          <div key={index} style={{ position: "relative", width: "60px", height: "60px", borderRadius: "6px", overflow: "hidden", border: "1px solid var(--border)" }}>
+                            <img src={imgUrl} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            <button
+                              type="button"
+                              onClick={() => setNewImagesList(newImagesList.filter((_, i) => i !== index))}
+                              style={{
+                                position: "absolute",
+                                top: "2px",
+                                right: "2px",
+                                width: "16px",
+                                height: "16px",
+                                borderRadius: "50%",
+                                background: "rgba(220, 38, 38, 0.9)",
+                                color: "#ffffff",
+                                border: "none",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                                cursor: "pointer",
+                                padding: 0
+                              }}
+                              title="Remove image"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleAddImageFile}
+                        style={{ display: "none" }}
+                        id="product-image-upload-multiple"
+                      />
+                      <label
+                        htmlFor="product-image-upload-multiple"
+                        className="mc-form-cancel-btn"
+                        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", height: "38px", margin: 0 }}
+                      >
+                        Upload Pictures
+                      </label>
+                      
+                      <select
+                        onChange={(e) => {
+                          handleAddPresetImage(e.target.value);
+                          e.target.value = "";
+                        }}
+                        className="mc-form-select"
+                        value=""
+                      >
+                        <option value="" disabled>-- Or Add Preset Mockup --</option>
+                        <option value="/merch/hoodie.png">Pharmacy Premium Hoodie</option>
+                        <option value="/merch/shirt.png">Pharmacy Signature Shirt</option>
+                        <option value="/merch/tote.png">Pharmacy Official Tote Bag</option>
+                        <option value="/merch/lanyard.png">Pharmacy Event Lanyard</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mc-form-footer">
+                <button 
+                  type="button" 
+                  className="mc-form-cancel-btn"
+                  onClick={() => setShowAddModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="mc-form-submit-btn"
+                >
+                  Add Product
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Modal */}
+      {editingItem && (
+        <div className="mc-modal-overlay" onClick={() => setEditingItem(null)}>
+          <div className="mc-form-card" onClick={(e) => e.stopPropagation()}>
+            <div className="mc-form-header">
+              <h2 className="mc-form-title">Edit Product</h2>
+              <button 
+                className="mc-modal-close" 
+                style={{ position: "static", width: "32px", height: "32px" }}
+                onClick={() => setEditingItem(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditProductSubmit}>
+              <div className="mc-form-body">
+                <div className="mc-form-group">
+                  <label>Product Name</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="e.g. Pharmacy Premium Jacket" 
+                    value={editName} 
+                    onChange={e => setEditName(e.target.value)} 
+                    className="mc-form-input" 
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="mc-form-group">
+                    <label>Category</label>
+                    <select 
+                      value={editCategory} 
+                      onChange={e => setEditCategory(e.target.value as any)} 
+                      className="mc-form-select"
+                    >
+                      <option value="apparel">Apparel</option>
+                      <option value="accessories">Accessories</option>
+                    </select>
+                  </div>
+                  <div className="mc-form-group">
+                    <label>Price / Value</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. PHP 899.00" 
+                      value={editPrice} 
+                      onChange={e => setEditPrice(e.target.value)} 
+                      className="mc-form-input" 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="mc-form-group">
+                    <label>Showcase Status</label>
+                    <select 
+                      value={editStatus} 
+                      onChange={e => setEditStatus(e.target.value as any)} 
+                      className="mc-form-select"
+                    >
+                      <option value="Showcase Only">Showcase Only</option>
+                      <option value="Coming Soon">Coming Soon</option>
+                    </select>
+                  </div>
+                  <div className="mc-form-group">
+                    <label>Material / Quality</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 100% Combed Cotton" 
+                      value={editMaterial} 
+                      onChange={e => setEditMaterial(e.target.value)} 
+                      className="mc-form-input" 
+                    />
+                  </div>
+                </div>
+
+                <div className="mc-form-group">
+                  <label>Description</label>
+                  <textarea 
+                    placeholder="Enter short description of the item..." 
+                    value={editDescription} 
+                    onChange={e => setEditDescription(e.target.value)} 
+                    className="mc-form-textarea" 
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="mc-form-group">
+                    <label>Available Sizes (comma-separated)</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. S, M, L, XL" 
+                      value={editSizes} 
+                      onChange={e => setEditSizes(e.target.value)} 
+                      className="mc-form-input" 
+                    />
+                  </div>
+                  <div className="mc-form-group">
+                    <label>Color Options (comma-separated)</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. White, Forest Green" 
+                      value={editColors} 
+                      onChange={e => setEditColors(e.target.value)} 
+                      className="mc-form-input" 
+                    />
+                  </div>
+                </div>
+
+                <div className="mc-form-group">
+                  <label>Design Features (one per line)</label>
+                  <textarea 
+                    placeholder="e.g. Spacious front pocket&#10;Water-resistant fabric" 
+                    value={editFeatures} 
+                    onChange={e => setEditFeatures(e.target.value)} 
+                    className="mc-form-textarea" 
+                  />
+                </div>
+
+                <div className="mc-form-group">
+                  <label>Product Showcase Pictures (First picture will be the primary cover)</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {editImagesList.length > 0 && (
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", padding: "10px", background: "var(--surface2)", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                        {editImagesList.map((imgUrl, index) => (
+                          <div key={index} style={{ position: "relative", width: "60px", height: "60px", borderRadius: "6px", overflow: "hidden", border: "1px solid var(--border)" }}>
+                            <img src={imgUrl} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            <button
+                              type="button"
+                              onClick={() => setEditImagesList(editImagesList.filter((_, i) => i !== index))}
+                              style={{
+                                position: "absolute",
+                                top: "2px",
+                                right: "2px",
+                                width: "16px",
+                                height: "16px",
+                                borderRadius: "50%",
+                                background: "rgba(220, 38, 38, 0.9)",
+                                color: "#ffffff",
+                                border: "none",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                                cursor: "pointer",
+                                padding: 0
+                              }}
+                              title="Remove image"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleEditImageFile}
+                        style={{ display: "none" }}
+                        id="product-edit-image-upload-multiple"
+                      />
+                      <label
+                        htmlFor="product-edit-image-upload-multiple"
+                        className="mc-form-cancel-btn"
+                        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", height: "38px", margin: 0 }}
+                      >
+                        Upload Pictures
+                      </label>
+                      
+                      <select
+                        onChange={(e) => {
+                          handleEditPresetImage(e.target.value);
+                          e.target.value = "";
+                        }}
+                        className="mc-form-select"
+                        value=""
+                      >
+                        <option value="" disabled>-- Or Add Preset Mockup --</option>
+                        <option value="/merch/hoodie.png">Pharmacy Premium Hoodie</option>
+                        <option value="/merch/shirt.png">Pharmacy Signature Shirt</option>
+                        <option value="/merch/tote.png">Pharmacy Official Tote Bag</option>
+                        <option value="/merch/lanyard.png">Pharmacy Event Lanyard</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mc-form-footer">
+                <button 
+                  type="button" 
+                  className="mc-form-cancel-btn"
+                  onClick={() => setEditingItem(null)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="mc-form-submit-btn"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -488,6 +1177,13 @@ export default function MerchCataloguePage() {
           gap: 4px;
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
+          transition: all 0.2s ease;
+        }
+
+        .mc-card:hover .mc-card-status {
+          opacity: 0;
+          transform: translateY(-5px);
+          pointer-events: none;
         }
 
         .status-soon {
@@ -847,6 +1543,236 @@ export default function MerchCataloguePage() {
 
         .mc-notice-icon {
           flex-shrink: 0;
+        }
+
+        .mc-search-actions-group {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+        }
+
+        @media (max-width: 768px) {
+          .mc-search-actions-group {
+            width: 100%;
+            flex-direction: row;
+          }
+          .mc-search-wrap {
+            flex-grow: 1;
+          }
+        }
+
+        .mc-add-btn {
+          height: 38px;
+          padding: 0 16px;
+          border-radius: var(--radius-sm);
+          border: none;
+          background: #7c3aed;
+          color: #ffffff;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .mc-add-btn:hover {
+          background: #6d28d9;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+        }
+
+        .mc-add-btn:active {
+          transform: translateY(0);
+        }
+
+        .mc-form-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          width: 100%;
+          max-width: 600px;
+          overflow: hidden;
+          position: relative;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.2);
+          animation: scaleUpCard 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .mc-form-header {
+          padding: 20px 28px;
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .mc-form-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--white-shade);
+          margin: 0;
+        }
+
+        .mc-form-body {
+          padding: 28px;
+          max-height: 65vh;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .mc-form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .mc-form-group label {
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--muted);
+        }
+
+        .mc-form-input {
+          height: 38px;
+          padding: 0 12px;
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--border);
+          background: var(--surface2);
+          color: var(--white-shade);
+          font-size: 13.5px;
+          outline: none;
+          transition: all 0.2s ease;
+        }
+
+        .mc-form-input:focus {
+          border-color: rgba(124, 58, 237, 0.4);
+        }
+
+        .mc-form-textarea {
+          min-height: 80px;
+          padding: 10px 12px;
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--border);
+          background: var(--surface2);
+          color: var(--white-shade);
+          font-size: 13.5px;
+          outline: none;
+          resize: vertical;
+          transition: all 0.2s ease;
+        }
+
+        .mc-form-textarea:focus {
+          border-color: rgba(124, 58, 237, 0.4);
+        }
+
+        .mc-form-select {
+          height: 38px;
+          padding: 0 12px;
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--border);
+          background: var(--surface2);
+          color: var(--white-shade);
+          font-size: 13.5px;
+          outline: none;
+          cursor: pointer;
+        }
+
+        .mc-form-select option {
+          background: var(--surface2);
+          color: var(--white-shade);
+        }
+
+        .mc-form-footer {
+          padding: 20px 28px;
+          border-top: 1px solid var(--border);
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+        }
+
+        .mc-form-cancel-btn {
+          height: 38px;
+          padding: 0 16px;
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--border);
+          background: transparent;
+          color: var(--muted);
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .mc-form-cancel-btn:hover {
+          color: var(--white-shade);
+          border-color: var(--muted);
+        }
+
+        .mc-form-submit-btn {
+          height: 38px;
+          padding: 0 16px;
+          border-radius: var(--radius-sm);
+          border: none;
+          background: #7c3aed;
+          color: #ffffff;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .mc-form-submit-btn:hover {
+          background: #6d28d9;
+        }
+
+        .mc-card-actions {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          display: flex;
+          gap: 6px;
+          z-index: 20;
+          opacity: 0;
+          pointer-events: none;
+          transition: all 0.2s ease;
+          transform: translateY(-5px);
+        }
+
+        .mc-card:hover .mc-card-actions {
+          opacity: 1;
+          pointer-events: auto;
+          transform: translateY(0);
+        }
+
+        .mc-card-action-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          border: 1px solid var(--border);
+          background: var(--surface);
+          color: var(--muted);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .mc-card-action-btn:hover {
+          background: var(--surface2);
+          color: #7c3aed;
+          border-color: rgba(124, 58, 237, 0.3);
+          transform: scale(1.1);
+        }
+
+        .mc-card-action-btn.delete-btn:hover {
+          color: #dc2626;
+          border-color: rgba(220, 38, 38, 0.3);
         }
       `}</style>
     </div>
