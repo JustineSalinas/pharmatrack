@@ -277,23 +277,26 @@ export default function EventsManagement() {
           />
         </div>
 
-        {events.length > 0 && (
-          <button 
-            type="button"
-            onClick={() => setShowDeleteAllModal(true)}
-            className="btn-danger-outline"
-          >
-            <Trash2 size={14} /> Delete All Events
-          </button>
-        )}
+        <div style={{ marginLeft: "auto", display: "flex", gap: "12px", alignItems: "center" }}>
+          {events.length > 0 && (
+            <button 
+              type="button"
+              onClick={() => setShowDeleteAllModal(true)}
+              className="btn-danger-outline"
+              style={{ height: "40px" }}
+            >
+              <Trash2 size={14} /> Delete All Events
+            </button>
+          )}
 
-        <button 
-          className="btn-create-event" 
-          onClick={() => { resetForm(); setShowModal(true); }} 
-          style={{ height: "40px", marginLeft: "auto" }}
-        >
-          <PlusCircle size={16} /> Create Event
-        </button>
+          <button 
+            className="btn-create-event" 
+            onClick={() => { resetForm(); setShowModal(true); }} 
+            style={{ height: "40px" }}
+          >
+            <PlusCircle size={16} /> Create Event
+          </button>
+        </div>
       </div>
 
       {loading ? (

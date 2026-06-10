@@ -319,20 +319,20 @@ export default function FacilitatorOverview() {
         {/* RIGHT: Quick Actions */}
         <div className="sd-right-col">
           <div className="sd-quick-links">
-            <p className="sd-panel-label" style={{ marginBottom: 10 }}>
+            <p className="sd-panel-label">
               Quick Actions
             </p>
             <div className="sd-quick-grid" style={{ gridTemplateColumns: "1fr" }}>
               {quickActions.map((a) => (
                 <Link href={a.href as any} className="sd-quick-card" key={a.label}>
-                  <div className="sd-quick-icon" style={{ background: "rgba(79, 70, 229, 0.08)", color: "#4f46e5" }}>
+                  <div className="sd-quick-icon">
                     {a.icon}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
-                    <span className="sd-quick-label" style={{ fontWeight: 600 }}>
+                    <span className="sd-quick-label">
                       {a.label}
                     </span>
-                    <span style={{ fontSize: "11px", color: "#4b5563" }}>{a.sub}</span>
+                    <span className="sd-quick-sub">{a.sub}</span>
                   </div>
                   <ChevronRight size={14} className="sd-quick-arrow" />
                 </Link>
@@ -478,29 +478,34 @@ export default function FacilitatorOverview() {
         .facilitator-overview-page .sd-quick-links {
           background: #ffffff !important;
           border: 1px solid rgba(79, 70, 229, 0.12) !important;
-          border-radius: 8px !important;
-          padding: 16px 18px !important;
+          border-radius: 12px !important;
+          padding: 24px 20px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -1px rgba(0, 0, 0, 0.01) !important;
         }
 
         .facilitator-overview-page .sd-panel-label {
           font-size: 12px !important;
-          font-weight: 600 !important;
+          font-weight: 700 !important;
           color: #4f46e5 !important;
           text-transform: uppercase !important;
           letter-spacing: 0.08em !important;
+          margin-bottom: 16px !important;
         }
 
         .facilitator-overview-page .sd-quick-card {
           display: flex !important;
           align-items: center !important;
-          gap: 12px !important;
+          gap: 16px !important;
           background: #ffffff !important;
           border: 1px solid rgba(79, 70, 229, 0.08) !important;
-          border-radius: 9px !important;
-          padding: 11px 13px !important;
+          border-radius: 12px !important;
+          padding: 14px 18px !important;
           text-decoration: none !important;
-          transition: all 0.15s ease !important;
-          margin-bottom: 8px !important;
+          transition: all 0.2s ease !important;
+          margin-bottom: 12px !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
         }
 
         .facilitator-overview-page .sd-quick-card:last-child {
@@ -508,25 +513,33 @@ export default function FacilitatorOverview() {
         }
 
         .facilitator-overview-page .sd-quick-card:hover {
-          background: rgba(79, 70, 229, 0.04) !important;
-          border-color: rgba(79, 70, 229, 0.18) !important;
-          transform: translateY(-1px) !important;
+          background: #ffffff !important;
+          border-color: rgba(79, 70, 229, 0.24) !important;
+          transform: translateY(-2px) !important;
+          box-shadow: 0 8px 16px rgba(79, 70, 229, 0.06), 0 2px 4px rgba(0, 0, 0, 0.02) !important;
         }
 
         .facilitator-overview-page .sd-quick-icon {
-          width: 32px !important;
-          height: 32px !important;
-          border-radius: 8px !important;
+          width: 40px !important;
+          height: 40px !important;
+          border-radius: 10px !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
           flex-shrink: 0 !important;
+          background: rgba(79, 70, 229, 0.06) !important;
+          color: #4f46e5 !important;
         }
 
         .facilitator-overview-page .sd-quick-label {
-          font-size: 13px !important;
+          font-size: 14px !important;
           font-weight: 600 !important;
           color: #111827 !important;
+        }
+
+        .facilitator-overview-page .sd-quick-sub {
+          font-size: 11px !important;
+          color: #6b7280 !important;
         }
 
         .facilitator-overview-page .sd-quick-arrow {
