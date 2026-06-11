@@ -8,6 +8,7 @@ import {
   Loader2, Calendar, AlertTriangle, Clock, MapPin, X, ChevronRight,
 } from "lucide-react";
 import type { StudentProfile, PharmaUser, Event } from "@/lib/schema";
+import { getEventTypeStyle } from "@/lib/event-type";
 
 interface QRSessionRow {
   id: string;
@@ -28,6 +29,7 @@ interface SessionBlock {
   type: "session" | "event";
   location?: string;
   sortTime: number;
+  eventType?: string;
 }
 
 function fmtTime(iso: string) {
@@ -162,7 +164,8 @@ export default function SchedulePage() {
             time: timeRange,
             type: "event",
             location: ev.location,
-            sortTime
+            sortTime,
+            eventType: ev.event_type ?? "Department",
           });
         }
 
@@ -270,7 +273,9 @@ export default function SchedulePage() {
                     justifyContent: "space-between",
                     width: "100%",
                     alignItems: "center",
-                    ...(hasOnlySchoolEvent ? { color: "var(--teal)" } : {})
+                    ...(hasOnlySchoolEvent ? {
+                      color: getEventTypeStyle(dayEvents.find(e => e.type === "event")?.eventType).color
+                    } : {})
                   }}>
                     <span style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.05em" }}>{day}</span>
                     <span style={{ fontSize: "11px", color: isToday ? "rgba(232, 184, 75, 0.8)" : "var(--dimmed)", fontWeight: isToday ? "600" : "normal" }}>{dates[day]}</span>
@@ -279,14 +284,15 @@ export default function SchedulePage() {
                     <span className="cal-cell-events" style={{ marginTop: "4px", width: "100%" }}>
                       {dayEvents.slice(0, 2).map((ev) => {
                         const isSchoolEvent = ev.type === "event";
+                        const ts = isSchoolEvent ? getEventTypeStyle(ev.eventType) : null;
                         return (
                           <span
                             key={ev.sessionId}
                             className="cal-cell-event-pill"
-                            style={isSchoolEvent ? {
-                              background: "rgba(45, 212, 191, 0.08)",
-                              color: "var(--teal)",
-                              border: "1px solid rgba(45, 212, 191, 0.15)",
+                            style={isSchoolEvent && ts ? {
+                              background: ts.bg,
+                              color: ts.color,
+                              border: `1px solid ${ts.border}`,
                             } : undefined}
                             title={ev.subject}
                           >
@@ -330,11 +336,12 @@ export default function SchedulePage() {
             <div className="cal-drawer-list">
               {grouped[selectedDay].map((ev) => {
                 const isSchoolEvent = ev.type === "event";
+                const ts = isSchoolEvent ? getEventTypeStyle(ev.eventType) : null;
                 return (
                   <div
                     key={ev.sessionId}
                     className="cal-event-card"
-                    style={isSchoolEvent ? { borderLeftColor: "var(--teal)" } : undefined}
+                    style={isSchoolEvent && ts ? { borderLeftColor: ts.color } : undefined}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "6px" }}>
                       <h4 className="cal-event-name">{ev.subject}</h4>
@@ -345,12 +352,12 @@ export default function SchedulePage() {
                         borderRadius: "4px",
                         textTransform: "uppercase",
                         letterSpacing: "0.05em",
-                        background: isSchoolEvent ? "rgba(45, 212, 191, 0.1)" : "rgba(232, 184, 75, 0.1)",
-                        color: isSchoolEvent ? "var(--teal)" : "var(--gold)",
-                        border: isSchoolEvent ? "1px solid rgba(45, 212, 191, 0.2)" : "1px solid rgba(232, 184, 75, 0.2)",
+                        background: isSchoolEvent && ts ? ts.bg : "rgba(232, 184, 75, 0.1)",
+                        color: isSchoolEvent && ts ? ts.color : "var(--gold)",
+                        border: isSchoolEvent && ts ? `1px solid ${ts.border}` : "1px solid rgba(232, 184, 75, 0.2)",
                         flexShrink: 0,
                       }}>
-                        {isSchoolEvent ? "School Event" : "Class Session"}
+                        {isSchoolEvent ? (ts?.label ?? "School Event") : "Class Session"}
                       </span>
                     </div>
                     <div className="cal-event-meta-row">
@@ -383,8 +390,9 @@ export default function SchedulePage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
               {visibleEvents.map((event) => {
                 const days = daysUntilEvent(event.date);
+                const ts = getEventTypeStyle(event.event_type);
                 return (
-                  <div key={event.id} className="sd-event-card">
+                  <div key={event.id} className="sd-event-card" style={{ borderLeftColor: ts.color }}>
                     <div className="sd-event-date-block" style={{ minWidth: "44px" }}>
                       <span className="sd-event-month">
                         {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short" })}
@@ -403,7 +411,23 @@ export default function SchedulePage() {
                       </span>
                     </div>
                     <div className="sd-event-detail">
-                      <h3 className="sd-event-name" style={{ fontSize: "13px", marginBottom: "4px" }}>{event.name}</h3>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                        <h3 className="sd-event-name" style={{ fontSize: "13px", margin: 0 }}>{event.name}</h3>
+                        <span style={{
+                          fontSize: "9px",
+                          fontWeight: 700,
+                          padding: "1px 5px",
+                          borderRadius: "4px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          background: ts.bg,
+                          color: ts.color,
+                          border: `1px solid ${ts.border}`,
+                          flexShrink: 0,
+                        }}>
+                          {ts.label}
+                        </span>
+                      </div>
                       <div className="sd-event-meta">
                         <span className="sd-event-meta-item">
                           <Clock size={11} />
