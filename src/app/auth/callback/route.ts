@@ -25,7 +25,13 @@ export async function GET(request: NextRequest) {
   if (oauthError) {
     console.error("OAuth callback error:", oauthError, oauthErrorDesc);
     const errUrl = new URL("/login", origin);
-    errUrl.searchParams.set("error", `oauth_error:${oauthError}${oauthErrorDesc ? ` - ${oauthErrorDesc}` : ""}`);
+    // Email scanners (Gmail, Outlook) auto-follow links and consume the one-time
+    // token before the user clicks it. The email IS confirmed; guide them to log in.
+    if (oauthError === "access_denied" && oauthErrorDesc?.toLowerCase().includes("email link is invalid or has expired")) {
+      errUrl.searchParams.set("error", "link_already_used");
+    } else {
+      errUrl.searchParams.set("error", `oauth_error:${oauthError}${oauthErrorDesc ? ` - ${oauthErrorDesc}` : ""}`);
+    }
     return NextResponse.redirect(errUrl);
   }
 
