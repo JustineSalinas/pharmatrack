@@ -46,22 +46,26 @@ export async function registerStudent(input: StudentRegisterInput) {
 
   const userId = authData.user.id;
 
-  // 1. Create User Record
-  const { error: userErr } = await supabase.from("users").insert({
-    id: userId,
-    email: input.email,
-    full_name: input.full_name,
-    account_type: "student" as AccountType,
-    status: "pending",
+  // Create user + student profile via server route (bypasses RLS — no session yet before email confirmation)
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      email: input.email,
+      full_name: input.full_name,
+      account_type: "student",
+      student_profile: {
+        student_id_number: input.student_id_number,
+        section: input.section,
+        current_year: input.current_year,
+      },
+    }),
   });
-  if (userErr) throw new Error(userErr.message);
-
-  // 2. Create Student Profile
-  await ensureStudentProfile(userId, {
-    student_id_number: input.student_id_number,
-    section: input.section,
-    current_year: input.current_year
-  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? "Failed to create user profile");
+  }
 
   return authData;
 }
@@ -115,22 +119,21 @@ export async function registerFacilitator(input: FacilitatorRegisterInput) {
 
   const userId = authData.user.id;
 
-  // 1. Create User Record (Pending approval)
-  const { error: userErr } = await supabase.from("users").insert({
-    id: userId,
-    email: input.email,
-    full_name: input.full_name,
-    account_type: "facilitator" as AccountType,
-    status: "pending",
+  // Create user + facilitator profile via server route (bypasses RLS — no session yet before email confirmation)
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      email: input.email,
+      full_name: input.full_name,
+      account_type: "facilitator",
+    }),
   });
-  if (userErr) throw new Error(userErr.message);
-
-  // 2. Create Facilitator Profile
-  const { error: profileErr } = await supabase.from("facilitator_profiles").insert({
-    user_id: userId,
-    department: "Pharmacy" // Default or allow input
-  });
-  if (profileErr) throw new Error(profileErr.message);
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? "Failed to create user profile");
+  }
 
   return authData;
 }
