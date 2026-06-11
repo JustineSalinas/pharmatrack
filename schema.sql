@@ -252,7 +252,8 @@ CREATE TABLE IF NOT EXISTS public.events (
   check_out_start    TIMESTAMPTZ,
   check_out_end      TIMESTAMPTZ,
   created_by         UUID NOT NULL REFERENCES public.users(id),
-  created_at         TIMESTAMPTZ DEFAULT NOW()
+  created_at         TIMESTAMPTZ DEFAULT NOW(),
+  target_year_levels  TEXT[]
 );
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
