@@ -343,6 +343,27 @@ export default function EventsManagement() {
                          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={12} /> {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                          <span style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}><MapPin size={12} /> {event.location}</span>
                        </div>
+                       {event.target_year_levels?.length > 0 && (
+                         <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px" }}>
+                           {event.target_year_levels.map((yr: string) => (
+                             <span
+                               key={yr}
+                               style={{
+                                 fontSize: "10px",
+                                 fontWeight: 600,
+                                 padding: "1px 7px",
+                                 borderRadius: "10px",
+                                 background: "rgba(79,70,229,0.12)",
+                                 border: "1px solid rgba(79,70,229,0.3)",
+                                 color: "#a5b4fc",
+                                 letterSpacing: "0.03em",
+                               }}
+                             >
+                               {yr}
+                             </span>
+                           ))}
+                         </div>
+                       )}
                      </div>
                   </div>
                   
