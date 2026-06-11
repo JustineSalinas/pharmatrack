@@ -40,6 +40,8 @@ export interface Event {
   check_out_end: string | null;
   created_by: string;
   created_at: string;
+  event_type: string | null;
+  target_year_levels: string[] | null;
 }
 
 export interface QRSession {
