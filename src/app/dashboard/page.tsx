@@ -94,9 +94,17 @@ function StudentDashboardContent() {
             .select("*")
             .gte("date", today)
             .order("date", { ascending: true })
-            .limit(8);
+            .limit(20);
 
-          if (upcoming) setUpcomingEvents(upcoming);
+          if (upcoming) {
+            const studentYear = u.student_profiles?.current_year ?? null;
+            const filtered = upcoming.filter(ev => {
+              if (!ev.target_year_levels || ev.target_year_levels.length === 0) return true;
+              if (!studentYear) return true;
+              return ev.target_year_levels.includes(studentYear);
+            });
+            setUpcomingEvents(filtered);
+          }
         }
       } catch (err) {
         console.error("Error loading student dashboard", err);
