@@ -35,6 +35,7 @@ import { supabase, parseDateLocal } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import type { AttendanceSummary, PharmaUser, StudentProfile, Event } from "@/lib/schema";
+import { getEventTypeStyle } from "@/lib/event-type";
 
 function StudentDashboardContent() {
   const searchParams = useSearchParams();
@@ -453,8 +454,9 @@ function StudentDashboardContent() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {visibleEvents.map((event) => {
                     const days = daysUntilEvent(event.date);
+                    const ts = getEventTypeStyle(event.event_type);
                     return (
-                      <div key={event.id} className="sd-event-card" style={{ padding: "10px 12px" }}>
+                      <div key={event.id} className="sd-event-card" style={{ padding: "10px 12px", borderLeftColor: ts.color }}>
                         <div className="sd-event-date-block" style={{ minWidth: "44px" }}>
                           <span className="sd-event-month">
                             {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short" })}
@@ -473,7 +475,23 @@ function StudentDashboardContent() {
                           </span>
                         </div>
                         <div className="sd-event-detail">
-                          <h3 className="sd-event-name" style={{ fontSize: "13px", marginBottom: "4px" }}>{event.name}</h3>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                            <h3 className="sd-event-name" style={{ fontSize: "13px", margin: 0 }}>{event.name}</h3>
+                            <span style={{
+                              fontSize: "9px",
+                              fontWeight: 700,
+                              padding: "1px 5px",
+                              borderRadius: "4px",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              background: ts.bg,
+                              color: ts.color,
+                              border: `1px solid ${ts.border}`,
+                              flexShrink: 0,
+                            }}>
+                              {ts.label}
+                            </span>
+                          </div>
                           <div className="sd-event-meta">
                             <span className="sd-event-meta-item">
                               <Clock size={11} />
