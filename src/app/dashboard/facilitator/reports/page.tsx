@@ -133,38 +133,42 @@ function StudentModal({ onClose, allStudents }: { onClose: () => void, allStuden
   );
 }
 const TrendChart = ({ data }: { data: { month: string, rate: number }[] }) => {
-  const width = 600;
-  const height = 220;
-  const paddingX = 48;
-  const chartWidth = width - paddingX * 2;
-  const yTicks = [60, 70, 80, 90, 100];
+  const width = 650;
+  const height = 240;
+  const paddingLeft = 50;
+  const paddingRight = 20;
+  const paddingTop = 25;
+  const paddingBottom = 35;
+  const chartWidth = width - paddingLeft - paddingRight;
+  const chartHeight = height - paddingTop - paddingBottom;
+
+  const yMin = 0;
+  const yMax = 100;
+  const yTicks = [0, 20, 40, 60, 80, 100];
 
   const getY = (rate: number) => {
-    const min = 50;
-    const max = 100;
-    const clamped = Math.max(min, Math.min(max, rate));
-    const topLimit = 25;
-    const bottomLimit = 170;
-    return bottomLimit - ((clamped - min) / (max - min)) * (bottomLimit - topLimit);
+    const clamped = Math.max(yMin, Math.min(yMax, rate));
+    return paddingTop + chartHeight - ((clamped - yMin) / (yMax - yMin)) * chartHeight;
   };
 
   const getX = (index: number) => {
-    if (data.length <= 1) return width / 2;
-    return paddingX + (index / (data.length - 1)) * chartWidth;
+    if (data.length <= 1) return paddingLeft + chartWidth / 2;
+    return paddingLeft + (index / (data.length - 1)) * chartWidth;
   };
 
+  const bottomY = getY(yMin);
   const points = data.map((d, i) => `${getX(i)},${getY(d.rate)}`).join(" ");
-  const areaPoints = data.length > 1 ? `${getX(0)},170 ${points} ${getX(data.length - 1)},170` : "";
+  const areaPoints = data.length > 1 ? `${getX(0)},${bottomY} ${points} ${getX(data.length - 1)},${bottomY}` : "";
 
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{ overflow: "visible" }}>
+    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" style={{ overflow: "visible" }}>
       {/* Grid lines and Y labels */}
       {yTicks.map(tick => {
         const y = getY(tick);
         return (
           <g key={tick}>
-            <text x={paddingX - 12} y={y + 7} fill="#4b5563" fontSize="22" fontWeight="700" textAnchor="end" fontFamily="var(--font-sans)">{tick}%</text>
-            <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="rgba(0,0,0,0.05)" strokeWidth="1" strokeDasharray="4 4" />
+            <text x={paddingLeft - 10} y={y + 4} fill="#9ca3af" fontSize="11" fontWeight="500" textAnchor="end" fontFamily="var(--font-sans)">{tick}%</text>
+            <line x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} stroke="rgba(0,0,0,0.06)" strokeWidth="1" strokeDasharray="4 4" />
           </g>
         );
       })}
@@ -173,7 +177,7 @@ const TrendChart = ({ data }: { data: { month: string, rate: number }[] }) => {
       {data.length > 1 && <polygon points={areaPoints} fill="url(#chartGrad)" opacity={0.3} />}
       
       {/* The Line */}
-      {data.length > 1 && <polyline points={points} fill="none" stroke="#4f46e5" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
+      {data.length > 1 && <polyline points={points} fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
       
       {/* Data points and X labels */}
       {data.map((d, i) => {
@@ -181,11 +185,11 @@ const TrendChart = ({ data }: { data: { month: string, rate: number }[] }) => {
         const y = getY(d.rate);
         return (
           <g key={d.month}>
-            <circle cx={x} cy={y} r="5.5" fill="#ffffff" stroke="#4f46e5" strokeWidth="3" />
+            <circle cx={x} cy={y} r="4.5" fill="#ffffff" stroke="#4f46e5" strokeWidth="2.5" />
             {/* Value label above the dot */}
-            <text x={x} y={y - 14} fill="#4f46e5" fontSize="20" fontWeight="700" textAnchor="middle" fontFamily="var(--font-sans)">{d.rate}%</text>
-            {/* Month label below the dot */}
-            <text x={x} y={208} fill="#4b5563" fontSize="22" textAnchor="middle" fontFamily="var(--font-sans)" fontWeight="700">{d.month}</text>
+            <text x={x} y={y - 10} fill="#4f46e5" fontSize="11" fontWeight="700" textAnchor="middle" fontFamily="var(--font-sans)">{d.rate}%</text>
+            {/* Month label below */}
+            <text x={x} y={height - 8} fill="#6b7280" fontSize="12" textAnchor="middle" fontFamily="var(--font-sans)" fontWeight="600">{d.month}</text>
           </g>
         );
       })}

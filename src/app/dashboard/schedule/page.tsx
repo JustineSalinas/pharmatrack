@@ -402,7 +402,7 @@ export default function SchedulePage() {
                       </span>
                       <span className="sd-event-days-pill" style={{
                         fontSize: "9px",
-                        padding: "2px 5px",
+                        padding: "2px 8px",
                         background: days === 0 ? "rgba(74,222,128,0.15)" : days === 1 ? "rgba(232,184,75,0.15)" : "rgba(255,255,255,0.06)",
                         color: days === 0 ? "var(--success)" : days === 1 ? "var(--gold)" : "var(--dimmed)",
                         border: days === 0 ? "1px solid rgba(74,222,128,0.25)" : days === 1 ? "1px solid rgba(232,184,75,0.25)" : "1px solid rgba(255,255,255,0.08)",

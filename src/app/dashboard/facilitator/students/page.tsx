@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   Search, Users, CheckCircle, XCircle, Clock, ChevronRight, X,
@@ -44,12 +44,7 @@ function getRateColor(rate: number) {
   return           { color: "#dc2626", bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.15)"  };
 }
 
-const SECTIONS_BY_YEAR: Record<string, string[]> = {
-  "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
-  "2nd Year": ["PH 2A", "PH 2B", "PH 2C", "PH 2D", "PH 2E"],
-  "3rd Year": ["PH 3A", "PH 3B", "PH 3C", "PH 3D"],
-  "4th Year": ["PH 4A", "PH 4B", "PH 4C", "PH 4D"],
-};
+
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
@@ -68,62 +63,96 @@ export default function StudentsPage() {
   const [detailRecords, setDetailRecords] = useState<any[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // Today's range for status calculation
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+  const fetchStudents = useCallback(async (isInitial = false) => {
+    try {
+      if (isInitial) setLoading(true);
 
-  useEffect(() => {
-    async function fetchStudents() {
-      try {
-        setLoading(true);
+      // 1. Fetch full student summary (attendance rates, counts, etc.)
+      const { data: summary, error: sErr } = await supabase
+        .from("student_attendance_summary")
+        .select("*");
+      if (sErr) throw sErr;
 
-        // 1. Fetch full student summary (attendance rates, counts, etc.)
-        const { data: summary, error: sErr } = await supabase
-          .from("student_attendance_summary")
-          .select("*");
-        if (sErr) throw sErr;
+      // Calculate today's range
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
-        // 2. Fetch today's attendance records for "Today" status column
-        const { data: todayRecs, error: tErr } = await supabase
-          .from("attendance_records")
-          .select("student_id, status")
-          .gte("created_at", todayStart.toISOString())
-          .lte("created_at", todayEnd.toISOString());
-        if (tErr) throw tErr;
+      // 2. Fetch today's attendance records for "Today" status column
+      const { data: todayRecs, error: tErr } = await supabase
+        .from("attendance_records")
+        .select("student_id, status")
+        .gte("created_at", todayStart.toISOString())
+        .lte("created_at", todayEnd.toISOString());
+      if (tErr) throw tErr;
 
-        // Map student_id → latest status today
-        const todayStatusMap: Record<string, string> = {};
-        (todayRecs || []).forEach((r: any) => {
-          todayStatusMap[r.student_id] = r.status;
-        });
+      // Map student_id → latest status today
+      const todayStatusMap: Record<string, string> = {};
+      (todayRecs || []).forEach((r: any) => {
+        todayStatusMap[r.student_id] = r.status;
+      });
 
-        const parsed = (summary || []).map((s: any) => ({
-          userId:       s.student_id,
-          id:           s.student_id_number || "N/A",
-          name:         s.full_name || "Unknown",
-          section:      s.section   || "N/A",
-          year:         s.current_year || "N/A",
-          rate:         Number(s.attendance_rate) || 0,
-          totalRecords: s.total_records    || 0,
-          presentCount: s.present_count   || 0,
-          lateCount:    s.late_count      || 0,
-          absentCount:  s.absent_count    || 0,
-          todayStatus:  todayStatusMap[s.student_id] || null,
-        }));
+      const parsed = (summary || []).map((s: any) => ({
+        userId:       s.student_id,
+        id:           s.student_id_number || "N/A",
+        name:         s.full_name || "Unknown",
+        section:      s.section   || "N/A",
+        year:         s.current_year || "N/A",
+        rate:         Number(s.attendance_rate) || 0,
+        totalRecords: s.total_records    || 0,
+        presentCount: s.present_count   || 0,
+        lateCount:    s.late_count      || 0,
+        absentCount:  s.absent_count    || 0,
+        todayStatus:  todayStatusMap[s.student_id] || null,
+      }));
 
-        setStudents(parsed);
+      setStudents(parsed);
 
-        const uniqueSections = Array.from(new Set(parsed.map(s => s.section))).filter(Boolean).sort() as string[];
-        setSections(uniqueSections);
+      const uniqueSections = Array.from(new Set(parsed.map(s => s.section))).filter(Boolean).sort() as string[];
+      setSections(uniqueSections);
 
-      } catch (err) {
-        console.error("Error loading students:", err);
-      } finally {
-        setLoading(false);
-      }
+    } catch (err) {
+      console.error("Error loading students:", err);
+    } finally {
+      if (isInitial) setLoading(false);
     }
-    fetchStudents();
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchStudents(true);
+  }, [fetchStudents]);
+
+  // Real-time updates: refresh list when students register or update profiles/attendance
+  useEffect(() => {
+    const channel = supabase
+      .channel("student-management-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "users" },
+        () => {
+          fetchStudents();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "student_profiles" },
+        () => {
+          fetchStudents();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "attendance_records" },
+        () => {
+          fetchStudents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchStudents]);
 
   // Fetch individual student's recent attendance records when they click View
   async function loadStudentDetail(student: any) {
@@ -155,16 +184,10 @@ export default function StudentsPage() {
     }
   }
 
-  // 1. Get unique sections from students in the database
-  const dynamicSections = Array.from(
+  // Get unique sections from students in the database
+  const availableSectionsList = Array.from(
     new Set(students.map(s => s.section))
   ).filter(Boolean).sort() as string[];
-
-  // 2. Determine static fallback sections (all years)
-  const staticFallback = Object.values(SECTIONS_BY_YEAR).flat();
-
-  // 3. Combine them
-  const availableSectionsList = Array.from(new Set([...dynamicSections, ...staticFallback])).sort();
 
   const filtered = students.filter(s =>
     (sectionFilter === "All" || s.section === sectionFilter) &&
@@ -268,24 +291,18 @@ export default function StudentsPage() {
             className="search-input"
           />
         </div>
-        <div className="section-filters" style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
-          <button
-            onClick={() => { setSectionFilter("All"); }}
-            className={`filter-chip ${sectionFilter === "All" ? "active" : ""}`}
-          >
-            All Sections
-          </button>
-
+        <select
+          value={sectionFilter}
+          onChange={e => setSectionFilter(e.target.value)}
+          className="filter-select"
+        >
+          <option value="All">All Sections</option>
           {availableSectionsList.map(s => (
-            <button
-              key={s}
-              onClick={() => { setSectionFilter(s); }}
-              className={`filter-chip ${sectionFilter === s ? "active" : ""}`}
-            >
+            <option key={s} value={s}>
               {s}
-            </button>
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
       {/* MAIN GRID: TABLE + DETAIL PANEL */}
@@ -553,9 +570,9 @@ export default function StudentsPage() {
           color: #ffffff !important;
         }
         .students-page .filter-select {
-          padding: 7px 14px;
+          padding: 9px 32px 9px 14px;
           border-radius: 7px;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           border: 1px solid #d1d5db;
@@ -563,6 +580,7 @@ export default function StudentsPage() {
           color: #374151;
           outline: none;
           transition: all 0.15s ease;
+          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
         .students-page .filter-select option {
           color: #374151 !important;
