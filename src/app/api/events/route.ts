@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const { name, location, date, check_in_start, check_in_late, check_in_end } = body;
+  const { name, location, date, check_in_start, check_in_late, check_in_end, target_year_levels } = body;
   if (!name || !location || !date || !check_in_start || !check_in_late || !check_in_end) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         check_in_late,
         check_in_end,
         created_by: user.id,
+        target_year_levels: target_year_levels?.length ? target_year_levels : null,
       })
       .select()
       .single();
@@ -77,13 +78,21 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Events API] Event successfully created: "${name}" (ID: ${newEvent.id})`);
 
-    // 5. Query all approved student emails for broadcasting
-    const { data: students, error: studentsErr } = await supabase
+    // 5. Query approved student emails for broadcasting — filtered by year level if event targets specific years
+    const targetYears: string[] | null = target_year_levels?.length ? target_year_levels : null;
+
+    let studentsQuery = supabase
       .from("users")
-      .select("email, full_name")
+      .select("email, full_name, student_profiles!inner(current_year)")
       .eq("account_type", "student")
       .eq("status", "approved")
       .ilike("email", "%@usa.edu.ph");
+
+    if (targetYears) {
+      studentsQuery = studentsQuery.in("student_profiles.current_year", targetYears);
+    }
+
+    const { data: students, error: studentsErr } = await studentsQuery;
 
     if (studentsErr) {
       console.error("[Events API] Failed to fetch student recipients for broadcast:", studentsErr.message);
