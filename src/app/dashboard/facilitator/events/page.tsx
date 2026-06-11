@@ -32,12 +32,14 @@ export default function EventsManagement() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Form State
+  const YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [lateTime, setLateTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [targetYearLevels, setTargetYearLevels] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
 
   const filteredEvents = events.filter(event => 
@@ -138,6 +140,7 @@ export default function EventsManagement() {
             check_in_start: startTS,
             check_in_late: lateTS,
             check_in_end: endTS,
+            target_year_levels: targetYearLevels.length ? targetYearLevels : null,
           })
           .eq("id", editingEvent.id);
 
@@ -160,6 +163,7 @@ export default function EventsManagement() {
             check_in_start: startTS,
             check_in_late: lateTS,
             check_in_end: endTS,
+            target_year_levels: targetYearLevels.length ? targetYearLevels : null,
           }),
         });
 
@@ -215,6 +219,7 @@ export default function EventsManagement() {
     setStartTime("");
     setLateTime("");
     setEndTime("");
+    setTargetYearLevels([]);
     setFormError("");
     setEditingEvent(null);
   }
@@ -234,6 +239,7 @@ export default function EventsManagement() {
     setStartTime(parseTime(event.check_in_start));
     setLateTime(parseTime(event.check_in_late));
     setEndTime(parseTime(event.check_in_end));
+    setTargetYearLevels(event.target_year_levels ?? []);
     setFormError("");
     setShowModal(true);
   }
@@ -473,6 +479,51 @@ export default function EventsManagement() {
                     value={endTime} onChange={e => setEndTime(e.target.value)} required 
                     style={{ colorScheme: "light", borderColor: "rgba(220, 38, 38, 0.3)", background: "rgba(220, 38, 38, 0.04)" }}
                   />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Target Year Levels
+                  <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: "6px", color: "var(--dimmed)", fontSize: "11px" }}>
+                    (leave all unchecked for All Years)
+                  </span>
+                </label>
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  {YEAR_LEVELS.map(year => {
+                    const checked = targetYearLevels.includes(year);
+                    return (
+                      <label
+                        key={year}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "7px",
+                          padding: "7px 14px",
+                          borderRadius: "var(--radius-sm)",
+                          border: `1px solid ${checked ? "rgba(79,70,229,0.5)" : "var(--border)"}`,
+                          background: checked ? "rgba(79,70,229,0.1)" : "var(--surface2)",
+                          cursor: "pointer",
+                          fontSize: "13px",
+                          color: checked ? "#a5b4fc" : "var(--white-shade)",
+                          transition: "all 0.15s ease",
+                          userSelect: "none",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setTargetYearLevels(prev =>
+                              prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]
+                            );
+                          }}
+                          style={{ accentColor: "#4f46e5", width: "14px", height: "14px" }}
+                        />
+                        {year}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
