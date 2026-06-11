@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import type { PharmaUser, StudentProfile, FacilitatorProfile, QRSession, AttendanceRecord } from "./schema";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
@@ -39,17 +39,11 @@ export type Database = {
   };
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: "pkce",
-    lock: async (name, acquireTimeout, fn) => {
-      return await fn();
-    },
-  },
-});
+// createBrowserClient (from @supabase/ssr) stores the PKCE code verifier in
+// cookies instead of localStorage, so the server-side /auth/callback route can
+// read it during the code-exchange step — fixing the "PKCE verifier not found"
+// error that occurs when a confirmation link is opened in Gmail or a new tab.
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Parses a YYYY-MM-DD date string as LOCAL midnight, avoiding the UTC-offset

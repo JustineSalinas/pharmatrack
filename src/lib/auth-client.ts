@@ -40,9 +40,19 @@ export async function registerStudent(input: StudentRegisterInput) {
     if (authError.message.toLowerCase().includes("user already registered")) {
       throw new Error("This email is already registered. Please try logging in instead.");
     }
+    if (authError.message.toLowerCase().includes("rate limit")) {
+      throw new Error("Too many sign-up attempts right now. Please wait a few minutes and try again.");
+    }
     throw new Error(authError.message);
   }
   if (!authData.user) throw new Error("Registration failed");
+
+  // Supabase email-enumeration protection returns a "successful" signUp with a
+  // phantom user id and an empty identities array when the email already exists.
+  // Detect it here so we show a clear message instead of a foreign-key error.
+  if (authData.user.identities && authData.user.identities.length === 0) {
+    throw new Error("This email is already registered. Please log in instead, or use a different email.");
+  }
 
   const userId = authData.user.id;
 
@@ -115,7 +125,22 @@ export async function registerFacilitator(input: FacilitatorRegisterInput) {
     },
   });
 
-  if (authError || !authData.user) throw new Error(authError?.message ?? "Registration failed");
+  if (authError) {
+    if (authError.message.toLowerCase().includes("user already registered")) {
+      throw new Error("This email is already registered. Please try logging in instead.");
+    }
+    if (authError.message.toLowerCase().includes("rate limit")) {
+      throw new Error("Too many sign-up attempts right now. Please wait a few minutes and try again.");
+    }
+    throw new Error(authError.message);
+  }
+  if (!authData.user) throw new Error("Registration failed");
+
+  // Supabase email-enumeration protection returns a "successful" signUp with a
+  // phantom user id and an empty identities array when the email already exists.
+  if (authData.user.identities && authData.user.identities.length === 0) {
+    throw new Error("This email is already registered. Please log in instead, or use a different email.");
+  }
 
   const userId = authData.user.id;
 
