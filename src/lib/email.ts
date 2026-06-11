@@ -8,6 +8,8 @@ export interface EventBroadcastInput {
   checkInStart: string;
   checkInLate: string;
   checkInEnd: string;
+  eventType?: string | null;
+  targetYearLevels?: string[] | null;
   recipients: Array<{ email: string; full_name: string }>;
 }
 
@@ -61,6 +63,19 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
   const lateTimeStr = formatTime(event.checkInLate);
   const endTimeStr = formatTime(event.checkInEnd);
 
+  const displayEventType = event.eventType ?? "Department";
+  const eventTypeColorMap: Record<string, string> = {
+    "University Wide": "#ef4444",
+    "Pharmacy": "#a78bfa",
+    "Department": "#D4AF37",
+  };
+  const eventTypeColor = eventTypeColorMap[displayEventType] ?? "#D4AF37";
+
+  const displayYearLevels =
+    event.targetYearLevels && event.targetYearLevels.length > 0
+      ? event.targetYearLevels.join(", ")
+      : "All Year Levels";
+
   console.log(`[Email Service] Preparing broadcast for event "${event.name}" to ${event.recipients.length} students.`);
 
   if (config.isSMTPConfigured) {
@@ -81,23 +96,35 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
       const mailOptions = {
         from: config.from,
         to: student.email,
-        subject: `New Event Scheduled: ${event.name}`,
+        subject: `[${displayEventType}] New Event Scheduled: ${event.name}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px; background-color: #ffffff; color: #333333;">
             <div style="text-align: center; border-bottom: 2px solid #E8B84B; padding-bottom: 15px; margin-bottom: 20px;">
               <h2 style="color: #1e1432; margin: 0;">PharmaTrack Portal</h2>
               <span style="color: #666666; font-size: 14px;">University of San Agustin Pharmacy Department</span>
             </div>
-            
+
             <p>Dear <strong>${student.full_name}</strong>,</p>
-            
-            <p>A new department event has been scheduled. Please find the details below:</p>
-            
-            <div style="background-color: #f7f7f9; border-left: 4px solid #E8B84B; padding: 15px; margin: 20px 0; border-radius: 4px;">
+
+            <p>A new <strong style="color: ${eventTypeColor};">${displayEventType}</strong> event has been scheduled for <strong>${displayYearLevels}</strong>. Please find the details below:</p>
+
+            <div style="background-color: #f7f7f9; border-left: 4px solid ${eventTypeColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 6px 0; font-weight: bold; color: #666666; width: 120px;">Event Name:</td>
+                  <td style="padding: 6px 0; font-weight: bold; color: #666666; width: 130px;">Event Name:</td>
                   <td style="padding: 6px 0; font-weight: bold; color: #1e1432;">${event.name}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #666666;">Event Type:</td>
+                  <td style="padding: 6px 0;">
+                    <span style="display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; background-color: ${eventTypeColor}20; color: ${eventTypeColor}; border: 1px solid ${eventTypeColor}40;">
+                      ${displayEventType}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #666666;">For Year Levels:</td>
+                  <td style="padding: 6px 0; font-weight: bold; color: #1e1432;">${displayYearLevels}</td>
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; color: #666666;">Date:</td>
@@ -121,9 +148,9 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
                 </tr>
               </table>
             </div>
-            
+
             <p>Make sure to bring your <strong>PharmaTrack Student QR Code Pass</strong> to verify your attendance at the venue.</p>
-            
+
             <p style="margin-top: 30px; font-size: 12px; color: #777777; border-top: 1px solid #eaeaea; padding-top: 15px; text-align: center;">
               This is an automated notification from PharmaTrack. Please do not reply directly to this email.
             </p>
@@ -149,8 +176,10 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
 
     const logEntries = event.recipients.map((student) => {
       return `[${new Date().toISOString()}] BROADCAST TO: ${student.full_name} (${student.email})
-Subject: New Event Scheduled: ${event.name}
+Subject: [${displayEventType}] New Event Scheduled: ${event.name}
 Event Details:
+- Event Type: ${displayEventType}
+- For Year Levels: ${displayYearLevels}
 - Location: ${event.location}
 - Date: ${displayDate}
 - Check-in Starts: ${startTimeStr}

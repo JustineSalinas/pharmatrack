@@ -105,6 +105,8 @@ export async function POST(req: NextRequest) {
         checkInStart: check_in_start,
         checkInLate: check_in_late,
         checkInEnd: check_in_end,
+        eventType: event_type ?? null,
+        targetYearLevels: targetYears,
         recipients: students,
       }).catch((broadcastErr) => {
         console.error("[Events API] Email broadcast failed:", broadcastErr.message);
