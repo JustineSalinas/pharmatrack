@@ -135,6 +135,9 @@ export default function MerchCataloguePage() {
   const [newFeatures, setNewFeatures] = useState("");
   const [newImagesList, setNewImagesList] = useState<string[]>([]);
 
+  // Delete confirmation state
+  const [deletingItem, setDeletingItem] = useState<MerchItem | null>(null);
+
   // Edit product form states
   const [editingItem, setEditingItem] = useState<MerchItem | null>(null);
   const [editName, setEditName] = useState("");
@@ -309,13 +312,17 @@ export default function MerchCataloguePage() {
     setEditingItem(null);
   };
 
-  const handleDeleteProductClick = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this product from the showcase?")) {
-      setMerchItems(merchItems.filter(item => item.id !== id));
-      if (selectedItem?.id === id) {
-        setSelectedItem(null);
-      }
+  const handleDeleteProductClick = (item: MerchItem) => {
+    setDeletingItem(item);
+  };
+
+  const confirmDeleteProduct = () => {
+    if (!deletingItem) return;
+    setMerchItems(merchItems.filter(item => item.id !== deletingItem.id));
+    if (selectedItem?.id === deletingItem.id) {
+      setSelectedItem(null);
     }
+    setDeletingItem(null);
   };
 
   const filteredItems = merchItems.filter((item) => {
@@ -447,7 +454,7 @@ export default function MerchCataloguePage() {
                       title="Delete Product"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteProductClick(item.id);
+                        handleDeleteProductClick(item);
                       }}
                     >
                       <Trash2 size={12} />
@@ -586,6 +593,28 @@ export default function MerchCataloguePage() {
                   <Info size={14} className="mc-notice-icon" />
                   <span>This item cannot be ordered or purchased online.</span>
                 </div>
+
+                {/* Facilitator actions */}
+                {isFacilitator && (
+                  <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+                    <button 
+                      className="mc-add-btn" 
+                      style={{ flex: 1, justifyContent: "center", background: "rgba(124, 58, 237, 0.1)", color: "#7c3aed", border: "1px solid rgba(124, 58, 237, 0.2)" }}
+                      onClick={() => handleEditProductClick(selectedItem)}
+                    >
+                      <Pencil size={14} />
+                      <span>Edit Product</span>
+                    </button>
+                    <button 
+                      className="mc-add-btn" 
+                      style={{ flex: 1, justifyContent: "center", background: "#dc2626" }}
+                      onClick={() => handleDeleteProductClick(selectedItem)}
+                    >
+                      <Trash2 size={14} />
+                      <span>Delete Product</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1016,6 +1045,35 @@ export default function MerchCataloguePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingItem && (
+        <div className="mc-modal-overlay" onClick={() => setDeletingItem(null)}>
+          <div className="mc-delete-card" onClick={(e) => e.stopPropagation()}>
+            <div className="mc-delete-icon-wrap">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="mc-delete-title">Delete Product?</h3>
+            <p className="mc-delete-desc">
+              Are you sure you want to delete <strong>{deletingItem.name}</strong> from the showcase? This action cannot be undone.
+            </p>
+            <div className="mc-delete-actions">
+              <button
+                className="mc-delete-cancel-btn"
+                onClick={() => setDeletingItem(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="mc-delete-confirm-btn"
+                onClick={confirmDeleteProduct}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1773,6 +1831,86 @@ export default function MerchCataloguePage() {
         .mc-card-action-btn.delete-btn:hover {
           color: #dc2626;
           border-color: rgba(220, 38, 38, 0.3);
+        }
+
+        .mc-delete-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          width: 100%;
+          max-width: 400px;
+          padding: 32px 28px 24px;
+          text-align: center;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
+          animation: scaleUpCard 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .mc-delete-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--white-shade);
+          margin: 0 0 8px;
+        }
+
+        .mc-delete-desc {
+          font-size: 13.5px;
+          color: var(--muted);
+          margin: 0 0 24px;
+          line-height: 1.5;
+        }
+
+        .mc-delete-icon-wrap {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: rgba(220, 38, 38, 0.08);
+          border: 1px solid rgba(220, 38, 38, 0.2);
+          color: #dc2626;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+        }
+
+        .mc-delete-actions {
+          display: flex;
+          gap: 10px;
+        }
+
+        .mc-delete-cancel-btn {
+          flex: 1;
+          height: 40px;
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--border);
+          background: var(--surface2);
+          color: var(--muted);
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .mc-delete-cancel-btn:hover {
+          color: var(--white-shade);
+          border-color: var(--muted);
+        }
+
+        .mc-delete-confirm-btn {
+          flex: 1;
+          height: 40px;
+          border-radius: var(--radius-sm);
+          border: none;
+          background: #dc2626;
+          color: #ffffff;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .mc-delete-confirm-btn:hover {
+          background: #b91c1c;
+          box-shadow: 0 0 15px rgba(220, 38, 38, 0.3);
         }
       `}</style>
     </div>
