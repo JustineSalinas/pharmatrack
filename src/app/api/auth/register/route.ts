@@ -29,13 +29,9 @@ export async function POST(req: NextRequest) {
 
   const supabase = getServiceClient();
 
-  // Verify the auth user actually exists (prevents spoofed userId attacks)
-  const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(userId);
-  if (authErr || !authUser?.user) {
-    return NextResponse.json({ error: "Auth user not found" }, { status: 403 });
-  }
-
-  // Insert into public.users (service role bypasses RLS)
+  // Insert into public.users (service role bypasses RLS).
+  // No getUserById check needed — the FK constraint on public.users.id → auth.users.id
+  // rejects any insert with a non-existent userId at the database level.
   const { error: userErr } = await supabase.from("users").insert({
     id: userId,
     email,
@@ -44,7 +40,15 @@ export async function POST(req: NextRequest) {
     status: "pending",
   });
   if (userErr) {
-    // Ignore duplicate — user record may already exist from a retry
+    // FK violation (23503): the userId isn't in auth.users — almost always the
+    // email-enumeration phantom-user case. Surface a clear, actionable message.
+    if (userErr.code === "23503") {
+      return NextResponse.json(
+        { error: "This email is already registered. Please log in instead, or use a different email." },
+        { status: 409 }
+      );
+    }
+    // Ignore duplicate (23505) — user record may already exist from a retry.
     if (!userErr.message.includes("duplicate") && !userErr.code?.includes("23505")) {
       return NextResponse.json({ error: userErr.message }, { status: 500 });
     }
