@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase, parseDateLocal } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
+import { EVENT_TYPES, getEventTypeStyle } from "@/lib/event-type";
 import { 
   PlusCircle, 
   Calendar, 
@@ -14,7 +15,8 @@ import {
   Loader2,
   Pencil,
   Search,
-  AlertTriangle
+  AlertTriangle,
+  Info
 } from "lucide-react";
 
 export default function EventsManagement() {
@@ -33,6 +35,7 @@ export default function EventsManagement() {
 
   // Form State
   const YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+  const [eventType, setEventType] = useState<string>("Department");
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
@@ -141,6 +144,7 @@ export default function EventsManagement() {
             check_in_late: lateTS,
             check_in_end: endTS,
             target_year_levels: targetYearLevels.length ? targetYearLevels : null,
+            event_type: eventType,
           })
           .eq("id", editingEvent.id);
 
@@ -164,6 +168,7 @@ export default function EventsManagement() {
             check_in_late: lateTS,
             check_in_end: endTS,
             target_year_levels: targetYearLevels.length ? targetYearLevels : null,
+            event_type: eventType,
           }),
         });
 
@@ -220,6 +225,7 @@ export default function EventsManagement() {
     setLateTime("");
     setEndTime("");
     setTargetYearLevels([]);
+    setEventType("Department");
     setFormError("");
     setEditingEvent(null);
   }
@@ -240,6 +246,7 @@ export default function EventsManagement() {
     setLateTime(parseTime(event.check_in_late));
     setEndTime(parseTime(event.check_in_end));
     setTargetYearLevels(event.target_year_levels ?? []);
+    setEventType(event.event_type ?? "Department");
     setFormError("");
     setShowModal(true);
   }
@@ -338,6 +345,25 @@ export default function EventsManagement() {
                            letterSpacing: "0.05em",
                            flexShrink: 0
                          }}>{status.label}</span>
+                         {(() => {
+                           const ts = getEventTypeStyle(event.event_type);
+                           return (
+                             <span style={{
+                               fontSize: "10px",
+                               fontWeight: 600,
+                               padding: "2px 8px",
+                               borderRadius: "12px",
+                               color: ts.color,
+                               background: ts.bg,
+                               border: `1px solid ${ts.border}`,
+                               textTransform: "uppercase",
+                               letterSpacing: "0.05em",
+                               flexShrink: 0,
+                             }}>
+                               {ts.label}
+                             </span>
+                           );
+                         })()}
                        </div>
                        <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "var(--dimmed)", fontSize: "12px" }}>
                          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={12} /> {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
@@ -505,9 +531,76 @@ export default function EventsManagement() {
 
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Event Type
+                </label>
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  {EVENT_TYPES.map(type => {
+                    const style = getEventTypeStyle(type);
+                    const selected = eventType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setEventType(type)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "7px",
+                          padding: "7px 16px",
+                          borderRadius: "var(--radius-sm)",
+                          border: `1px solid ${selected ? style.border : "var(--border)"}`,
+                          background: selected ? style.bg : "var(--surface2)",
+                          cursor: "pointer",
+                          fontSize: "13px",
+                          fontWeight: selected ? 600 : 400,
+                          color: selected ? style.color : "var(--white-shade)",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <span style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "50%",
+                          background: selected ? style.color : "var(--border)",
+                          flexShrink: 0,
+                          transition: "all 0.15s ease",
+                        }} />
+                        {type}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <label style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "var(--dimmed)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em"
+                }}>
                   Target Year Levels
-                  <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: "6px", color: "var(--dimmed)", fontSize: "11px" }}>
-                    (leave all unchecked for All Years)
+                  <span style={{ 
+                    fontWeight: 500, 
+                    textTransform: "none", 
+                    letterSpacing: 0, 
+                    color: "var(--gold)", 
+                    background: "rgba(232, 184, 75, 0.08)", 
+                    border: "1px solid rgba(232, 184, 75, 0.25)",
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}>
+                    <Info size={12} style={{ flexShrink: 0 }} />
+                    Leave all unchecked for All Years
                   </span>
                 </label>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
