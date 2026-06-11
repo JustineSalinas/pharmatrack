@@ -9,6 +9,7 @@ import {
   MapPin, Clock, X,
 } from "lucide-react";
 import type { Event } from "@/lib/schema";
+import { getEventTypeStyle } from "@/lib/event-type";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -160,11 +161,19 @@ export default function CalendarPage() {
                 <span className="cal-cell-num">{date.getDate()}</span>
                 {dayEvents.length > 0 && (
                   <span className="cal-cell-events">
-                    {dayEvents.slice(0, 2).map((ev) => (
-                      <span key={ev.id} className="cal-cell-event-pill" title={ev.name}>
-                        {ev.name}
-                      </span>
-                    ))}
+                    {dayEvents.slice(0, 2).map((ev) => {
+                      const ts = getEventTypeStyle(ev.event_type);
+                      return (
+                        <span
+                          key={ev.id}
+                          className="cal-cell-event-pill"
+                          style={{ background: ts.bg, color: ts.color, border: `1px solid ${ts.border}` }}
+                          title={ev.name}
+                        >
+                          {ev.name}
+                        </span>
+                      );
+                    })}
                     {dayEvents.length > 2 && (
                       <span className="cal-cell-more">+{dayEvents.length - 2} more</span>
                     )}
@@ -198,20 +207,39 @@ export default function CalendarPage() {
             </div>
           ) : (
             <div className="cal-drawer-list">
-              {selectedEvents.map((ev) => (
-                <div key={ev.id} className="cal-event-card">
-                  <h4 className="cal-event-name">{ev.name}</h4>
-                  {ev.description && <p className="cal-event-desc">{ev.description}</p>}
-                  <div className="cal-event-meta-row">
-                    <span className="cal-event-meta-item">
-                      <MapPin size={12} /> {ev.location}
-                    </span>
-                    <span className="cal-event-meta-item">
-                      <Clock size={12} /> {fmtTime(ev.check_in_start)} – {fmtTime(ev.check_in_end)}
-                    </span>
+              {selectedEvents.map((ev) => {
+                const ts = getEventTypeStyle(ev.event_type);
+                return (
+                  <div key={ev.id} className="cal-event-card" style={{ borderLeftColor: ts.color }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "6px" }}>
+                      <h4 className="cal-event-name">{ev.name}</h4>
+                      <span style={{
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        background: ts.bg,
+                        color: ts.color,
+                        border: `1px solid ${ts.border}`,
+                        flexShrink: 0,
+                      }}>
+                        {ts.label}
+                      </span>
+                    </div>
+                    {ev.description && <p className="cal-event-desc">{ev.description}</p>}
+                    <div className="cal-event-meta-row">
+                      <span className="cal-event-meta-item">
+                        <MapPin size={12} /> {ev.location}
+                      </span>
+                      <span className="cal-event-meta-item">
+                        <Clock size={12} /> {fmtTime(ev.check_in_start)} – {fmtTime(ev.check_in_end)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
