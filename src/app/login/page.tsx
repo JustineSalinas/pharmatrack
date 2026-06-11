@@ -39,7 +39,9 @@ function LoginForm() {
       setSuccessMsg("Password updated successfully! Please log in with your new password.");
     }
     if (err) {
-      if (err.startsWith("code_exchange_failed:")) {
+      if (err === "link_already_used") {
+        setSuccessMsg("Your email is already verified! You can log in below.");
+      } else if (err.startsWith("code_exchange_failed:")) {
         setError(`Google login failed: ${err.replace("code_exchange_failed:", "")}`);
       } else if (err.startsWith("verification_failed:")) {
         setError(`Email verification failed: ${err.replace("verification_failed:", "")}`);
