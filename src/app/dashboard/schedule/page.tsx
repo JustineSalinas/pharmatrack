@@ -19,7 +19,7 @@ interface QRSessionRow {
   created_at: string;
 }
 type DayKey = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
-const DAY_LABELS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const DAY_LABELS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_INDEX_MAP: Record<number, DayKey> = { 1: "MON", 2: "TUE", 3: "WED", 4: "THU", 5: "FRI", 6: "SAT", 0: "SUN" };
 
 interface SessionBlock {
@@ -84,8 +84,8 @@ export default function SchedulePage() {
         // Compute actual dates for MON–SAT
         const start = new Date(startOfWeek);
         const dayDatesMap: Record<DayKey, string> = {} as Record<DayKey, string>;
-        const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
-        for (let i = 0; i < 6; i++) {
+        const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+        for (let i = 0; i < 7; i++) {
           const d = new Date(start);
           d.setDate(start.getDate() + i);
           dayDatesMap[DAY_KEYS[i]] = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -217,7 +217,7 @@ export default function SchedulePage() {
   if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
 
   return (
-    <div className="fade-in sd-root">
+    <div className="fade-in sd-root schedule-page-wrapper">
       {/* ── Header ── */}
       <header className="sd-header">
         <div>
@@ -242,7 +242,7 @@ export default function SchedulePage() {
       )}
 
       {/* ── Weekly Grid ── */}
-      <div className="cal-grid-panel" style={{ marginTop: "24px" }}>
+      <div className="cal-grid-panel" style={{ marginBottom: "24px" }}>
         {!hasAny ? (
           <div className="sp-empty-state" style={{ padding: "60px 20px" }}>
             <Calendar size={48} color="var(--gold)" style={{ opacity: 0.8, marginBottom: "16px" }} />
@@ -250,7 +250,7 @@ export default function SchedulePage() {
             <span style={{ fontSize: "13px", color: "var(--dimmed)", marginTop: "6px" }}>Check back later once events are created by your facilitator.</span>
           </div>
         ) : (
-          <div className="cal-grid" style={{ gridTemplateColumns: `repeat(${DAY_LABELS.length}, 1fr)` }}>
+          <div className="cal-grid">
             {DAY_LABELS.map((day) => {
               const isToday = day === today;
               const isSelected = selectedDay === day;
@@ -268,14 +268,13 @@ export default function SchedulePage() {
                   ].filter(Boolean).join(" ")}
                   onClick={() => setSelectedDay(day)}
                 >
-                  <span className="cal-cell-num"
-                    style={hasOnlySchoolEvent ? {
-                      color: getEventTypeStyle(dayEvents.find(e => e.type === "event")?.eventType).color
-                    } : undefined}
-                  >
+                  <div className="cal-cell-top">
                     <span className="cal-cell-day-label">{day}</span>
-                    <span className={`cal-cell-date-label${isToday ? " cal-cell-date-today" : ""}`}>{dates[day]}</span>
-                  </span>
+                    <span className="cal-cell-month-label">{dates[day].split(' ')[0]}</span>
+                  </div>
+                  <div className="cal-cell-date-number">
+                    {dates[day].split(' ')[1]}
+                  </div>
                   {dayEvents.length > 0 && (
                     <span className="cal-cell-events">
                       {dayEvents.slice(0, 2).map((ev) => {
@@ -296,8 +295,11 @@ export default function SchedulePage() {
                           </span>
                         );
                       })}
+                      {dayEvents.length > 1 && (
+                        <span className="cal-cell-more mobile-only">+{dayEvents.length - 1}</span>
+                      )}
                       {dayEvents.length > 2 && (
-                        <span className="cal-cell-more">+{dayEvents.length - 2} more</span>
+                        <span className="cal-cell-more desktop-only">+{dayEvents.length - 2} more</span>
                       )}
                     </span>
                   )}
@@ -310,7 +312,10 @@ export default function SchedulePage() {
 
       {/* Selected Day Details (Drawer) */}
       {selectedDay && (
-        <div className="cal-drawer" style={{ marginTop: "24px" }}>
+        <div className="cal-drawer" style={{ marginBottom: "24px", position: "relative" }}>
+          <button className="cal-drawer-close" style={{ position: "absolute", top: "20px", right: "20px" }} onClick={() => setSelectedDay(null)} aria-label="Close">
+            <X size={16} />
+          </button>
           <div className="cal-drawer-header">
             <div>
               <p className="sd-panel-label">Selected Day</p>
@@ -318,9 +323,6 @@ export default function SchedulePage() {
                 {getFullDateString(selectedDay)}
               </h3>
             </div>
-            <button className="cal-drawer-close" onClick={() => setSelectedDay(null)} aria-label="Close">
-              <X size={16} />
-            </button>
           </div>
 
           {(!grouped[selectedDay] || grouped[selectedDay].length === 0) ? (
@@ -373,7 +375,7 @@ export default function SchedulePage() {
       )}
 
       {/* ── Upcoming School Events ── */}
-      <div className="sd-event-panel" style={{ marginTop: "32px" }}>
+      <div className="sd-event-panel">
         <div className="sd-event-panel-header">
           <div>
             <p className="sd-panel-label">School Events</p>
@@ -383,7 +385,12 @@ export default function SchedulePage() {
 
         {upcomingEvents.length > 0 ? (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+            <div className="upcoming-events-grid" style={{ 
+              display: "grid", 
+              gridTemplateColumns: visibleEvents.length === 1 ? "1fr" : "repeat(2, 1fr)", 
+              gap: "16px",
+              alignItems: "stretch"
+            }}>
               {visibleEvents.map((event) => {
                 const days = daysUntilEvent(event.date);
                 const ts = getEventTypeStyle(event.event_type);
