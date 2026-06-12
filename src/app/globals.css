@@ -1399,7 +1399,7 @@ html {
   /* Section Titles */
   .attendance-title {
     font-size: clamp(0.7rem, 3.8vw, 1.3rem) !important;
-    color: var(--gold) !important;
+    color: var(--white) !important;
     margin-top: -5px;
     letter-spacing: 0.2px;
     white-space: normal !important;
@@ -2881,8 +2881,8 @@ html {
   }
 
   .hero-title {
-    font-size: 7.5vw !important;
-    letter-spacing: -0.5px !important;
+    font-size: clamp(2.5rem, 12vw, 4.5rem) !important;
+    letter-spacing: -1px !important;
     max-width: 100%;
     word-break: keep-all;
     overflow-wrap: normal;
