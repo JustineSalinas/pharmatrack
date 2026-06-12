@@ -5777,13 +5777,14 @@ input[type="password"]::-ms-clear {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 10px;
-  text-align: left;
+  text-align: center;
   color: var(--white-shade);
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   overflow: hidden;
 }
 
@@ -5808,7 +5809,7 @@ input[type="password"]::-ms-clear {
 
 .cal-cell.selected {
   border-color: var(--teal);
-  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.25);
+  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.18);
 }
 
 .cal-cell.has-events .cal-cell-num {
@@ -5817,19 +5818,49 @@ input[type="password"]::-ms-clear {
 }
 
 .cal-cell-num {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
   font-size: 13px;
   font-weight: 600;
   color: var(--white-shade);
 }
 
+.cal-cell-day-label {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+.cal-cell-date-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--dimmed);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.cal-cell-date-today {
+  color: rgba(232, 184, 75, 0.8);
+  font-weight: 600;
+}
+
 .cal-cell-events {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
+  width: 100%;
+  margin-top: 2px;
 }
 
 .cal-cell-event-pill {
   display: block;
+  width: 100%;
   font-size: 11px;
   font-weight: 600;
   background: rgba(217, 119, 6, 0.08);
@@ -5840,13 +5871,13 @@ input[type="password"]::-ms-clear {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: left;
 }
 
 .cal-cell-more {
   font-size: 10px;
   color: var(--muted);
   font-weight: 600;
-  padding-left: 4px;
 }
 
 .cal-drawer {
@@ -6322,24 +6353,28 @@ input[type="password"]::-ms-clear {
 
   /* ── Calendar: compact cells, hide event pills ── */
   .cal-grid-panel {
-    padding: 10px 8px !important;
+    padding: 14px 12px !important;
   }
   .cal-weekday-row,
   .cal-grid {
-    gap: 3px !important;
+    gap: 6px !important;
   }
   .cal-weekday {
     font-size: 10px !important;
     padding: 4px 0 !important;
   }
   .cal-cell {
-    min-height: 44px !important;
-    padding: 4px 3px !important;
-    gap: 2px !important;
-    border-radius: 6px !important;
+    min-height: auto !important;
+    padding: 8px 4px !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
+    flex: 1 1 0 !important;
   }
-  .cal-cell-num {
+  .cal-cell-day-label {
     font-size: 11px !important;
+  }
+  .cal-cell-date-label {
+    font-size: 9px !important;
   }
   .cal-cell-event-pill {
     display: none !important;
@@ -6348,14 +6383,21 @@ input[type="password"]::-ms-clear {
     display: none !important;
   }
   /* Show a small dot instead of pills for event-bearing days */
+  .cal-cell.has-events .cal-cell-events {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 8px;
+  }
   .cal-cell.has-events .cal-cell-events::after {
     content: "";
     display: block;
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #b45309;
-    margin: 1px auto 0;
+    margin: 0;
+    flex-shrink: 0;
   }
   /* Calendar nav: wrap month label */
   .sd-header .cal-month-nav {
@@ -6427,7 +6469,8 @@ input[type="password"]::-ms-clear {
   }
   /* Slightly tighter calendar cells */
   .cal-cell {
-    min-height: 36px !important;
+    min-height: auto !important;
+    padding: 6px 3px !important;
   }
 }
 
