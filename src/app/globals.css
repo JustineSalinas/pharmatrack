@@ -2881,8 +2881,8 @@ html {
   }
 
   .hero-title {
-    font-size: clamp(2.5rem, 12vw, 4.5rem) !important;
-    letter-spacing: -1px !important;
+    font-size: clamp(2.5rem, 14.5vw, 5rem) !important;
+    letter-spacing: -1.5px !important;
     max-width: 100%;
     word-break: keep-all;
     overflow-wrap: normal;
