@@ -268,20 +268,16 @@ export default function SchedulePage() {
                   ].filter(Boolean).join(" ")}
                   onClick={() => setSelectedDay(day)}
                 >
-                  <span className="cal-cell-num" style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    width: "100%",
-                    alignItems: "center",
-                    ...(hasOnlySchoolEvent ? {
+                  <span className="cal-cell-num"
+                    style={hasOnlySchoolEvent ? {
                       color: getEventTypeStyle(dayEvents.find(e => e.type === "event")?.eventType).color
-                    } : {})
-                  }}>
-                    <span style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.05em" }}>{day}</span>
-                    <span style={{ fontSize: "11px", color: isToday ? "rgba(232, 184, 75, 0.8)" : "var(--dimmed)", fontWeight: isToday ? "600" : "normal" }}>{dates[day]}</span>
+                    } : undefined}
+                  >
+                    <span className="cal-cell-day-label">{day}</span>
+                    <span className={`cal-cell-date-label${isToday ? " cal-cell-date-today" : ""}`}>{dates[day]}</span>
                   </span>
                   {dayEvents.length > 0 && (
-                    <span className="cal-cell-events" style={{ marginTop: "4px", width: "100%" }}>
+                    <span className="cal-cell-events">
                       {dayEvents.slice(0, 2).map((ev) => {
                         const isSchoolEvent = ev.type === "event";
                         const ts = isSchoolEvent ? getEventTypeStyle(ev.eventType) : null;
