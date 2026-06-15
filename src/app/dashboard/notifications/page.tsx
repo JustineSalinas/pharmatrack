@@ -26,31 +26,71 @@ function buildEventNotif(event: Event): NotificationItem {
   // Use parseDateLocal so a YYYY-MM-DD date string is treated as local midnight,
   // not UTC midnight — which would shift the displayed date by -1 day in UTC+8.
   const localDate = parseDateLocal(event.date);
-  const displayDate = localDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const displayDate = localDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const startTime = event.check_in_start
+    ? new Date(`1970-01-01T${event.check_in_start}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : null;
+  const endTime = event.check_in_end
+    ? new Date(`1970-01-01T${event.check_in_end}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : null;
+
+  const timePart = startTime && endTime ? `${startTime} – ${endTime}` : startTime ?? null;
+  const dateLine = [displayDate, timePart].filter(Boolean).join(" · ");
+  const locationLine = event.location ? `📍 ${event.location}` : null;
+  const descLine = event.description ?? null;
+  const body = [dateLine, locationLine, descLine].filter(Boolean).join(" — ");
+
   return {
     id: `event-${event.id}`,
     icon: "📅",
     type: "info",
     title: event.name,
-    body: [event.description, event.location ? `📍 ${event.location}` : null].filter(Boolean).join(" — ") || `Location: ${event.location}`,
+    body,
     time: displayDate,
     read: false,
-    sortKey: event.created_at, // Use created_at (proper ISO timestamp) for sort ordering
+    sortKey: event.created_at,
   };
 }
 
-function buildAttendanceNotif(record: AttendanceRecord & { qr_sessions: { subject: string } | null }): NotificationItem {
+function buildAttendanceNotif(record: AttendanceRecord & {
+  qr_sessions: { subject: string; section: string; date: string } | null;
+  events: { name: string; date: string; location: string | null } | null;
+}): NotificationItem {
   const map: Record<string, { icon: string; type: NotifType; verb: string }> = {
     present: { icon: "✅", type: "success", verb: "Check-In Confirmed" },
     late:    { icon: "⏰", type: "warning", verb: "Marked Late" },
     absent:  { icon: "⚠️", type: "danger",  verb: "Absent Record" },
   };
   const { icon, type, verb } = map[record.status] ?? { icon: "📋", type: "info", verb: "Attendance Updated" };
-  const subject = record.qr_sessions?.subject ?? "a class";
+
+  let context = "";
+  if (record.events) {
+    const d = parseDateLocal(record.events.date);
+    const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    context = `${record.events.name} on ${dateStr}`;
+    if (record.events.location) context += ` · ${record.events.location}`;
+  } else if (record.qr_sessions) {
+    const dateStr = record.qr_sessions.date
+      ? parseDateLocal(record.qr_sessions.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : null;
+    context = record.qr_sessions.subject;
+    if (record.qr_sessions.section) context += ` — ${record.qr_sessions.section}`;
+    if (dateStr) context += ` on ${dateStr}`;
+  } else {
+    context = "a class";
+  }
+
+  const timeIn = record.time_in
+    ? new Date(record.time_in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : null;
+
   const body =
-    record.status === "absent" ? `You were marked absent for ${subject}. Contact your facilitator if this is an error.` :
-    record.status === "late"   ? `You were marked late for ${subject}.` :
-                                 `Attendance confirmed for ${subject}.`;
+    record.status === "absent"
+      ? `You were marked absent from ${context}. Contact your facilitator if this is an error.`
+      : record.status === "late"
+      ? `You were marked late for ${context}${timeIn ? ` — checked in at ${timeIn}` : ""}.`
+      : `Attendance confirmed for ${context}${timeIn ? ` — checked in at ${timeIn}` : ""}.`;
+
   return { id: `attendance-${record.id}`, icon, type, title: verb, body, time: formatRelativeTime(record.created_at), read: false, sortKey: record.created_at };
 }
 
@@ -83,7 +123,7 @@ export default function NotificationsPage() {
           .select("id, name, description, location, date, check_in_start, check_in_end, created_at")
           .order("date", { ascending: false }).limit(10);
         const { data: attRaw } = await supabase.from("attendance_records")
-          .select("id, student_id, session_id, status, time_in, time_out, remarks, created_at, qr_sessions(subject, section)")
+          .select("id, student_id, session_id, event_id, status, time_in, time_out, remarks, created_at, qr_sessions(subject, section, date), events(name, date, location)")
           .eq("student_id", u.id).order("created_at", { ascending: false }).limit(10);
         const merged = [
           ...(events ?? []).map((e) => buildEventNotif(e as Event)),
