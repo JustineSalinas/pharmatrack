@@ -28,10 +28,10 @@ function buildEventNotif(event: Event): NotificationItem {
   const localDate = parseDateLocal(event.date);
   const displayDate = localDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   const startTime = event.check_in_start
-    ? new Date(`1970-01-01T${event.check_in_start}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    ? new Date(event.check_in_start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : null;
   const endTime = event.check_in_end
-    ? new Date(`1970-01-01T${event.check_in_end}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    ? new Date(event.check_in_end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : null;
 
   const timePart = startTime && endTime ? `${startTime} – ${endTime}` : startTime ?? null;
