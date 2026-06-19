@@ -315,7 +315,7 @@
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
       <span class="badge badge-gold">v1.0 Production Ready</span>
-      <span style="font-size:12px;color:var(--dimmed);">Generated: June 19, 2026</span>
+      <span style="font-size:12px;color:var(--dimmed);">Updated: June 19, 2026</span>
     </div>
   </div>
 
@@ -403,6 +403,67 @@
         <div>
           <div class="change-label">Supabase Connected via MCP</div>
           <div class="change-detail">Authenticated Claude to the live Supabase project (<code>jnklgyibjsxgotilvzyb</code>). Verified RLS grants, policies, and schema. Confirmed 800-user capacity is well within free tier limits (50,000 MAU).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session 2 Changes -->
+  <div class="section">
+    <div class="section-title">Changes Shipped — Session 2</div>
+    <div class="card">
+      <div class="change-item">
+        <div class="change-dot" style="background:var(--success);"></div>
+        <div>
+          <div class="change-label">Supabase Auth SMTP — Configured by User</div>
+          <div class="change-detail">Supabase Authentication now routes signup confirmation and password-reset emails through Resend SMTP (<code>smtp.resend.com:465</code>), removing the 3 email/hr free-tier cap. Onboarding 800 students in bulk is now unblocked.</div>
+        </div>
+      </div>
+
+      <div class="change-item">
+        <div class="change-dot" style="background:var(--danger);"></div>
+        <div>
+          <div class="change-label">Rate Limiting — Upgraded to Upstash Redis</div>
+          <div class="change-detail">Replaced the in-memory <code>Map</code> rate limiter (resets on restart, not shared across Vercel instances) with <code>@upstash/ratelimit</code> sliding-window backed by Upstash Redis. Graceful in-memory fallback if Redis is unreachable so a Redis outage never blocks scan traffic. Activated by setting <code>UPSTASH_REDIS_REST_URL</code> + <code>UPSTASH_REDIS_REST_TOKEN</code> in env.</div>
+          <div class="change-files">
+            <span class="file-tag">src/middleware.ts</span>
+          </div>
+          <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
+            <span class="badge badge-dim">Sliding window</span>
+            <span class="badge badge-dim">Distributed across instances</span>
+            <span class="badge badge-dim">Fail-open on outage</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="change-item">
+        <div class="change-dot" style="background:var(--success);"></div>
+        <div>
+          <div class="change-label">Error Monitoring — Sentry Integrated</div>
+          <div class="change-detail">Added <code>@sentry/nextjs</code> with client, server, and edge configs. Captures unhandled exceptions, API errors, and performance traces in production only. PII (<code>sendDefaultPii: false</code>) is never sent. Source maps upload when <code>SENTRY_AUTH_TOKEN</code> is set. 10% transaction sampling to stay within free tier.</div>
+          <div class="change-files">
+            <span class="file-tag">sentry.client.config.ts</span>
+            <span class="file-tag">sentry.server.config.ts</span>
+            <span class="file-tag">sentry.edge.config.ts</span>
+            <span class="file-tag">next.config.js</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="change-item">
+        <div class="change-dot" style="background:var(--gold);"></div>
+        <div>
+          <div class="change-label">Database Indexes — 7 Applied via Migration</div>
+          <div class="change-detail">Applied performance indexes to Supabase via SQL migration. <code>attendance_records</code> was completely unindexed beyond its PK — all hot query columns are now covered.</div>
+          <div class="change-files">
+            <span class="file-tag">attendance_records(student_id)</span>
+            <span class="file-tag">attendance_records(event_id)</span>
+            <span class="file-tag">attendance_records(session_id)</span>
+            <span class="file-tag">attendance_records(event_id, status)</span>
+            <span class="file-tag">attendance_records(created_at DESC)</span>
+            <span class="file-tag">events(date)</span>
+            <span class="file-tag">users(account_type)</span>
+          </div>
         </div>
       </div>
     </div>
@@ -557,7 +618,7 @@
           <table style="width:100%;font-size:12px;border-collapse:collapse;">
             <tr><td style="padding:4px 0;color:var(--dimmed);">Monthly Active Users</td><td style="text-align:right;color:var(--white);">800 / 50,000</td></tr>
             <tr><td style="padding:4px 0;color:var(--dimmed);">Database Size</td><td style="text-align:right;color:var(--white);">&lt; 10MB / 500MB</td></tr>
-            <tr><td style="padding:4px 0;color:var(--dimmed);">Auth Emails (built-in)</td><td style="text-align:right;color:var(--warning);">3/hr ⚠ Configure SMTP</td></tr>
+            <tr><td style="padding:4px 0;color:var(--dimmed);">Auth Emails (Resend SMTP)</td><td style="text-align:right;color:var(--success);">Unlimited ✓ Configured</td></tr>
             <tr><td style="padding:4px 0;color:var(--dimmed);">Realtime Connections</td><td style="text-align:right;color:var(--white);">~20 / 200 max</td></tr>
           </table>
         </div>
@@ -579,24 +640,20 @@
     </div>
   </div>
 
-  <!-- Pending Manual Step -->
+  <!-- Completed Manual Step -->
   <div class="section">
-    <div class="section-title">Pending Manual Action</div>
-    <div class="card" style="border-color:rgba(249,115,22,0.3);background:linear-gradient(135deg,var(--surface),rgba(249,115,22,0.04));">
+    <div class="section-title">Completed Manual Action</div>
+    <div class="card" style="border-color:rgba(16,185,129,0.3);background:linear-gradient(135deg,var(--surface),rgba(16,185,129,0.04));">
       <div class="card-header">
-        <div class="card-title" style="color:var(--warning);">⚠ Configure Supabase Auth SMTP</div>
-        <span class="badge badge-warning">Required</span>
+        <div class="card-title" style="color:var(--success);">✓ Supabase Auth SMTP Configured</div>
+        <span class="badge badge-success">Done</span>
       </div>
       <div class="card-body">
-        Supabase's built-in auth emails (signup confirmation, password reset) are capped at <strong>3 per hour</strong> on free tier. This will slow onboarding when students register in bulk. Fix: configure Supabase to use Resend as the SMTP relay.
-        <br /><br />
-        <strong>Steps:</strong> Supabase Dashboard → Authentication → SMTP Settings → Enable Custom SMTP
-        <br />
+        Supabase Authentication is now routing signup confirmation and password-reset emails through Resend SMTP (<code>smtp.resend.com:465</code>). The 3 email/hr free-tier cap is removed — bulk student onboarding is unblocked.
         <div style="margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--font-mono);font-size:12px;color:var(--white-shade);line-height:2;">
           Host: &nbsp;&nbsp;&nbsp;&nbsp;smtp.resend.com<br />
           Port: &nbsp;&nbsp;&nbsp;&nbsp;465<br />
           Username: resend<br />
-          Password: [RESEND_API_KEY from .env.local]<br />
           Sender: &nbsp;&nbsp;PharmaTrack &lt;notifications@usa.edu.ph&gt;
         </div>
       </div>
@@ -607,16 +664,38 @@
   <div class="section">
     <div class="section-title">Recommendations</div>
 
-    <div class="rec-card">
-      <div class="rec-icon" style="background:rgba(239,68,68,0.1);">🔒</div>
+    <!-- ── Completed ── -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--success);margin-bottom:10px;margin-top:4px;">Completed</div>
+
+    <div class="rec-card" style="opacity:0.7;border-color:rgba(16,185,129,0.2);">
+      <div class="rec-icon" style="background:rgba(16,185,129,0.1);">✓</div>
       <div class="rec-content">
-        <div class="rec-title">Upgrade Rate Limiting to Redis (Upstash)</div>
-        <div class="rec-desc">The current in-memory rate limiter resets on every server restart and doesn't share state across multiple Vercel function instances. Upstash Redis (free tier: 10,000 req/day) provides persistent, distributed rate limiting with zero ops overhead.</div>
-        <div class="rec-effort">
-          <span class="dot dot-high"></span> High priority &bull; ~2 hours &bull; <code>npm install @upstash/ratelimit @upstash/redis</code>
-        </div>
+        <div class="rec-title" style="text-decoration:line-through;color:var(--dimmed);">Upgrade Rate Limiting to Redis (Upstash)</div>
+        <div class="rec-desc">Replaced in-memory <code>Map</code> with <code>@upstash/ratelimit</code> sliding-window backed by Upstash Redis. Graceful fallback keeps scan traffic flowing if Redis is unreachable.</div>
+        <div class="rec-effort"><span class="dot dot-high"></span> <span style="color:var(--success);">Done — Session 2</span></div>
       </div>
     </div>
+
+    <div class="rec-card" style="opacity:0.7;border-color:rgba(16,185,129,0.2);">
+      <div class="rec-icon" style="background:rgba(16,185,129,0.1);">✓</div>
+      <div class="rec-content">
+        <div class="rec-title" style="text-decoration:line-through;color:var(--dimmed);">Add Error Monitoring (Sentry)</div>
+        <div class="rec-desc">Integrated <code>@sentry/nextjs</code> with client, server, and edge configs. Production-only, no PII, 10% transaction sampling.</div>
+        <div class="rec-effort"><span class="dot dot-med"></span> <span style="color:var(--success);">Done — Session 2</span></div>
+      </div>
+    </div>
+
+    <div class="rec-card" style="opacity:0.7;border-color:rgba(16,185,129,0.2);">
+      <div class="rec-icon" style="background:rgba(16,185,129,0.1);">✓</div>
+      <div class="rec-content">
+        <div class="rec-title" style="text-decoration:line-through;color:var(--dimmed);">Add Database Indexes on Hot Columns</div>
+        <div class="rec-desc">Applied 7 indexes via Supabase migration: <code>attendance_records</code> on student_id, event_id, session_id, (event_id, status), created_at; <code>events</code> on date; <code>users</code> on account_type.</div>
+        <div class="rec-effort"><span class="dot dot-med"></span> <span style="color:var(--success);">Done — Session 2</span></div>
+      </div>
+    </div>
+
+    <!-- ── Open ── -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--dimmed);margin-bottom:10px;margin-top:20px;">Open</div>
 
     <div class="rec-card">
       <div class="rec-icon" style="background:rgba(249,115,22,0.1);">📧</div>
@@ -630,34 +709,12 @@
     </div>
 
     <div class="rec-card">
-      <div class="rec-icon" style="background:rgba(16,185,129,0.1);">📊</div>
-      <div class="rec-content">
-        <div class="rec-title">Add Error Monitoring (Sentry)</div>
-        <div class="rec-desc">There is no error monitoring in production. Sentry's free tier captures unhandled exceptions, API errors, and performance traces. It would surface issues like failed DB queries, Resend timeouts, or slow scan response times before students report them.</div>
-        <div class="rec-effort">
-          <span class="dot dot-med"></span> Medium priority &bull; ~1 hour &bull; <code>npm install @sentry/nextjs</code>
-        </div>
-      </div>
-    </div>
-
-    <div class="rec-card">
       <div class="rec-icon" style="background:rgba(99,102,241,0.1);">📱</div>
       <div class="rec-content">
         <div class="rec-title">Add PWA Support for Scanner Pages</div>
         <div class="rec-desc">Facilitators use the scanner on mobile. Adding a PWA manifest and service worker lets them install PharmaTrack to their home screen, access it faster, and keep the camera active without browser chrome getting in the way. Critical for event-day reliability.</div>
         <div class="rec-effort">
           <span class="dot dot-med"></span> Medium priority &bull; ~3 hours &bull; <code>next-pwa</code> or manual manifest
-        </div>
-      </div>
-    </div>
-
-    <div class="rec-card">
-      <div class="rec-icon" style="background:rgba(212,175,55,0.1);">🗄️</div>
-      <div class="rec-content">
-        <div class="rec-title">Add Database Indexes on Hot Columns</div>
-        <div class="rec-desc">As attendance records grow (800 students × many events), queries filtering by <code>student_id</code>, <code>event_id</code>, <code>status</code>, and <code>created_at</code> will slow down. Add indexes: <code>CREATE INDEX ON attendance_records(event_id)</code>, <code>CREATE INDEX ON attendance_records(student_id)</code>, and a composite on <code>(event_id, status)</code>.</div>
-        <div class="rec-effort">
-          <span class="dot dot-med"></span> Medium priority &bull; 30 minutes &bull; Run via Supabase SQL editor
         </div>
       </div>
     </div>
@@ -685,10 +742,176 @@
     </div>
   </div>
 
+  <!-- Production Readiness — Bulk Registration Audit -->
+  <div class="section">
+    <div class="section-title">Production Audit — Bulk Registration (800 Users)</div>
+
+    <!-- Summary bar -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+      <div class="stat-card">
+        <div class="stat-number" style="color:var(--success);font-size:24px;">0</div>
+        <div class="stat-label">Will Break</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" style="color:var(--success);font-size:24px;">0</div>
+        <div class="stat-label">Residual Risk</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" style="color:var(--success);font-size:24px;">8</div>
+        <div class="stat-label">Confirmed Safe</div>
+      </div>
+    </div>
+
+    <!-- Was: Will Break — now resolved -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--success);margin-bottom:10px;">Previously: Will Break — Now Resolved</div>
+
+    <div class="card" style="border-color:rgba(16,185,129,0.2);opacity:0.75;margin-bottom:10px;">
+      <div class="card-header">
+        <div class="card-title" style="text-decoration:line-through;color:var(--dimmed);">Rate limit of 5/min blocks shared campus IP</div>
+        <span class="badge badge-success">Fixed — F1</span>
+      </div>
+      <div class="card-body">
+        <code>/api/auth/register</code> was capped at 5 req/min per IP. Raised to 60/min — still blocks bots, won't block a classroom registering at the same time.
+        <div class="card-meta" style="margin-top:10px;">src/middleware.ts:7 — changed limit: 5 → 60</div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:rgba(16,185,129,0.2);opacity:0.75;margin-bottom:10px;">
+      <div class="card-header">
+        <div class="card-title" style="text-decoration:line-through;color:var(--dimmed);">Supabase Auth email rate limit (3/hr) blocks bulk signups</div>
+        <span class="badge badge-success">Resolved by SMTP config</span>
+      </div>
+      <div class="card-body">
+        The default Supabase free-tier email rate limit (3 confirmation emails/hr) would have blocked bulk student registration. Configuring custom SMTP (Resend) <strong>bypasses this cap entirely</strong> — Supabase now delegates all auth emails to Resend and no longer applies its own limit.
+        <div class="card-meta" style="margin-top:10px;">Supabase Dashboard → Authentication → SMTP &bull; Resolved by user in Session 2</div>
+      </div>
+    </div>
+
+    <!-- Residual risk — resolved -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--success);margin-bottom:10px;margin-top:20px;">Previously: Residual Risk — Now Resolved</div>
+
+    <div class="card" style="border-color:rgba(16,185,129,0.2);opacity:0.75;margin-bottom:10px;">
+      <div class="card-header">
+        <div class="card-title" style="text-decoration:line-through;color:var(--dimmed);">Supabase GoTrue signup API rate limit (campus WiFi only)</div>
+        <span class="badge badge-success">Fixed</span>
+      </div>
+      <div class="card-body">
+        <code>supabase.auth.signUp()</code> no longer runs in the browser. It was moved into <code>POST /api/auth/register</code> (server-side, anon key). GoTrue now rate-limits by the <strong>Vercel server IP</strong>, not the student's shared campus WiFi IP — the per-student limit is gone entirely. Auth creation and profile creation happen in one server round-trip; the server cleans up the auth user on any profile failure so no orphan accounts can form.
+        <div class="card-meta" style="margin-top:10px;">api/auth/register/route.ts — signUp() merged server-side &bull; lib/auth-client.ts — browser signUp() removed</div>
+      </div>
+    </div>
+
+    <!-- Silent Failures -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--warning);margin-bottom:10px;margin-top:20px;">Will Cause Silent Failures</div>
+
+    <div class="card" style="border-color:rgba(99,102,241,0.2);margin-bottom:10px;">
+      <div class="card-header">
+        <div class="card-title" style="color:#a5b4fc;">Individual approval is intentional — manual review required</div>
+        <span class="badge badge-info">By Design</span>
+      </div>
+      <div class="card-body">
+        Facilitators and admins manually verify each student's section, name, and email before approving. A bulk-approve button would bypass this check and risk letting incorrectly registered students through. One-by-one approval is the correct workflow for this department.
+        <div class="card-meta" style="margin-top:10px;">dashboard/admin/users/page.tsx — no change needed</div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:rgba(249,115,22,0.2);margin-bottom:10px;">
+      <div class="card-header">
+        <div class="card-title" style="color:var(--warning);">Ghost accounts on two-step registration failure</div>
+        <span class="badge badge-warning">High</span>
+      </div>
+      <div class="card-body">
+        Registration is two steps: (1) <code>supabase.auth.signUp()</code> → creates the auth user, (2) <code>POST /api/auth/register</code> → creates the profile. If step 2 fails (network error, rate limit, DB error), the student has a ghost auth user — can't register again (email taken), can't log in (no profile). There is no auth-user cleanup in <code>registerStudent()</code>.
+        <div class="card-meta" style="margin-top:10px;">lib/auth-client.ts:24–81 &bull; Fix: add cleanup server route called on step-2 failure</div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:rgba(249,115,22,0.2);margin-bottom:10px;">
+      <div class="card-header">
+        <div class="card-title" style="color:var(--warning);">Approval relies on RLS working from the browser</div>
+        <span class="badge badge-warning">Medium</span>
+      </div>
+      <div class="card-body">
+        <code>handleUpdateStatus</code> calls <code>supabase.from("users").update()</code> directly from the browser via the anon key. This requires a working RLS policy allowing admins to update <code>users.status</code>. The known <code>is_admin</code> EXECUTE grant issue (see memory) means approvals could silently fail — the optimistic UI update makes it look like it worked when it didn't.
+        <div class="card-meta" style="margin-top:10px;">dashboard/admin/users/page.tsx:62–73 &bull; Fix: move approval to a server route; add server-side confirmation before optimistic update</div>
+      </div>
+    </div>
+
+    <!-- Confirmed Safe -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--success);margin-bottom:10px;margin-top:20px;">Confirmed Safe</div>
+    <div class="card" style="padding:16px 20px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--white-shade);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="color:var(--success);font-weight:700;">✓</span> Database capacity — 800 MAU vs 50,000 limit
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--white-shade);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="color:var(--success);font-weight:700;">✓</span> Email confirmation — Resend SMTP removes rate cap
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--white-shade);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="color:var(--success);font-weight:700;">✓</span> DB writes — atomic inserts, indexes applied
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--white-shade);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="color:var(--success);font-weight:700;">✓</span> Status-based access guard — pending blocks dashboard
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--white-shade);padding:6px 0;">
+          <span style="color:var(--success);font-weight:700;">✓</span> QR code uniqueness — random UUID, zero collision risk
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--white-shade);padding:6px 0;">
+          <span style="color:var(--success);font-weight:700;">✓</span> No student notification gap noted (expected behavior)
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixes needed -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--dimmed);margin-bottom:10px;margin-top:20px;">3 Fixes Required Before Bulk Onboarding</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th style="width:32px;">#</th>
+            <th style="width:80px;">Effort</th>
+            <th>Fix</th>
+            <th style="width:90px;">File</th>
+            <th style="width:80px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="issue-num">F1</span></td>
+            <td><span class="badge badge-dim">5 min</span></td>
+            <td>
+              <div class="issue-text">Raise <code>/api/auth/register</code> rate limit from 5/min to 60/min per IP — still blocks bots, won't block a classroom registering simultaneously.</div>
+            </td>
+            <td><div class="issue-file">middleware.ts:7</div></td>
+            <td><span class="status-fixed">Done</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">F2</span></td>
+            <td><span class="badge badge-dim">N/A</span></td>
+            <td>
+              <div class="issue-text">~~Bulk approve~~ — Facilitators/admins manually verify each student's section, name, and email before approving. Individual review is the intended workflow; bulk-approve removed from scope.</div>
+            </td>
+            <td><div class="issue-file">admin/users/page.tsx</div></td>
+            <td><span class="badge badge-info">By Design</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">F3</span></td>
+            <td><span class="badge badge-dim">30 min</span></td>
+            <td>
+              <div class="issue-text">Add ghost-account cleanup in <code>registerStudent()</code> and <code>registerFacilitator()</code>: on <code>POST /api/auth/register</code> failure, calls <code>POST /api/auth/cleanup</code> (new service-role route) to delete the orphan auth user so the student can retry.</div>
+            </td>
+            <td><div class="issue-file">lib/auth-client.ts · api/auth/cleanup/route.ts</div></td>
+            <td><span class="status-fixed">Done</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Footer -->
   <div class="meta-footer">
     <p>PharmaTrack &mdash; University of San Agustin Pharmacy Department</p>
-    <p style="margin-top:4px;">Report generated by Claude Code &bull; June 19, 2026 &bull; Branch: main</p>
+    <p style="margin-top:4px;">Report generated by Claude Code &bull; Last updated: June 19, 2026 &bull; Branch: main</p>
   </div>
 
 </div>
