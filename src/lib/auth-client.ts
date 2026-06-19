@@ -164,36 +164,36 @@ export async function registerFacilitator(input: FacilitatorRegisterInput) {
 }
 
 export async function completeOnboarding(
-  userId: string, 
-  email: string, 
-  fullName: string, 
+  userId: string,
+  email: string,
+  fullName: string,
   role: "student" | "facilitator",
   studentData?: { studentId: string, section: string, year: string }
 ) {
-  // 1. Create User Record
-  const status = "pending";
-  const { error: userErr } = await supabase.from("users").insert({
-    id: userId,
-    email: email,
+  const body: Record<string, unknown> = {
+    userId,
+    email,
     full_name: fullName,
-    account_type: role as AccountType,
-    status: status,
-  });
-  if (userErr) throw new Error("Failed to create user record: " + userErr.message);
+    account_type: role,
+  };
 
-  // 2. Create Role Profile
   if (role === "student" && studentData) {
-    await ensureStudentProfile(userId, {
+    body.student_profile = {
       student_id_number: studentData.studentId,
       section: studentData.section,
-      current_year: studentData.year
-    });
-  } else if (role === "facilitator") {
-    const { error: profileErr } = await supabase.from("facilitator_profiles").insert({
-      user_id: userId,
-      department: "Pharmacy"
-    });
-    if (profileErr) throw new Error("Failed to create facilitator profile: " + profileErr.message);
+      current_year: studentData.year,
+    };
+  }
+
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? "Failed to complete profile setup");
   }
 }
 
@@ -221,18 +221,11 @@ export async function updatePassword(newPassword: string) {
 }
 
 export async function getCurrentUser() {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  let user = session?.user;
-  
-  if (!user) {
-    // Fallback to getUser() in case session is refreshing or needs validation
-    const { data: { user: fetchedUser }, error: authError } = await supabase.auth.getUser();
-    if (authError || !fetchedUser) {
-      console.log("No authenticated user session found.");
-      return null;
-    }
-    user = fetchedUser;
+  // getUser() validates the JWT with Supabase Auth server — more reliable than getSession()
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    console.log("No authenticated user session found.");
+    return null;
   }
 
   // Fetch base user profile first

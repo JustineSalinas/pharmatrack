@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing student profile fields" }, { status: 400 });
     }
 
-    // Generate a QR code ID for the student
-    const qrCodeId = `QR-${userId.slice(0, 8).toUpperCase()}`;
+    // Generate a QR code ID for the student — same format as [...all]/route.ts
+    const qrCodeId = `QR-${crypto.randomUUID().replace(/-/g, "").substring(0, 8).toUpperCase()}`;
 
     const { error: profileErr } = await supabase.from("student_profiles").upsert({
       user_id: userId,

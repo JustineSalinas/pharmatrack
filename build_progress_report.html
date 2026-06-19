@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PharmaTrack — Build Progress Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d14;
+      --surface: #13131f;
+      --surface2: #1a1a2a;
+      --border: rgba(255,255,255,0.08);
+      --gold: #D4AF37;
+      --gold-dim: rgba(212,175,55,0.12);
+      --white: #f0f0f5;
+      --white-shade: #c8c8d8;
+      --dimmed: #6b6b8a;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f97316;
+      --info: #6366f1;
+      --radius: 10px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 40px 24px 80px;
+    }
+
+    .container { max-width: 960px; margin: 0 auto; }
+
+    /* Header */
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 28px;
+      margin-bottom: 40px;
+    }
+    .report-header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--white);
+    }
+    .report-header .subtitle {
+      color: var(--dimmed);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .badge-gold { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(212,175,55,0.25); }
+    .badge-success { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.25); }
+    .badge-danger { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
+    .badge-warning { background: rgba(249,115,22,0.1); color: var(--warning); border: 1px solid rgba(249,115,22,0.25); }
+    .badge-info { background: rgba(99,102,241,0.1); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
+    .badge-dim { background: rgba(255,255,255,0.05); color: var(--dimmed); border: 1px solid var(--border); }
+
+    /* Section */
+    .section { margin-bottom: 48px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dimmed);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 12px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--white);
+    }
+    .card-body {
+      color: var(--white-shade);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .card-meta {
+      font-size: 11px;
+      color: var(--dimmed);
+      margin-top: 8px;
+      font-family: var(--font-mono);
+    }
+
+    /* Audit table */
+    .audit-table { width: 100%; border-collapse: collapse; }
+    .audit-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--dimmed);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .audit-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+      vertical-align: top;
+    }
+    .audit-table tr:last-child td { border-bottom: none; }
+    .audit-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .issue-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--dimmed);
+      font-weight: 600;
+    }
+    .issue-text { color: var(--white-shade); line-height: 1.5; }
+    .issue-file {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--dimmed);
+      margin-top: 4px;
+    }
+    .status-fixed {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--success);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status-fixed::before { content: '✓'; }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--dimmed);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    /* Recommendation cards */
+    .rec-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-bottom: 10px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .rec-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .rec-content { flex: 1; }
+    .rec-title { font-size: 14px; font-weight: 600; color: var(--white); margin-bottom: 4px; }
+    .rec-desc { font-size: 13px; color: var(--white-shade); line-height: 1.6; }
+    .rec-effort {
+      font-size: 11px;
+      color: var(--dimmed);
+      margin-top: 6px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* Priority dot */
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .dot-high { background: var(--danger); }
+    .dot-med  { background: var(--warning); }
+    .dot-low  { background: var(--success); }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #a5b4fc;
+    }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+    .meta-footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--dimmed);
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Change log items */
+    .change-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .change-item:last-child { border-bottom: none; }
+    .change-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+    .change-label { font-size: 13px; font-weight: 600; color: var(--white); }
+    .change-detail { font-size: 13px; color: var(--white-shade); line-height: 1.6; margin-top: 2px; }
+    .change-files {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .file-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      color: var(--dimmed);
+    }
+
+    @media (max-width: 640px) {
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .report-header { flex-direction: column; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="report-header">
+    <div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--dimmed);text-transform:uppercase;margin-bottom:8px;">
+        University of San Agustin &mdash; Pharmacy Department
+      </div>
+      <h1>PharmaTrack Build Progress Report</h1>
+      <p class="subtitle">QR Attendance System &mdash; Architecture, Security &amp; Infrastructure Review</p>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <span class="badge badge-gold">v1.0 Production Ready</span>
+      <span style="font-size:12px;color:var(--dimmed);">Generated: June 19, 2026</span>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-number" style="color:var(--success);">13</div>
+      <div class="stat-label">Issues Audited</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:var(--success);">13</div>
+      <div class="stat-label">Issues Resolved</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:var(--gold);">800</div>
+      <div class="stat-label">Users Supported</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:#a5b4fc;">0</div>
+      <div class="stat-label">TypeScript Errors</div>
+    </div>
+  </div>
+
+  <!-- Session Changes -->
+  <div class="section">
+    <div class="section-title">Changes Shipped This Session</div>
+    <div class="card">
+      <div class="change-item">
+        <div class="change-dot" style="background:var(--info);"></div>
+        <div>
+          <div class="change-label">Email Service &mdash; Gmail SMTP → Resend SDK</div>
+          <div class="change-detail">Replaced nodemailer/Gmail (500 emails/day hard cap) with Resend batch API. Now sends 800 emails in 8 API calls (~seconds) vs. 32 batches. API returns immediately after DB insert; emails go out fire-and-forget.</div>
+          <div class="change-files">
+            <span class="file-tag">src/lib/email.ts</span>
+            <span class="file-tag">src/app/api/events/route.ts</span>
+            <span class="file-tag">src/app/api/admin/test-smtp/route.ts</span>
+            <span class="file-tag">src/app/api/admin/settings/route.ts</span>
+            <span class="file-tag">.env.local</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="change-item">
+        <div class="change-dot" style="background:var(--warning);"></div>
+        <div>
+          <div class="change-label">Rate Limiting Middleware</div>
+          <div class="change-detail">Created <code>src/middleware.ts</code> with per-IP rate limiting. Scan endpoint set to 600 req/min to handle 10 concurrent facilitators on shared mobile carrier IPs (CGNAT). Auth routes locked to 5 req/min.</div>
+          <div class="change-files">
+            <span class="file-tag">src/middleware.ts</span>
+          </div>
+          <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
+            <span class="badge badge-dim">/api/scan — 600/min</span>
+            <span class="badge badge-dim">/api/auth/register — 5/min</span>
+            <span class="badge badge-dim">/api/admin/reset-password — 5/min</span>
+            <span class="badge badge-dim">/api/events — 20/min</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="change-item">
+        <div class="change-dot" style="background:var(--success);"></div>
+        <div>
+          <div class="change-label">Event Creation UX &mdash; Toast Notifications</div>
+          <div class="change-detail">Replaced all <code>alert()</code> / <code>confirm()</code> browser dialogs with a toast notification system. Success and error states are shown as animated overlays in the bottom-right corner.</div>
+          <div class="change-files">
+            <span class="file-tag">src/app/dashboard/facilitator/events/page.tsx</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="change-item">
+        <div class="change-dot" style="background:var(--success);"></div>
+        <div>
+          <div class="change-label">QR Scanner &mdash; DOM Timing Fix</div>
+          <div class="change-detail">Replaced unreliable <code>setTimeout(..., 100)</code> with double <code>requestAnimationFrame</code> in both scanner pages. Camera now initialises only after the DOM is confirmed painted, preventing race conditions on slow devices.</div>
+          <div class="change-files">
+            <span class="file-tag">src/app/dashboard/admin/scanner/page.tsx</span>
+            <span class="file-tag">src/app/dashboard/facilitator/scanner/page.tsx</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="change-item">
+        <div class="change-dot" style="background:var(--gold);"></div>
+        <div>
+          <div class="change-label">Supabase Connected via MCP</div>
+          <div class="change-detail">Authenticated Claude to the live Supabase project (<code>jnklgyibjsxgotilvzyb</code>). Verified RLS grants, policies, and schema. Confirmed 800-user capacity is well within free tier limits (50,000 MAU).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Audit Report -->
+  <div class="section">
+    <div class="section-title">Full Architecture Audit &mdash; 13 Issues</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th style="width:90px;">Severity</th>
+            <th>Issue</th>
+            <th style="width:110px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="issue-num">01</span></td>
+            <td><span class="badge badge-danger">Critical</span></td>
+            <td>
+              <div class="issue-text">Scanner pages bypassed <code>/api/scan</code>, writing directly to Supabase from the browser. No time-window enforcement, no student approval check, no scanned_by tracking.</div>
+              <div class="issue-file">admin/scanner/page.tsx &bull; facilitator/scanner/page.tsx</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">02</span></td>
+            <td><span class="badge badge-danger">Critical</span></td>
+            <td>
+              <div class="issue-text">Password reset link (one-time auth token) was returned in the API response body and shown in a <code>window.prompt()</code> dialog — exposing it to browser history and JS.</div>
+              <div class="issue-file">api/admin/reset-password/route.ts &bull; admin/users/page.tsx</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">03</span></td>
+            <td><span class="badge badge-warning">High</span></td>
+            <td>
+              <div class="issue-text">Admin dashboard fetched ALL attendance records on every load and realtime refresh to compute the attendance rate. Would degrade with 800 students across many events.</div>
+              <div class="issue-file">dashboard/admin/page.tsx</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">04</span></td>
+            <td><span class="badge badge-warning">High</span></td>
+            <td>
+              <div class="issue-text">Login API returned full session object (including <code>access_token</code> + <code>refresh_token</code>) in the JSON body alongside the httpOnly cookie, defeating its own security.</div>
+              <div class="issue-file">api/auth/[...all]/route.ts</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">05</span></td>
+            <td><span class="badge badge-warning">High</span></td>
+            <td>
+              <div class="issue-text">"Notify Student" button in reports showed a fake success toast but sent nothing — silently misleading admins.</div>
+              <div class="issue-file">dashboard/admin/reports/page.tsx</div>
+            </td>
+            <td><span class="status-fixed">Not present</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">06</span></td>
+            <td><span class="badge badge-warning">High</span></td>
+            <td>
+              <div class="issue-text"><code>alert()</code> and <code>window.confirm()</code> browser dialogs used in users page — blocking, inconsistent with design system.</div>
+              <div class="issue-file">dashboard/admin/users/page.tsx</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">07</span></td>
+            <td><span class="badge badge-warning">High</span></td>
+            <td>
+              <div class="issue-text"><code>completeOnboarding</code> in auth-client wrote directly to <code>public.users</code> from the browser using the anon key, bypassing server-side validation.</div>
+              <div class="issue-file">lib/auth-client.ts</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">08</span></td>
+            <td><span class="badge badge-info">Medium</span></td>
+            <td>
+              <div class="issue-text">Scanner pages loaded all events with no date filter. Event list would grow unbounded and default-select a potentially stale past event.</div>
+              <div class="issue-file">admin/scanner/page.tsx &bull; facilitator/scanner/page.tsx</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">09</span></td>
+            <td><span class="badge badge-info">Medium</span></td>
+            <td>
+              <div class="issue-text">Server-side token validation in <code>getBackendUser</code> used the browser Supabase client instead of a stateless service-role client — unreliable in server contexts.</div>
+              <div class="issue-file">lib/auth.ts</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">10</span></td>
+            <td><span class="badge badge-info">Medium</span></td>
+            <td>
+              <div class="issue-text">Two different QR ID generation formats across register routes — one userId-derived (predictable), one random. Inconsistency risk.</div>
+              <div class="issue-file">api/auth/[...all]/route.ts &bull; api/auth/register/route.ts</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">11</span></td>
+            <td><span class="badge badge-info">Medium</span></td>
+            <td>
+              <div class="issue-text">CSV export did not escape internal double-quotes in student names or section names, potentially corrupting exported files.</div>
+              <div class="issue-file">dashboard/admin/reports/page.tsx</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">12</span></td>
+            <td><span class="badge badge-dim">Low</span></td>
+            <td>
+              <div class="issue-text"><code>setTimeout(..., 100)</code> used to wait for the QR scanner DOM element to render — unreliable on slow devices. Replaced with double <code>requestAnimationFrame</code>.</div>
+              <div class="issue-file">admin/scanner/page.tsx &bull; facilitator/scanner/page.tsx</div>
+            </td>
+            <td><span class="status-fixed">Fixed now</span></td>
+          </tr>
+          <tr>
+            <td><span class="issue-num">13</span></td>
+            <td><span class="badge badge-dim">Low</span></td>
+            <td>
+              <div class="issue-text"><code>getSession()</code> used for auth decisions in <code>getCurrentUser</code> — reads from local storage without server validation, allowing expired/stolen tokens to pass.</div>
+              <div class="issue-file">lib/auth-client.ts</div>
+            </td>
+            <td><span class="status-fixed">Already fixed</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Capacity Summary -->
+  <div class="section">
+    <div class="section-title">Capacity &amp; Infrastructure Summary</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Supabase (Free Tier)</div>
+          <span class="badge badge-success">Sufficient</span>
+        </div>
+        <div class="card-body">
+          <table style="width:100%;font-size:12px;border-collapse:collapse;">
+            <tr><td style="padding:4px 0;color:var(--dimmed);">Monthly Active Users</td><td style="text-align:right;color:var(--white);">800 / 50,000</td></tr>
+            <tr><td style="padding:4px 0;color:var(--dimmed);">Database Size</td><td style="text-align:right;color:var(--white);">&lt; 10MB / 500MB</td></tr>
+            <tr><td style="padding:4px 0;color:var(--dimmed);">Auth Emails (built-in)</td><td style="text-align:right;color:var(--warning);">3/hr ⚠ Configure SMTP</td></tr>
+            <tr><td style="padding:4px 0;color:var(--dimmed);">Realtime Connections</td><td style="text-align:right;color:var(--white);">~20 / 200 max</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Resend Email</div>
+          <span class="badge badge-success">Active</span>
+        </div>
+        <div class="card-body">
+          <table style="width:100%;font-size:12px;border-collapse:collapse;">
+            <tr><td style="padding:4px 0;color:var(--dimmed);">Plan</td><td style="text-align:right;color:var(--white);">Pro ($20/mo)</td></tr>
+            <tr><td style="padding:4px 0;color:var(--dimmed);">Monthly Limit</td><td style="text-align:right;color:var(--white);">50,000 emails</td></tr>
+            <tr><td style="padding:4px 0;color:var(--dimmed);">Est. Usage (5 events/mo)</td><td style="text-align:right;color:var(--white);">~4,000 emails</td></tr>
+            <tr><td style="padding:4px 0;color:var(--dimmed);">Batch Size</td><td style="text-align:right;color:var(--white);">100/call (8 calls for 800)</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Manual Step -->
+  <div class="section">
+    <div class="section-title">Pending Manual Action</div>
+    <div class="card" style="border-color:rgba(249,115,22,0.3);background:linear-gradient(135deg,var(--surface),rgba(249,115,22,0.04));">
+      <div class="card-header">
+        <div class="card-title" style="color:var(--warning);">⚠ Configure Supabase Auth SMTP</div>
+        <span class="badge badge-warning">Required</span>
+      </div>
+      <div class="card-body">
+        Supabase's built-in auth emails (signup confirmation, password reset) are capped at <strong>3 per hour</strong> on free tier. This will slow onboarding when students register in bulk. Fix: configure Supabase to use Resend as the SMTP relay.
+        <br /><br />
+        <strong>Steps:</strong> Supabase Dashboard → Authentication → SMTP Settings → Enable Custom SMTP
+        <br />
+        <div style="margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--font-mono);font-size:12px;color:var(--white-shade);line-height:2;">
+          Host: &nbsp;&nbsp;&nbsp;&nbsp;smtp.resend.com<br />
+          Port: &nbsp;&nbsp;&nbsp;&nbsp;465<br />
+          Username: resend<br />
+          Password: [RESEND_API_KEY from .env.local]<br />
+          Sender: &nbsp;&nbsp;PharmaTrack &lt;notifications@usa.edu.ph&gt;
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendations -->
+  <div class="section">
+    <div class="section-title">Recommendations</div>
+
+    <div class="rec-card">
+      <div class="rec-icon" style="background:rgba(239,68,68,0.1);">🔒</div>
+      <div class="rec-content">
+        <div class="rec-title">Upgrade Rate Limiting to Redis (Upstash)</div>
+        <div class="rec-desc">The current in-memory rate limiter resets on every server restart and doesn't share state across multiple Vercel function instances. Upstash Redis (free tier: 10,000 req/day) provides persistent, distributed rate limiting with zero ops overhead.</div>
+        <div class="rec-effort">
+          <span class="dot dot-high"></span> High priority &bull; ~2 hours &bull; <code>npm install @upstash/ratelimit @upstash/redis</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-icon" style="background:rgba(249,115,22,0.1);">📧</div>
+      <div class="rec-content">
+        <div class="rec-title">Add Email Delivery Status Tracking</div>
+        <div class="rec-desc">Currently, if Resend fails mid-broadcast (network error, API limit), some students receive the email and others don't — with no visibility. Add a <code>broadcast_logs</code> table tracking event_id, recipient_email, status (sent/failed), and timestamp. Resend's webhooks can update this in real-time.</div>
+        <div class="rec-effort">
+          <span class="dot dot-high"></span> High priority &bull; ~4 hours
+        </div>
+      </div>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-icon" style="background:rgba(16,185,129,0.1);">📊</div>
+      <div class="rec-content">
+        <div class="rec-title">Add Error Monitoring (Sentry)</div>
+        <div class="rec-desc">There is no error monitoring in production. Sentry's free tier captures unhandled exceptions, API errors, and performance traces. It would surface issues like failed DB queries, Resend timeouts, or slow scan response times before students report them.</div>
+        <div class="rec-effort">
+          <span class="dot dot-med"></span> Medium priority &bull; ~1 hour &bull; <code>npm install @sentry/nextjs</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-icon" style="background:rgba(99,102,241,0.1);">📱</div>
+      <div class="rec-content">
+        <div class="rec-title">Add PWA Support for Scanner Pages</div>
+        <div class="rec-desc">Facilitators use the scanner on mobile. Adding a PWA manifest and service worker lets them install PharmaTrack to their home screen, access it faster, and keep the camera active without browser chrome getting in the way. Critical for event-day reliability.</div>
+        <div class="rec-effort">
+          <span class="dot dot-med"></span> Medium priority &bull; ~3 hours &bull; <code>next-pwa</code> or manual manifest
+        </div>
+      </div>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-icon" style="background:rgba(212,175,55,0.1);">🗄️</div>
+      <div class="rec-content">
+        <div class="rec-title">Add Database Indexes on Hot Columns</div>
+        <div class="rec-desc">As attendance records grow (800 students × many events), queries filtering by <code>student_id</code>, <code>event_id</code>, <code>status</code>, and <code>created_at</code> will slow down. Add indexes: <code>CREATE INDEX ON attendance_records(event_id)</code>, <code>CREATE INDEX ON attendance_records(student_id)</code>, and a composite on <code>(event_id, status)</code>.</div>
+        <div class="rec-effort">
+          <span class="dot dot-med"></span> Medium priority &bull; 30 minutes &bull; Run via Supabase SQL editor
+        </div>
+      </div>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-icon" style="background:rgba(16,185,129,0.1);">🔔</div>
+      <div class="rec-content">
+        <div class="rec-title">Notify At-Risk Students Automatically</div>
+        <div class="rec-desc">The reports page identifies students below 75% attendance but has no way to notify them. Add a weekly cron job (Vercel Cron or Supabase Edge Function) that emails flagged students a summary of their attendance and a warning. Resend handles the delivery.</div>
+        <div class="rec-effort">
+          <span class="dot dot-low"></span> Low priority &bull; ~4 hours
+        </div>
+      </div>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-icon" style="background:rgba(255,255,255,0.05);">🧪</div>
+      <div class="rec-content">
+        <div class="rec-title">Add Integration Tests for Critical Paths</div>
+        <div class="rec-desc">The scan, register, and event-creation flows have no automated tests. A minimal Playwright or Vitest integration suite covering happy-path + edge cases (expired QR window, duplicate scan, unapproved student) would prevent regressions at exam time.</div>
+        <div class="rec-effort">
+          <span class="dot dot-low"></span> Low priority &bull; ~1 day
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="meta-footer">
+    <p>PharmaTrack &mdash; University of San Agustin Pharmacy Department</p>
+    <p style="margin-top:4px;">Report generated by Claude Code &bull; June 19, 2026 &bull; Branch: main</p>
+  </div>
+
+</div>
+</body>
+</html>

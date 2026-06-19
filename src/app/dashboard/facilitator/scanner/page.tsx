@@ -65,9 +65,11 @@ export default function FacilitatorScannerPage() {
         
         setFacilitator(user);
         
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
         const { data: events, error } = await supabase
           .from("events")
           .select("*")
+          .gte("date", sevenDaysAgo)
           .order("date", { ascending: false });
         
         if (error) throw error;
@@ -174,8 +176,8 @@ export default function FacilitatorScannerPage() {
     setScanResult(null);
     setIsScanning(true);
 
-    // Wait for DOM container reader element to render
-    setTimeout(async () => {
+    // Wait for the DOM element to be painted before initialising the scanner
+    requestAnimationFrame(() => requestAnimationFrame(async () => {
       try {
         const qrScanner = new Html5Qrcode("reader");
         scannerRef.current = qrScanner;
@@ -194,9 +196,9 @@ export default function FacilitatorScannerPage() {
       } catch (err: any) {
         console.error("Camera start error", err);
         setIsScanning(false);
-        alert("Could not start camera: " + (err.message || "Permissions denied"));
+        setScanResult({ success: false, message: "Camera Error", submessage: err.message || "Camera permissions denied." });
       }
-    }, 100);
+    }));
   };
 
   const stopCamera = async () => {
@@ -255,76 +257,45 @@ export default function FacilitatorScannerPage() {
     }
   }
 
-  // ── PHASE 2: Confirm — facilitator clicks Confirm Check-In, writes attendance ──
+  // ── PHASE 2: Confirm — facilitator clicks Confirm Check-In, calls /api/scan ──
   async function confirmCheckIn() {
     if (!verifiedStudent || !selectedEventId || !facilitator) return;
     setConfirmLoading(true);
 
     try {
-      const { data: event } = await supabase
-        .from("events")
-        .select("*")
-        .eq("id", selectedEventId)
-        .single();
-      if (!event) throw new Error("Event not found");
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-      const now = new Date();
-      let status = "present";
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ qr_code_id: verifiedStudent.qrCodeId, event_id: selectedEventId }),
+      });
 
-      if (now > new Date(event.check_in_late)) status = "late";
+      const json = await res.json();
 
-      if (now > new Date(event.check_in_end)) {
-        setVerifiedStudent(null);
-        setScanResult({
-          success: false,
-          message: "Check-in Closed",
-          submessage: `Attendance window ended at ${new Date(event.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`,
-        });
+      if (!res.ok) {
+        setScanResult({ success: false, message: "Scan Failed", submessage: json.error || "An error occurred." });
         return;
       }
 
-      const { data: existingRecord } = await supabase
-        .from("attendance_records")
-        .select("*")
-        .eq("student_id", verifiedStudent.userId)
-        .eq("event_id", selectedEventId)
-        .maybeSingle();
-
-      if (existingRecord) {
-        if (!existingRecord.time_out) {
-          const { error: outErr } = await supabase
-            .from("attendance_records")
-            .update({ time_out: now.toISOString() })
-            .eq("id", existingRecord.id);
-          if (outErr) throw outErr;
-          setScanResult({
-            success: true,
-            message: "Check-out Recorded!",
-            submessage: `${verifiedStudent.fullName} has checked out successfully.`,
-          });
-        } else {
-          setScanResult({
-            success: false,
-            message: "Already Logged",
-            submessage: `${verifiedStudent.fullName} has already recorded both check-in and check-out.`,
-          });
-        }
-      } else {
-        const { error: insErr } = await supabase
-          .from("attendance_records")
-          .insert({
-            student_id: verifiedStudent.userId,
-            event_id: selectedEventId,
-            status,
-            time_in: now.toISOString(),
-            scanned_by: facilitator.id,
-          });
-        if (insErr) throw insErr;
+      if (json.action === "time_in") {
         setScanResult({
           success: true,
-          message: `${status.toUpperCase()}!`,
+          message: `${(json.status || "present").toUpperCase()}!`,
           submessage: `${verifiedStudent.fullName} checked in successfully.`,
         });
+      } else if (json.action === "time_out") {
+        setScanResult({
+          success: true,
+          message: "Check-out Recorded!",
+          submessage: `${verifiedStudent.fullName} has checked out successfully.`,
+        });
+      } else {
+        setScanResult({ success: false, message: "Scan Failed", submessage: json.message || json.error || "Unexpected response." });
       }
 
       fetchRecentScans(selectedEventId);

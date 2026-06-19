@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Auth API] Login successful for user ${email} (${profile?.account_type || "no profile"})`);
 
-    const res = NextResponse.json({ user: data.user, profile, session: data.session });
+    const res = NextResponse.json({ user: data.user, profile });
     res.cookies.set("pharmatrack_token", data.session?.access_token ?? "", {
       httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7,
     });

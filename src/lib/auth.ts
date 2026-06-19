@@ -1,7 +1,15 @@
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import type { PharmaUser } from "./schema";
+
+const getServiceClient = () =>
+  createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
 
 export async function getBackendUser(req?: NextRequest) {
   let token: string | undefined;
@@ -25,7 +33,7 @@ export async function getBackendUser(req?: NextRequest) {
   }
 
   if (token) {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const { data: { user }, error } = await getServiceClient().auth.getUser(token);
     if (!error && user) return user;
   }
 

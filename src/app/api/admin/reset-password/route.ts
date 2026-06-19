@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 import { getBackendUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -55,15 +56,35 @@ export async function POST(req: NextRequest) {
       throw error;
     }
 
-    console.log(`[ResetPassword API] Password reset link successfully generated for target ${email}`);
+    const actionLink = data?.properties?.action_link;
+    if (!actionLink) throw new Error("Failed to generate reset link");
 
-    // In production you'd send this via email — here we return the link
-    // so the admin can share it manually or it can be emailed via Supabase's
-    // built-in email (depending on your SMTP config).
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const from = process.env.RESEND_FROM || "PharmaTrack <notifications@usa.edu.ph>";
+
+    const { error: emailErr } = await resend.emails.send({
+      from,
+      to: email,
+      subject: "Password Reset — PharmaTrack",
+      html: `
+        <p>Hello,</p>
+        <p>An administrator has requested a password reset for your PharmaTrack account.</p>
+        <p><a href="${actionLink}" style="background:#4f46e5;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;">Reset Password</a></p>
+        <p>This link expires in 24 hours. If you did not request this, you can ignore this email.</p>
+        <p style="color:#6b7280;font-size:12px;">— PharmaTrack System</p>
+      `,
+    });
+
+    if (emailErr) {
+      console.error(`[ResetPassword API] Resend email failed for ${email}:`, emailErr);
+      throw new Error("Failed to send reset email: " + emailErr.message);
+    }
+
+    console.log(`[ResetPassword API] Password reset email sent to ${email}`);
+
     return NextResponse.json({
       success: true,
-      message: `Password reset link generated for ${email}`,
-      link: data?.properties?.action_link ?? null,
+      message: `Password reset email sent to ${email}`,
     });
   } catch (err: any) {
     console.error("[ResetPassword API] Internal server error:", err);
