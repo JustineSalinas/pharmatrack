@@ -60,11 +60,9 @@ export async function GET(req: NextRequest) {
     // 4. Map DB configurations
     const dbMap = new Map((dbConfigs || []).map((item) => [item.key, item.value]));
 
-    // 5. Check if environment variables for SMTP are configured
-    const envHost = process.env.SMTP_HOST;
-    const envUser = process.env.SMTP_USER;
-    const envPass = process.env.SMTP_PASS;
-    const isSMTPManagedByEnv = !!(envHost && envUser && envPass);
+    // 5. Check if Resend is configured
+    const resendKey = process.env.RESEND_API_KEY;
+    const isSMTPManagedByEnv = !!(resendKey && resendKey !== "re_your_api_key_here");
 
     // 6. Merge configurations safely
     const settings: Record<string, string> = {};

@@ -98,7 +98,8 @@ export async function POST(req: NextRequest) {
     if (studentsErr) {
       console.error("[Events API] Failed to fetch student recipients for broadcast:", studentsErr.message);
     } else if (students && students.length > 0) {
-      await sendEventBroadcast({
+      // Fire-and-forget — don't block the response while 800 emails send
+      sendEventBroadcast({
         name,
         location,
         date,
