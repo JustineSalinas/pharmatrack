@@ -22,47 +22,16 @@ export async function getAuthUser() {
 }
 
 export async function registerStudent(input: StudentRegisterInput) {
-  const redirectTo = `${window.location.origin}/auth/callback`;
-
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: input.email,
-    password: input.password,
-    options: {
-      emailRedirectTo: redirectTo,
-      data: {
-        full_name: input.full_name,
-        account_type: "student",
-      },
-    },
-  });
-
-  if (authError) {
-    if (authError.message.toLowerCase().includes("user already registered")) {
-      throw new Error("This email is already registered. Please try logging in instead.");
-    }
-    if (authError.message.toLowerCase().includes("rate limit")) {
-      throw new Error("Too many sign-up attempts right now. Please wait a few minutes and try again.");
-    }
-    throw new Error(authError.message);
-  }
-  if (!authData.user) throw new Error("Registration failed");
-
-  // Supabase email-enumeration protection returns a "successful" signUp with a
-  // phantom user id and an empty identities array when the email already exists.
-  // Detect it here so we show a clear message instead of a foreign-key error.
-  if (authData.user.identities && authData.user.identities.length === 0) {
-    throw new Error("This email is already registered. Please log in instead, or use a different email.");
-  }
-
-  const userId = authData.user.id;
-
-  // Create user + student profile via server route (bypasses RLS — no session yet before email confirmation)
+  // signUp() is called server-side inside /api/auth/register so Supabase
+  // GoTrue rate-limits by the Vercel server IP, not the student's shared
+  // campus WiFi IP. Auth creation and profile creation are one round-trip;
+  // the server cleans up on any failure so no orphan auth users can form.
   const res = await fetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      userId,
       email: input.email,
+      password: input.password,
       full_name: input.full_name,
       account_type: "student",
       student_profile: {
@@ -72,12 +41,12 @@ export async function registerStudent(input: StudentRegisterInput) {
       },
     }),
   });
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    throw new Error(json.error ?? "Failed to create user profile");
-  }
 
-  return authData;
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(json.error ?? "Registration failed. Please try again.");
+  }
+  return json;
 }
 
 /**
@@ -111,56 +80,22 @@ export async function ensureStudentProfile(userId: string, data: { student_id_nu
 }
 
 export async function registerFacilitator(input: FacilitatorRegisterInput) {
-  const redirectTo = `${window.location.origin}/auth/callback`;
-
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: input.email,
-    password: input.password,
-    options: {
-      emailRedirectTo: redirectTo,
-      data: {
-        full_name: input.full_name,
-        account_type: "facilitator",
-      },
-    },
-  });
-
-  if (authError) {
-    if (authError.message.toLowerCase().includes("user already registered")) {
-      throw new Error("This email is already registered. Please try logging in instead.");
-    }
-    if (authError.message.toLowerCase().includes("rate limit")) {
-      throw new Error("Too many sign-up attempts right now. Please wait a few minutes and try again.");
-    }
-    throw new Error(authError.message);
-  }
-  if (!authData.user) throw new Error("Registration failed");
-
-  // Supabase email-enumeration protection returns a "successful" signUp with a
-  // phantom user id and an empty identities array when the email already exists.
-  if (authData.user.identities && authData.user.identities.length === 0) {
-    throw new Error("This email is already registered. Please log in instead, or use a different email.");
-  }
-
-  const userId = authData.user.id;
-
-  // Create user + facilitator profile via server route (bypasses RLS — no session yet before email confirmation)
   const res = await fetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      userId,
       email: input.email,
+      password: input.password,
       full_name: input.full_name,
       account_type: "facilitator",
     }),
   });
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    throw new Error(json.error ?? "Failed to create user profile");
-  }
 
-  return authData;
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(json.error ?? "Registration failed. Please try again.");
+  }
+  return json;
 }
 
 export async function completeOnboarding(

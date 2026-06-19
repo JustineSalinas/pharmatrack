@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PharmaTrack — Feature & Architecture Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d14; --surface: #13131f; --surface2: #1a1a2a;
+      --border: rgba(255,255,255,0.08);
+      --gold: #D4AF37; --gold-dim: rgba(212,175,55,0.12);
+      --white: #f0f0f5; --white-shade: #c8c8d8; --dimmed: #6b6b8a;
+      --success: #10b981; --danger: #ef4444; --warning: #f97316; --info: #6366f1;
+      --student: #2dd4bf; --facilitator: #a78bfa; --admin: #D4AF37;
+      --radius: 10px; --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    body { background: var(--bg); color: var(--white); font-family: var(--font); font-size: 14px; line-height: 1.6; padding: 40px 24px 80px; }
+    .container { max-width: 1040px; margin: 0 auto; }
+
+    /* Header */
+    .report-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 28px; margin-bottom: 40px; }
+    .report-header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; }
+    .report-header .subtitle { color: var(--dimmed); font-size: 13px; margin-top: 4px; }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+    .badge-gold   { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(212,175,55,0.25); }
+    .badge-success{ background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.25); }
+    .badge-danger { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
+    .badge-warning{ background: rgba(249,115,22,0.1); color: var(--warning); border: 1px solid rgba(249,115,22,0.25); }
+    .badge-info   { background: rgba(99,102,241,0.1); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
+    .badge-dim    { background: rgba(255,255,255,0.05); color: var(--dimmed); border: 1px solid var(--border); }
+    .badge-student    { background: rgba(45,212,191,0.1); color: var(--student); border: 1px solid rgba(45,212,191,0.25); }
+    .badge-facilitator{ background: rgba(167,139,250,0.1); color: var(--facilitator); border: 1px solid rgba(167,139,250,0.25); }
+    .badge-admin      { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(212,175,55,0.25); }
+
+    /* Section */
+    .section { margin-bottom: 52px; }
+    .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dimmed); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* Role header strip */
+    .role-strip { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; }
+    .role-strip-student    { background: rgba(45,212,191,0.06); border: 1px solid rgba(45,212,191,0.2); }
+    .role-strip-facilitator{ background: rgba(167,139,250,0.06); border: 1px solid rgba(167,139,250,0.2); }
+    .role-strip-admin      { background: rgba(212,175,55,0.06); border: 1px solid rgba(212,175,55,0.2); }
+    .role-strip-shared     { background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
+    .role-name { font-size: 15px; font-weight: 700; }
+    .role-name-student     { color: var(--student); }
+    .role-name-facilitator { color: var(--facilitator); }
+    .role-name-admin       { color: var(--gold); }
+    .role-desc { font-size: 13px; color: var(--dimmed); }
+
+    /* Feature cards */
+    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+    .feature-card-title { font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .feature-card-body { font-size: 12.5px; color: var(--white-shade); line-height: 1.65; }
+    .feature-card-meta { font-size: 11px; color: var(--dimmed); margin-top: 8px; font-family: var(--mono); }
+    .feature-card.wide { grid-column: 1 / -1; }
+
+    /* Flow steps */
+    .flow-steps { display: flex; flex-direction: column; gap: 0; }
+    .flow-step { display: flex; gap: 16px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .flow-step:last-child { border-bottom: none; }
+    .flow-num { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .flow-content { flex: 1; }
+    .flow-title { font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 3px; }
+    .flow-desc { font-size: 12.5px; color: var(--white-shade); line-height: 1.6; }
+    .flow-file { font-size: 11px; color: var(--dimmed); font-family: var(--mono); margin-top: 5px; }
+
+    /* Page inventory table */
+    .inv-table { width: 100%; border-collapse: collapse; }
+    .inv-table th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dimmed); padding: 8px 14px; border-bottom: 1px solid var(--border); }
+    .inv-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12.5px; vertical-align: top; }
+    .inv-table tr:last-child td { border-bottom: none; }
+    .inv-table tr:hover td { background: rgba(255,255,255,0.015); }
+    .page-path { font-family: var(--mono); font-size: 11.5px; color: #a5b4fc; }
+    .page-desc { color: var(--white-shade); }
+
+    /* API table */
+    .api-table { width: 100%; border-collapse: collapse; }
+    .api-table th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dimmed); padding: 8px 14px; border-bottom: 1px solid var(--border); }
+    .api-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12.5px; vertical-align: top; }
+    .api-table tr:last-child td { border-bottom: none; }
+    .method { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+    .method-post { background: rgba(16,185,129,0.12); color: var(--success); }
+    .method-get  { background: rgba(99,102,241,0.12); color: #a5b4fc; }
+    .api-path { font-family: var(--mono); font-size: 12px; color: var(--white-shade); }
+
+    /* Infra chips */
+    .infra-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .infra-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .infra-name { font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 4px; }
+    .infra-detail { font-size: 12px; color: var(--dimmed); line-height: 1.6; }
+    .infra-status { font-size: 11px; font-weight: 600; margin-top: 8px; }
+
+    /* Security chips */
+    .security-list { display: flex; flex-direction: column; gap: 8px; }
+    .security-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+    .security-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .security-text { font-size: 12.5px; color: var(--white-shade); line-height: 1.55; }
+    .security-text strong { color: var(--white); }
+
+    code { font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; color: #a5b4fc; }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 12px; }
+    .meta-footer { text-align: center; font-size: 12px; color: var(--dimmed); padding-top: 24px; border-top: 1px solid var(--border); }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tag { font-family: var(--mono); font-size: 11px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; color: var(--dimmed); }
+
+    @media (max-width: 640px) {
+      .feature-grid { grid-template-columns: 1fr; }
+      .infra-grid { grid-template-columns: 1fr; }
+      .report-header { flex-direction: column; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="report-header">
+    <div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--dimmed);text-transform:uppercase;margin-bottom:8px;">
+        University of San Agustin &mdash; Pharmacy Department
+      </div>
+      <h1>PharmaTrack — Feature & Architecture Report</h1>
+      <p class="subtitle">Complete Frontend, Backend, and Role-Based Feature Inventory &mdash; June 19, 2026</p>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <span class="badge badge-gold">v1.0 Production Ready</span>
+      <div style="display:flex;gap:6px;">
+        <span class="badge badge-student">Student</span>
+        <span class="badge badge-facilitator">Facilitator</span>
+        <span class="badge badge-admin">Admin</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       1. ARCHITECTURE OVERVIEW
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Architecture Overview</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-card-title">Stack</div>
+        <div class="feature-card-body">
+          <strong>Next.js 14</strong> App Router with server-side rendering and API routes. TypeScript end-to-end.
+          Client components use React 18 with Suspense boundaries and skeleton loaders.
+          Realtime updates via Supabase Postgres Change subscriptions.
+        </div>
+        <div class="tag-row">
+          <span class="tag">Next.js 14</span><span class="tag">React 18</span><span class="tag">TypeScript 5</span><span class="tag">App Router</span>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-title">Database &amp; Auth</div>
+        <div class="feature-card-body">
+          Supabase (PostgreSQL) with Row Level Security on all 7 tables. Supabase Auth
+          handles JWT sessions via httpOnly cookie (<code>pharmatrack_token</code>).
+          Auth emails (signup confirmation, password reset) route through <strong>Resend SMTP</strong>.
+        </div>
+        <div class="tag-row">
+          <span class="tag">Supabase PostgreSQL</span><span class="tag">RLS</span><span class="tag">Resend SMTP</span>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-title">Rate Limiting</div>
+        <div class="feature-card-body">
+          Next.js middleware intercepts four API paths. <strong>Upstash Redis</strong> (sliding window,
+          distributed across Vercel instances). Fail-open: if Redis is unreachable, falls back
+          to in-memory Map so scan traffic is never blocked by a Redis outage.
+        </div>
+        <div class="tag-row">
+          <span class="tag">Upstash Redis</span><span class="tag">Sliding Window</span><span class="tag">Fail-open</span>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-title">Monitoring &amp; Performance</div>
+        <div class="feature-card-body">
+          <strong>Sentry</strong> integrated (client + server + edge configs). Production-only, no PII,
+          10% transaction sampling. 7 PostgreSQL indexes applied on hot columns
+          (<code>attendance_records</code>, <code>events</code>, <code>users</code>).
+        </div>
+        <div class="tag-row">
+          <span class="tag">Sentry</span><span class="tag">7 DB Indexes</span><span class="tag">Realtime Subscriptions</span>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-title">Email Infrastructure</div>
+        <div class="feature-card-body">
+          Resend SDK handles all transactional emails. Event broadcasts go out in batches of 100
+          (8 API calls for 800 students). Fire-and-forget: API returns after DB insert, emails
+          go out async. Auth emails (confirm, reset) route through Supabase's custom SMTP using
+          Resend — removing the 3/hr free-tier cap.
+        </div>
+        <div class="tag-row">
+          <span class="tag">Resend Batch API</span><span class="tag">Custom SMTP</span><span class="tag">Fire-and-forget</span>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-title">Data Tables</div>
+        <div class="feature-card-body">
+          <code>users</code> · <code>student_profiles</code> · <code>facilitator_profiles</code> ·
+          <code>events</code> · <code>attendance_records</code> · <code>qr_sessions</code> ·
+          <code>system_config</code>. All with RLS. Attendance summary exposed via
+          <code>student_attendance_summary</code> view.
+        </div>
+        <div class="tag-row">
+          <span class="tag">7 Tables</span><span class="tag">1 View</span><span class="tag">RLS on all</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       2. PUBLIC PAGES (PRE-LOGIN)
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Public Pages — Pre-Login</div>
+
+    <div class="feature-grid">
+      <div class="feature-card wide">
+        <div class="feature-card-title">Landing Page <code>/</code></div>
+        <div class="feature-card-body">
+          Animated dark background with CSS blob animations and a USA watermark.
+          Typewriter component cycles through 6 bilingual phrases (Filipino/English) at variable speed with a blinking cursor.
+          Hero section with "PHARMATRACK" wordmark, "Professional Attendance Monitoring" subtitle, two CTA buttons (Scanner, Create Account), and three feature pills (Secure QR Identity · Live Reporting · Faculty Integration).
+          Scroll indicator bounces to the "How It Works" section below.
+          <br /><br />
+          <strong>How It Works</strong> card: 3-step visual flow (Register → Scan → Track) with inline SVG icons and per-step accent colors.
+          <strong>Key Features</strong> card: Automated Reporting, Real-time Data, Precision &amp; Accuracy with SVG icons.
+          <strong>QR Mockup</strong> card: animated scan-line over a QR icon.
+          Footer with university name and copyright.
+        </div>
+        <div class="tag-row">
+          <span class="tag">Typewriter animation</span><span class="tag">CSS blobs</span><span class="tag">Scroll-to section</span><span class="tag">Bilingual</span>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Login <code>/login</code></div>
+        <div class="feature-card-body">
+          Email + password form with show/hide toggle. Reads URL params on mount:
+          <code>?verified=true</code> → green success banner; <code>?pending=true</code> → registration complete message;
+          <code>?reset=success</code> → password updated; <code>?error=…</code> → error banner with parsed message types.
+          <br /><br />
+          <strong>Pending Approval Screen:</strong> when a logged-in user is <code>status: pending</code>, they are signed out
+          and shown a gold hourglass screen with their name, role, and instructions to check back later.
+          Wraps <code>LoginForm</code> in Suspense for SSR compatibility.
+        </div>
+        <div class="tag-row"><span class="tag">Show/hide password</span><span class="tag">URL param feedback</span><span class="tag">Pending screen</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Register <code>/register</code></div>
+        <div class="feature-card-body">
+          Role toggle (Student / Facilitator). Student fields: Full Name, USA Email, Student ID, Year (1st–4th),
+          Section (dynamically populated per year — 1st has 5 sections PH 1A–E, 4th has 4). Password + Confirm with show/hide.
+          <br /><br />
+          <strong>Post-registration:</strong> shows email verification screen with green mail icon, the registered email
+          highlighted in gold, instructions, and a spam-folder hint. Facilitator accounts show an extra warning that
+          admin approval is required. Registration calls <code>POST /api/auth/register</code> server-side
+          — <code>signUp()</code> runs on the Vercel server IP, not the student's device.
+        </div>
+        <div class="tag-row"><span class="tag">Role toggle</span><span class="tag">Dynamic sections</span><span class="tag">Email verify screen</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Forgot Password <code>/forgot-password</code></div>
+        <div class="feature-card-body">
+          Sends a Supabase password-reset email to the provided address via
+          <code>supabase.auth.resetPasswordForEmail()</code>. Email redirects to <code>/reset-password</code>
+          with a short-lived recovery session token.
+        </div>
+        <div class="tag-row"><span class="tag">Resend SMTP relay</span><span class="tag">OTP link</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Reset Password <code>/reset-password</code></div>
+        <div class="feature-card-body">
+          Reads the recovery session from the URL (via <code>/auth/callback</code> redirect).
+          Calls <code>supabase.auth.updateUser({ password })</code> using the active recovery session.
+          On success redirects to <code>/login?reset=success</code>.
+        </div>
+        <div class="tag-row"><span class="tag">Recovery session</span><span class="tag">Supabase updateUser</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Onboarding <code>/onboarding</code></div>
+        <div class="feature-card-body">
+          Fallback for OAuth / SSO users who authenticated via Google but have no profile row yet.
+          Role toggle + student fields. Calls <code>POST /api/auth/register</code> with the existing <code>userId</code>
+          (no password — skips <code>signUp()</code> step). Signs out after completion and redirects to
+          <code>/login?pending=true</code>.
+        </div>
+        <div class="tag-row"><span class="tag">OAuth fallback</span><span class="tag">Profile-only create</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Auth Callback <code>/auth/callback</code></div>
+        <div class="feature-card-body">
+          Handles two cases. <strong>Case 1 – Email OTP:</strong> <code>token_hash + type</code> → <code>verifyOtp()</code>
+          → redirect to <code>/login?verified=true</code> (or <code>/reset-password</code> for recovery links).
+          Handles the Gmail/Outlook email-scanner edge case where the one-time link is pre-consumed —
+          redirects with <code>?error=link_already_used</code> and a friendly message.
+          <br /><br />
+          <strong>Case 2 – PKCE / OAuth:</strong> <code>code</code> → <code>exchangeCodeForSession()</code>
+          → checks if profile exists → routes to <code>/onboarding</code> (new) or <code>/dashboard</code> (returning).
+          Sets <code>pharmatrack_token</code> httpOnly cookie on success.
+        </div>
+        <div class="tag-row"><span class="tag">OTP verify</span><span class="tag">PKCE exchange</span><span class="tag">httpOnly cookie</span><span class="tag">Email scanner safe</span></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       3. AUTH FLOW (END-TO-END)
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Authentication Flow — End to End</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="flow-steps" style="padding:8px 20px;">
+
+        <div class="flow-step">
+          <div class="flow-num" style="background:rgba(212,175,55,0.15);color:var(--gold);">1</div>
+          <div class="flow-content">
+            <div class="flow-title">User submits registration form</div>
+            <div class="flow-desc">Browser POSTs to <code>POST /api/auth/register</code> with email, password, full_name, role, and student fields. No browser-side Supabase call.</div>
+            <div class="flow-file">src/lib/auth-client.ts → registerStudent() / registerFacilitator()</div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-num" style="background:rgba(212,175,55,0.15);color:var(--gold);">2</div>
+          <div class="flow-content">
+            <div class="flow-title">Server calls <code>supabase.auth.signUp()</code> using anon key</div>
+            <div class="flow-desc">Runs on the Vercel server — GoTrue rate-limits by the <strong>Vercel server IP</strong>, not the student's campus WiFi IP. Phantom-user detection (empty <code>identities[]</code>) handled server-side. Returns 409 for duplicate emails.</div>
+            <div class="flow-file">src/app/api/auth/register/route.ts — Step 1</div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-num" style="background:rgba(212,175,55,0.15);color:var(--gold);">3</div>
+          <div class="flow-content">
+            <div class="flow-title">Supabase sends confirmation email via Resend SMTP</div>
+            <div class="flow-desc">Custom SMTP (smtp.resend.com:465) bypasses Supabase's 3/hr free-tier email cap. Confirmation link redirects to <code>/auth/callback?token_hash=…&amp;type=signup</code>.</div>
+            <div class="flow-file">Supabase Auth → SMTP settings → Resend relay</div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-num" style="background:rgba(212,175,55,0.15);color:var(--gold);">4</div>
+          <div class="flow-content">
+            <div class="flow-title">Server creates <code>public.users</code> + role profile (same request)</div>
+            <div class="flow-desc">Service-role client inserts into <code>public.users</code> (status: "pending") and either <code>student_profiles</code> or <code>facilitator_profiles</code>. On any DB failure, the auth user is cleaned up via <code>admin.deleteUser()</code> — no orphan accounts.</div>
+            <div class="flow-file">src/app/api/auth/register/route.ts — Steps 2 &amp; 3</div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-num" style="background:rgba(212,175,55,0.15);color:var(--gold);">5</div>
+          <div class="flow-content">
+            <div class="flow-title">User clicks confirmation link → email verified</div>
+            <div class="flow-desc"><code>/auth/callback</code> calls <code>verifyOtp({ token_hash, type: 'signup' })</code>. On success, redirects to <code>/login?verified=true</code>. If link was pre-consumed by an email scanner, shows a safe "already verified" message instead of an error.</div>
+            <div class="flow-file">src/app/auth/callback/route.ts — Case 1</div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-num" style="background:rgba(212,175,55,0.15);color:var(--gold);">6</div>
+          <div class="flow-content">
+            <div class="flow-title">User logs in — 4-step check</div>
+            <div class="flow-desc">
+              ① <code>loginUser()</code> → Supabase auth sign-in.<br />
+              ② <code>getAuthUser()</code> → checks <code>email_confirmed_at</code>; unconfirmed users are signed out with a "check your inbox" message.<br />
+              ③ <code>getCurrentUser()</code> → fetches <code>public.users</code> + role profile.<br />
+              ④ Status check: <code>pending</code> → sign out + pending approval screen. <code>rejected</code> → sign out + error. <code>approved</code> → redirect to role dashboard.
+            </div>
+            <div class="flow-file">src/app/login/page.tsx — handleLogin()</div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-num" style="background:rgba(212,175,55,0.15);color:var(--gold);">7</div>
+          <div class="flow-content">
+            <div class="flow-title">Admin/Facilitator manually reviews &amp; approves the account</div>
+            <div class="flow-desc">Admin opens User Management, verifies the student's name, section, and email match expected records, and clicks Approve. Status updates from <code>pending</code> → <code>approved</code>.</div>
+            <div class="flow-file">src/app/dashboard/admin/users/page.tsx — handleUpdateStatus()</div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-num" style="background:rgba(212,175,55,0.15);color:var(--gold);">8</div>
+          <div class="flow-content">
+            <div class="flow-title">Approved user logs in → role-specific dashboard</div>
+            <div class="flow-desc">
+              Student → <code>/dashboard</code><br />
+              Facilitator → <code>/dashboard/facilitator</code><br />
+              Admin → <code>/dashboard/admin</code>
+            </div>
+            <div class="flow-file">Role redirect logic in login/page.tsx</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       4. STUDENT ROLE
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Student Role</div>
+
+    <div class="role-strip role-strip-student">
+      <span class="badge badge-student">Student</span>
+      <div>
+        <div class="role-name role-name-student">Student Portal</div>
+        <div class="role-desc">Read-only attendance view. QR identity presentation. No scanning capability — receives event notifications and tracks own attendance history.</div>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+
+      <div class="feature-card wide">
+        <div class="feature-card-title">Dashboard <code>/dashboard</code></div>
+        <div class="feature-card-body">
+          <strong>Attendance Donut Ring:</strong> animated SVG circle with cubic-bezier transition showing overall attendance rate %. Center displays the % number. Transitions smoothly on data change via Supabase Realtime.<br /><br />
+          <strong>Standing Badge:</strong> Excellent Standing (≥90% · green) · Good Standing (≥75% · teal) · At Risk (≥60% · gold) · Poor Standing (&lt;60% · red) · No Records Yet (neutral, prevents 0% stigma for new users).<br /><br />
+          <strong>3 Stat Tiles:</strong> Present, Late, Absent counts with mini horizontal progress bars showing proportion of total records. Color-coded green / amber / red.<br /><br />
+          <strong>QR Access Pass Card:</strong> USA university banner + seal, 148×148px QR code (Error Correction Level H), student name, ID number, year &amp; section, QR code ID string. Download as PNG button. Full-screen toggle button.<br /><br />
+          <strong>Full-Screen Check-In Modal:</strong> 200×200px QR on white card with gold glow. Download QR button. "Keep screen brightness high" hint. Closes on backdrop click or X.<br /><br />
+          <strong>QR Repair Modal:</strong> shown when <code>student_profiles</code> row is missing. Student enters ID number, year, section → calls <code>ensureStudentProfile()</code> which upserts on conflict → page reloads with correct QR.<br /><br />
+          <strong>Upcoming Events Panel:</strong> fetches events with date ≥ today (local date, UTC+8 aware), filters by student's <code>current_year</code> against <code>target_year_levels[]</code>. Shows max 4 with "See N More" toggle. Each event shows: date block with month/day/days-until pill (Today · Tomorrow · In Nd), event name, type badge (color-coded), time range, location.<br /><br />
+          <strong>Quick Actions Grid:</strong> Check In (opens QR modal), My Records, Schedule, Progress — 4-item grid.<br /><br />
+          <strong>Skeleton Loader:</strong> full layout skeleton with shimmer effect for donut, tiles, QR card, event panel, and quick links — renders while data loads.<br /><br />
+          <strong>Realtime:</strong> Supabase channel subscription on <code>attendance_records WHERE student_id = {userId}</code>. Triggers <code>fetchStats()</code> on any INSERT/UPDATE so the donut and tiles update instantly after a facilitator scans the student.
+        </div>
+        <div class="tag-row">
+          <span class="tag">SVG donut ring</span><span class="tag">Realtime sub</span><span class="tag">QR PNG download</span><span class="tag">Skeleton loader</span><span class="tag">Year-level filter</span><span class="tag">QR repair</span>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Attendance Records <code>/dashboard/records</code></div>
+        <div class="feature-card-body">
+          Full list of the student's attendance records across all events. Filterable by status (Present / Late / Absent / Incomplete). Shows event name, date, time-in, time-out, status badge, and any remarks.
+        </div>
+        <div class="tag-row"><span class="tag">Status filter</span><span class="tag">Per-event breakdown</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Schedule / Calendar <code>/dashboard/schedule</code> &amp; <code>/dashboard/calendar</code></div>
+        <div class="feature-card-body">
+          Weekly event schedule view with event cards grouped by date. Calendar view shows a monthly grid. Events are filtered to the student's year level. Local-timezone aware date rendering (no UTC drift in UTC+8).
+        </div>
+        <div class="tag-row"><span class="tag">Weekly view</span><span class="tag">Monthly grid</span><span class="tag">Year-level filter</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Notifications <code>/dashboard/notifications</code></div>
+        <div class="feature-card-body">
+          Combined feed of event notifications and attendance record alerts.
+          Events build into notification items with date, time range, location, and description.
+          Attendance records surface as success (present/late) or warning (absent/incomplete) cards.
+          Relative timestamps (Just now · Xh ago · Yesterday · Xd ago · Month Day).
+          Mark all as read action. Empty state with bell icon.
+        </div>
+        <div class="tag-row"><span class="tag">Event + attendance feed</span><span class="tag">Relative timestamps</span><span class="tag">Mark all read</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Profile <code>/dashboard/profile</code></div>
+        <div class="feature-card-body">
+          View and update full name. Change password (calls <code>supabase.auth.updateUser</code>).
+          Displays email (read-only), account type, student ID number, year, section, QR code ID.
+        </div>
+        <div class="tag-row"><span class="tag">Name update</span><span class="tag">Password change</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Merch <code>/dashboard/merch</code></div>
+        <div class="feature-card-body">
+          Merchandise or department store page accessible from the student nav. Currently in the route structure; content scope is department-specific.
+        </div>
+        <div class="tag-row"><span class="tag">Student nav</span></div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       5. FACILITATOR ROLE
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Facilitator Role</div>
+
+    <div class="role-strip role-strip-facilitator">
+      <span class="badge badge-facilitator">Facilitator</span>
+      <div>
+        <div class="role-name role-name-facilitator">Facilitator Portal</div>
+        <div class="role-desc">Manages event-day scanning, creates events, views student lists and attendance reports. Cannot approve accounts (admin-only). Requires admin approval before first login.</div>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+
+      <div class="feature-card wide">
+        <div class="feature-card-title">Facilitator Dashboard <code>/dashboard/facilitator</code></div>
+        <div class="feature-card-body">
+          <strong>Stat Cards:</strong> Total Students · Active Events Today (local date, UTC+8 safe) · Scans Today · Students Absent Today. All computed via <code>count()</code> queries — no full table fetches.<br /><br />
+          <strong>Today's Attendance Feed:</strong> list of recent attendance records for today with student name, event name, status badge, time-in.<br /><br />
+          <strong>Quick Navigation:</strong> Scanner, Events, Students, Attendance, Reports — prominent link cards.<br /><br />
+          <strong>Auto-backfill:</strong> calls <code>backfillEventStatuses()</code> throttled to once per hour (via <code>runIfDue()</code>) to auto-mark absent/incomplete for past events whose check-in window has closed. Runs silently in the background — no loading state shown.
+        </div>
+        <div class="tag-row">
+          <span class="tag">Count-only queries</span><span class="tag">Local date UTC+8</span><span class="tag">Auto-backfill absent</span><span class="tag">1hr throttle</span>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">QR Scanner <code>/dashboard/facilitator/scanner</code></div>
+        <div class="feature-card-body">
+          <code>html5-qrcode</code> library with camera access. Event selector pre-filtered to upcoming/today events only (no stale past events in the list). Scan calls <code>POST /api/scan</code> which enforces the check-in time window server-side, determines status (present / late / incomplete), records the facilitator's ID as <code>scanned_by</code>, and prevents duplicate scans. DOM initialization uses double <code>requestAnimationFrame</code> instead of <code>setTimeout</code> to prevent camera race conditions on slow mobile devices.
+        </div>
+        <div class="tag-row"><span class="tag">html5-qrcode</span><span class="tag">Server-side time check</span><span class="tag">rAF DOM init</span><span class="tag">Duplicate prevention</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Events <code>/dashboard/facilitator/events</code></div>
+        <div class="feature-card-body">
+          Create events with: name, description, location, date, check-in start/late/end times, optional checkout window, event type, and target year levels (multi-select). On creation, <code>POST /api/events</code> inserts the event and broadcasts a notification email to all approved students filtered by year level via Resend batch API. Toast notifications replace all <code>alert()</code> / <code>confirm()</code> dialogs.
+        </div>
+        <div class="tag-row"><span class="tag">Toast notifications</span><span class="tag">Email broadcast</span><span class="tag">Year-level targeting</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Students <code>/dashboard/facilitator/students</code></div>
+        <div class="feature-card-body">
+          Full list of approved students with section, year level, and attendance summary. Searchable. Filterable by section and year.
+        </div>
+        <div class="tag-row"><span class="tag">Search</span><span class="tag">Section/year filter</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Attendance <code>/dashboard/facilitator/attendance</code></div>
+        <div class="feature-card-body">
+          Per-event attendance table. Shows all students for a selected event with their status, time-in, time-out, and remarks. Can manually adjust a student's status or add remarks.
+        </div>
+        <div class="tag-row"><span class="tag">Per-event view</span><span class="tag">Manual override</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Reports <code>/dashboard/facilitator/reports</code></div>
+        <div class="feature-card-body">
+          Per-event and per-section attendance breakdowns. Identifies students below 75% attendance threshold (at-risk flag). Export to CSV with proper double-quote escaping for names with internal commas.
+        </div>
+        <div class="tag-row"><span class="tag">At-risk flag &lt;75%</span><span class="tag">CSV export</span><span class="tag">Quote-escaped</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Profile <code>/dashboard/facilitator/profile</code></div>
+        <div class="feature-card-body">
+          View/edit full name, change password. Department shown as read-only (Pharmacy). Account type and email displayed.
+        </div>
+        <div class="tag-row"><span class="tag">Name update</span><span class="tag">Password change</span></div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       6. ADMIN ROLE
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Admin Role</div>
+
+    <div class="role-strip role-strip-admin">
+      <span class="badge badge-admin">Admin</span>
+      <div>
+        <div class="role-name role-name-admin">Admin Control Panel</div>
+        <div class="role-desc">Full system control — user approval, event management, scanning, reports, system config, and realtime oversight. Admin accounts are pre-provisioned; they do not go through the registration/approval flow.</div>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+
+      <div class="feature-card wide">
+        <div class="feature-card-title">Admin Dashboard <code>/dashboard/admin</code></div>
+        <div class="feature-card-body">
+          <strong>System Attendance Rate:</strong> large 48px number with animated horizontal progress bar. Computed server-side as <code>COUNT(present/late) / COUNT(*)</code> — never fetches individual rows.<br /><br />
+          <strong>Stat Cards:</strong> Total Students · Total Facilitators · Pending Approvals (lights up gold when &gt; 0).<br /><br />
+          <strong>Notification Bell:</strong> gold dot indicator when pending approvals exist. Dropdown shows: pending approvals count (links to user management), low attendance alert (&lt;75% system-wide), or "You're all caught up" when clean.<br /><br />
+          <strong>Live Activity Feed:</strong> last 8 attendance records with student name initials avatar, event name, time-in, and status badge. Joined via <code>select(`events(name), users!student_id(full_name)`)</code>.<br /><br />
+          <strong>Realtime:</strong> Supabase channel on <code>attendance_records</code> (all events) refreshes the feed + stats on every INSERT/UPDATE silently (no loading state reset).<br /><br />
+          <strong>Auto-backfill:</strong> same throttled <code>backfillEventStatuses()</code> as facilitator dashboard — runs once per hour to mark past events absent.
+        </div>
+        <div class="tag-row">
+          <span class="tag">Count-only stats</span><span class="tag">Realtime feed</span><span class="tag">Notification bell</span><span class="tag">Gold dot indicator</span><span class="tag">Auto-backfill</span>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">User Management <code>/dashboard/admin/users</code></div>
+        <div class="feature-card-body">
+          Full user table with tab filters (All · Students · Facilitators · Admins) and live search by name or email.
+          Per-row actions:<br />
+          • <strong>Approve</strong> (pending → approved)<br />
+          • <strong>Reject</strong> (pending → rejected)<br />
+          • <strong>Suspend</strong> (approved → rejected) with shield icon<br />
+          • <strong>Restore</strong> (rejected → approved)<br />
+          • <strong>Reset Password</strong> (non-students only) — calls <code>POST /api/admin/reset-password</code>, sends Resend email<br /><br />
+          Avatars: USA logo for admin/facilitator, initials for students. Role-badge color. Registration date. Status badge (PENDING · APPROVED · REJECTED). Toast notifications for all actions. Approval is intentionally one-by-one so staff can verify section, name, and email before approving.
+        </div>
+        <div class="tag-row"><span class="tag">Tab filters</span><span class="tag">Live search</span><span class="tag">5 status actions</span><span class="tag">Reset password</span><span class="tag">Toast notifications</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Reports <code>/dashboard/admin/reports</code></div>
+        <div class="feature-card-body">
+          System-wide attendance reports with a hand-rolled SVG trend chart (polyline + gradient area fill, Y-axis grid at 60/70/80/90/100%, local-font X-axis labels).
+          Per-student breakdown with at-risk flag (&lt;75%). XLSX export via <code>xlsx</code> library. PDF generation via <code>pdfkit</code>. Filters by event, section, year.
+        </div>
+        <div class="tag-row"><span class="tag">SVG trend chart</span><span class="tag">XLSX export</span><span class="tag">PDF via pdfkit</span><span class="tag">At-risk flag</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">QR Scanner <code>/dashboard/admin/scanner</code></div>
+        <div class="feature-card-body">
+          Identical to facilitator scanner. <code>html5-qrcode</code>, server-side time validation via <code>POST /api/scan</code>, date-filtered event list, double <code>requestAnimationFrame</code> DOM init. Admin scans record <code>scanned_by: adminUserId</code>.
+        </div>
+        <div class="tag-row"><span class="tag">html5-qrcode</span><span class="tag">scanned_by tracking</span><span class="tag">rAF DOM init</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Events <code>/dashboard/admin/events</code></div>
+        <div class="feature-card-body">
+          Full event CRUD. Create, edit, delete events. Same fields as facilitator event creation: name, description, location, date, check-in window, checkout window, event type, target year levels. Event creation triggers email broadcast.
+        </div>
+        <div class="tag-row"><span class="tag">Full CRUD</span><span class="tag">Email broadcast</span><span class="tag">Year targeting</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Attendance <code>/dashboard/admin/attendance</code></div>
+        <div class="feature-card-body">
+          Full attendance log across all events. Filter by event, student, status, date range. Manual status override and remarks editing.
+        </div>
+        <div class="tag-row"><span class="tag">Cross-event log</span><span class="tag">Manual override</span><span class="tag">Remarks</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">System Settings <code>/dashboard/admin/settings</code></div>
+        <div class="feature-card-body">
+          Configures key-value pairs in <code>system_config</code> table: check-in start time, late cutoff, end time. Test SMTP button calls <code>POST /api/admin/test-smtp</code> to verify Resend connectivity. Settings are read by the scan API for time-window enforcement.
+        </div>
+        <div class="tag-row"><span class="tag">system_config KV</span><span class="tag">SMTP test</span><span class="tag">Time window config</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">Profile <code>/dashboard/admin/profile</code></div>
+        <div class="feature-card-body">
+          Same as facilitator profile. Name update, password change. Admin badge displayed.
+        </div>
+        <div class="tag-row"><span class="tag">Name update</span><span class="tag">Password change</span></div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       7. API LAYER
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">API Layer</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="api-table">
+        <thead>
+          <tr>
+            <th style="width:80px;">Method</th>
+            <th style="width:280px;">Route</th>
+            <th>Responsibility</th>
+            <th style="width:90px;">Auth</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><span class="api-path">/api/auth/register</span></td>
+            <td>Server-side <code>signUp()</code> (anon key, Vercel IP) + <code>public.users</code> insert + role profile. Orphan cleanup on failure. Returns 409 for duplicate emails, 429 for rate limit.</td>
+            <td><span class="badge badge-dim">None</span></td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><span class="api-path">/api/auth/cleanup</span></td>
+            <td>Deletes a ghost auth user via service-role <code>admin.deleteUser()</code>. Called when profile creation fails after signUp succeeds.</td>
+            <td><span class="badge badge-dim">None</span></td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><span class="api-path">/api/auth/[...all]</span></td>
+            <td>Handles <code>login</code> (signInWithPassword + httpOnly cookie), <code>logout</code> (clear cookie), and legacy admin <code>register</code> action (admin.createUser + email_confirm: true).</td>
+            <td><span class="badge badge-dim">None / Session</span></td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><span class="api-path">/api/scan</span></td>
+            <td>Core scan endpoint. Validates QR code ID against <code>student_profiles</code>. Checks student approval status. Enforces time window (present / late / incomplete). Prevents duplicate scans. Records <code>scanned_by</code>. Rate limited: 600/min per IP.</td>
+            <td><span class="badge badge-facilitator">Facilitator/Admin</span></td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><span class="api-path">/api/events</span></td>
+            <td>Creates an event, then broadcasts email notifications to all approved students matching target year levels via Resend batch API (100/call). Returns immediately after DB insert — email is fire-and-forget. Rate limited: 20/min.</td>
+            <td><span class="badge badge-facilitator">Facilitator/Admin</span></td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><span class="api-path">/api/admin/reset-password</span></td>
+            <td>Admin-triggered password reset. Calls Supabase <code>generateLink({ type: 'recovery' })</code> and sends the link via Resend email. Link goes to student/facilitator's inbox only — never returned in the response body. Rate limited: 5/min.</td>
+            <td><span class="badge badge-admin">Admin only</span></td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><span class="api-path">/api/admin/settings</span></td>
+            <td>Reads/writes key-value pairs to <code>system_config</code> table (check-in times, etc.).</td>
+            <td><span class="badge badge-admin">Admin only</span></td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><span class="api-path">/api/admin/test-smtp</span></td>
+            <td>Sends a test email via Resend to verify SMTP configuration is working. Returns delivery status.</td>
+            <td><span class="badge badge-admin">Admin only</span></td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><span class="api-path">/api/student/profile</span></td>
+            <td>Returns the authenticated student's full profile including student_profiles join.</td>
+            <td><span class="badge badge-student">Student</span></td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><span class="api-path">/auth/callback</span></td>
+            <td>OTP verification (token_hash) and PKCE code exchange. Sets httpOnly cookie on success. Handles email-scanner pre-consumption edge case gracefully.</td>
+            <td><span class="badge badge-dim">None</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       8. SECURITY MODEL
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Security Model</div>
+    <div class="security-list">
+      <div class="security-item"><span class="security-icon">🔒</span><div class="security-text"><strong>RLS on all 7 tables.</strong> Students can only read their own records. Facilitators can read/write events and scan records. Admins have broader write access via RLS policies. Service-role client used only in API routes, never exposed to the browser.</div></div>
+      <div class="security-item"><span class="security-icon">🍪</span><div class="security-text"><strong>httpOnly cookie session</strong> (<code>pharmatrack_token</code>). Access token set on login via API route — never accessible to JavaScript. <code>secure: true, sameSite: lax</code>. 7-day expiry.</div></div>
+      <div class="security-item"><span class="security-icon">🧱</span><div class="security-text"><strong>Rate limiting (Upstash Redis sliding window)</strong>: scan 600/min · register 60/min · reset-password 5/min · events 20/min. Distributed across Vercel instances. Fails open on Redis outage so scan traffic is never blocked by infrastructure.</div></div>
+      <div class="security-item"><span class="security-icon">🌐</span><div class="security-text"><strong>signUp() proxied through Vercel server.</strong> GoTrue rate-limits by the Vercel IP, not individual student campus WiFi IPs. Removes the shared-IP signup throttle issue for bulk onboarding.</div></div>
+      <div class="security-item"><span class="security-icon">🗑️</span><div class="security-text"><strong>No orphan auth users.</strong> If DB profile creation fails after signUp(), the server immediately calls <code>admin.deleteUser()</code> via the cleanup route. Students can retry registration cleanly.</div></div>
+      <div class="security-item"><span class="security-icon">📧</span><div class="security-text"><strong>Password reset links never returned in API responses.</strong> Reset link is sent to the student's inbox only. Admin sees a success toast, never the token. Previous bug (token shown in <code>window.prompt</code>) was fixed in Session 1.</div></div>
+      <div class="security-item"><span class="security-icon">✉️</span><div class="security-text"><strong>Email enumeration protection preserved.</strong> Phantom user detection (empty <code>identities[]</code>) happens server-side in <code>/api/auth/register</code>, surfaced as a clear "already registered" 409 — consistent with Supabase's own protection, no leakage.</div></div>
+      <div class="security-item"><span class="security-icon">🔍</span><div class="security-text"><strong>QR scans validated server-side only.</strong> The scan page never writes to Supabase directly. All scans go through <code>POST /api/scan</code> which enforces time windows, checks student approval status, prevents duplicates, and records who scanned.</div></div>
+      <div class="security-item"><span class="security-icon">🧹</span><div class="security-text"><strong>Token validation uses <code>getUser()</code> not <code>getSession()</code>.</strong> <code>getUser()</code> validates the JWT against the Supabase Auth server on every call — no stale local-storage session can pass. Used in <code>getCurrentUser()</code> throughout all protected pages.</div></div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       9. INFRASTRUCTURE & SERVICES
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Infrastructure &amp; Services</div>
+    <div class="infra-grid">
+      <div class="infra-card">
+        <div class="infra-name">Supabase</div>
+        <div class="infra-detail">PostgreSQL database, Auth (JWT), Realtime subscriptions. Free tier: 800 MAU / 50,000 cap (1.6% used). DB &lt;10MB / 500MB cap. Custom SMTP configured via Resend. 7 performance indexes applied.</div>
+        <div class="infra-status" style="color:var(--success);">✓ Active · Free tier</div>
+      </div>
+      <div class="infra-card">
+        <div class="infra-name">Resend</div>
+        <div class="infra-detail">Handles all email delivery: event broadcast notifications (batch API, 100/call), admin password reset links, and Supabase Auth emails (confirmation, recovery). Pro plan: 50,000 emails/mo. Est. 4,000/mo at 5 events.</div>
+        <div class="infra-status" style="color:var(--success);">✓ Active · Pro plan</div>
+      </div>
+      <div class="infra-card">
+        <div class="infra-name">Upstash Redis</div>
+        <div class="infra-detail">Distributed rate limiting via <code>@upstash/ratelimit</code> sliding window. Shared state across all Vercel function instances. Fail-open fallback to in-memory Map. Set <code>UPSTASH_REDIS_REST_URL</code> + <code>UPSTASH_REDIS_REST_TOKEN</code> in env to activate.</div>
+        <div class="infra-status" style="color:var(--warning);">⚠ Env vars needed to activate</div>
+      </div>
+      <div class="infra-card">
+        <div class="infra-name">Sentry</div>
+        <div class="infra-detail">Error monitoring for client, server, and edge runtimes. Production-only, <code>sendDefaultPii: false</code>, 10% transaction sampling. Source maps uploaded when <code>SENTRY_AUTH_TOKEN</code> is set. Set <code>NEXT_PUBLIC_SENTRY_DSN</code> + <code>SENTRY_DSN</code> to activate.</div>
+        <div class="infra-status" style="color:var(--warning);">⚠ DSN env vars needed to activate</div>
+      </div>
+      <div class="infra-card">
+        <div class="infra-name">Vercel</div>
+        <div class="infra-detail">Next.js 14 App Router deployment. Middleware runs on all function instances. Registration <code>signUp()</code> proxied through server so GoTrue rate-limits by Vercel IP. <code>withSentryConfig</code> wraps the build for source map upload.</div>
+        <div class="infra-status" style="color:var(--success);">✓ Production deployment</div>
+      </div>
+      <div class="infra-card">
+        <div class="infra-name">QR Code</div>
+        <div class="infra-detail"><code>qrcode.react</code> (SVG, Error Correction Level H) for display. <code>html5-qrcode</code> for camera scanning. QR IDs are random 8-char hex (<code>QR-XXXXXXXX</code>) — not derived from user ID. PNG export via canvas clone.</div>
+        <div class="infra-status" style="color:var(--success);">✓ ECL H · Non-predictable IDs</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       10. PAGE INVENTORY
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Complete Page Inventory (31 Routes)</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th style="width:60px;">Role</th>
+            <th style="width:300px;">Route</th>
+            <th>Page / Purpose</th>
+            <th style="width:80px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Public -->
+          <tr><td><span class="badge badge-dim">Public</span></td><td><span class="page-path">/</span></td><td class="page-desc">Landing — hero, typewriter, How it Works, features, QR mockup</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-dim">Public</span></td><td><span class="page-path">/login</span></td><td class="page-desc">Login with pending approval screen and URL-param feedback</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-dim">Public</span></td><td><span class="page-path">/register</span></td><td class="page-desc">Student/facilitator registration with email verify confirmation screen</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-dim">Public</span></td><td><span class="page-path">/forgot-password</span></td><td class="page-desc">Send password reset email</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-dim">Public</span></td><td><span class="page-path">/reset-password</span></td><td class="page-desc">Set new password via recovery session</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-dim">Public</span></td><td><span class="page-path">/onboarding</span></td><td class="page-desc">OAuth/Google users without a profile complete their setup here</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-dim">Public</span></td><td><span class="page-path">/auth/callback</span></td><td class="page-desc">OTP verify + PKCE exchange + email-scanner safe handling</td><td><span class="badge badge-success">Live</span></td></tr>
+          <!-- Student -->
+          <tr><td><span class="badge badge-student">Student</span></td><td><span class="page-path">/dashboard</span></td><td class="page-desc">Main student dashboard — donut, QR ID, upcoming events, quick actions, realtime</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-student">Student</span></td><td><span class="page-path">/dashboard/records</span></td><td class="page-desc">Full attendance record history with status filters</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-student">Student</span></td><td><span class="page-path">/dashboard/schedule</span></td><td class="page-desc">Weekly event schedule view filtered by student's year level</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-student">Student</span></td><td><span class="page-path">/dashboard/calendar</span></td><td class="page-desc">Monthly calendar view of events</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-student">Student</span></td><td><span class="page-path">/dashboard/notifications</span></td><td class="page-desc">Combined event + attendance notification feed with relative timestamps</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-student">Student</span></td><td><span class="page-path">/dashboard/profile</span></td><td class="page-desc">Name update, password change, QR code ID display</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-student">Student</span></td><td><span class="page-path">/dashboard/merch</span></td><td class="page-desc">Department merchandise / store page</td><td><span class="badge badge-success">Live</span></td></tr>
+          <!-- Facilitator -->
+          <tr><td><span class="badge badge-facilitator">Facilitator</span></td><td><span class="page-path">/dashboard/facilitator</span></td><td class="page-desc">Facilitator overview — stats, today's feed, backfill, quick links</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-facilitator">Facilitator</span></td><td><span class="page-path">/dashboard/facilitator/scanner</span></td><td class="page-desc">QR camera scanner with server-side time enforcement</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-facilitator">Facilitator</span></td><td><span class="page-path">/dashboard/facilitator/events</span></td><td class="page-desc">Create events with email broadcast via Resend</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-facilitator">Facilitator</span></td><td><span class="page-path">/dashboard/facilitator/students</span></td><td class="page-desc">Approved student roster with search and filters</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-facilitator">Facilitator</span></td><td><span class="page-path">/dashboard/facilitator/attendance</span></td><td class="page-desc">Per-event attendance table with manual override</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-facilitator">Facilitator</span></td><td><span class="page-path">/dashboard/facilitator/reports</span></td><td class="page-desc">Section/event breakdowns, at-risk flags, CSV export</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-facilitator">Facilitator</span></td><td><span class="page-path">/dashboard/facilitator/profile</span></td><td class="page-desc">Name and password management</td><td><span class="badge badge-success">Live</span></td></tr>
+          <!-- Admin -->
+          <tr><td><span class="badge badge-admin">Admin</span></td><td><span class="page-path">/dashboard/admin</span></td><td class="page-desc">Admin overview — system rate, live feed, notifications, realtime</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-admin">Admin</span></td><td><span class="page-path">/dashboard/admin/users</span></td><td class="page-desc">User approval, suspension, restore, password reset with tab filters</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-admin">Admin</span></td><td><span class="page-path">/dashboard/admin/reports</span></td><td class="page-desc">System-wide reports, SVG trend chart, XLSX + PDF export</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-admin">Admin</span></td><td><span class="page-path">/dashboard/admin/scanner</span></td><td class="page-desc">Admin QR scanner identical to facilitator scanner</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-admin">Admin</span></td><td><span class="page-path">/dashboard/admin/events</span></td><td class="page-desc">Full event CRUD with email broadcast</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-admin">Admin</span></td><td><span class="page-path">/dashboard/admin/attendance</span></td><td class="page-desc">Cross-event attendance log with filters and manual override</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-admin">Admin</span></td><td><span class="page-path">/dashboard/admin/settings</span></td><td class="page-desc">system_config key-value editor, SMTP test button</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-admin">Admin</span></td><td><span class="page-path">/dashboard/admin/profile</span></td><td class="page-desc">Name and password management</td><td><span class="badge badge-success">Live</span></td></tr>
+          <!-- API -->
+          <tr><td><span class="badge badge-dim">API</span></td><td><span class="page-path">/api/auth/register</span></td><td class="page-desc">Server-side signUp + profile creation with orphan cleanup</td><td><span class="badge badge-success">Live</span></td></tr>
+          <tr><td><span class="badge badge-dim">API</span></td><td><span class="page-path">/api/scan + /api/events + /api/admin/*</span></td><td class="page-desc">Scan processing, event broadcast, user management, settings, SMTP test</td><td><span class="badge badge-success">Live</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+  <div class="meta-footer">
+    <p>PharmaTrack &mdash; University of San Agustin Pharmacy Department</p>
+    <p style="margin-top:4px;">Feature Report generated by Claude Code &bull; June 19, 2026 &bull; Branch: main</p>
+  </div>
+
+</div>
+</body>
+</html>
