@@ -44,6 +44,7 @@ export default function EventsManagement() {
   const [endTime, setEndTime] = useState("");
   const [targetYearLevels, setTargetYearLevels] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const filteredEvents = events.filter(event => 
     event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -181,11 +182,22 @@ export default function EventsManagement() {
       setShowModal(false);
       resetForm();
       fetchEvents();
+      showToast(
+        editingEvent
+          ? "Event updated successfully."
+          : "Event created — students will be notified via email.",
+        "success"
+      );
     } catch (err: any) {
-      alert(err.message);
+      setFormError(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function showToast(message: string, type: "success" | "error") {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
   }
 
   async function handleDeleteConfirm() {
@@ -196,8 +208,9 @@ export default function EventsManagement() {
       if (error) throw error;
       setEventToDelete(null);
       fetchEvents();
+      showToast("Event deleted.", "success");
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message || "Failed to delete event.", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -210,8 +223,9 @@ export default function EventsManagement() {
       if (error) throw error;
       setShowDeleteAllModal(false);
       fetchEvents();
+      showToast("All events deleted.", "success");
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message || "Failed to delete events.", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -780,6 +794,27 @@ export default function EventsManagement() {
         </div>
       )}
 
+      {/* TOAST NOTIFICATION */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: "28px", right: "28px", zIndex: 2000,
+          display: "flex", alignItems: "center", gap: "10px",
+          background: toast.type === "success" ? "rgba(16,185,129,0.12)" : "rgba(220,38,38,0.12)",
+          border: `1px solid ${toast.type === "success" ? "rgba(16,185,129,0.35)" : "rgba(220,38,38,0.35)"}`,
+          color: toast.type === "success" ? "#34d399" : "#fca5a5",
+          padding: "12px 18px", borderRadius: "8px",
+          fontSize: "13px", fontWeight: 500,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+          animation: "fadeInUp 0.2s ease",
+          maxWidth: "360px",
+        }}>
+          {toast.type === "success"
+            ? <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+            : <AlertTriangle size={16} style={{ flexShrink: 0 }} />}
+          {toast.message}
+        </div>
+      )}
+
       <style jsx>{`
         .search-input:focus {
           border-color: var(--gold) !important;
@@ -840,6 +875,10 @@ export default function EventsManagement() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         .settings-input {
           height: 36px;

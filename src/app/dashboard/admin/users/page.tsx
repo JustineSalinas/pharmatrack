@@ -13,7 +13,13 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterRole>("All");
   const [search, setSearch] = useState("");
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const router = useRouter();
+
+  function showToast(message: string, type: "success" | "error" = "success") {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     fetchUsers();
@@ -63,20 +69,18 @@ export default function AdminUsers() {
 
       setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
     } catch (err: any) {
-      alert("Error updating status: " + err.message);
+      showToast("Error updating status: " + err.message, "error");
     }
   }
 
   async function handleResetPassword(email: string, name: string) {
-    if (!confirm(`Send a password reset link for ${name} (${email})?`)) return;
     try {
-      // Get the current session to extract the access token
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
       const res = await fetch("/api/admin/reset-password", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           ...(token ? { "Authorization": `Bearer ${token}` } : {})
         },
@@ -84,13 +88,9 @@ export default function AdminUsers() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      if (json.link) {
-        prompt(`Reset link for ${name} (copy and share):`, json.link);
-      } else {
-        alert(`Reset email sent to ${email} via Supabase SMTP.`);
-      }
+      showToast(`Password reset email sent to ${email}.`, "success");
     } catch (err: any) {
-      alert("Error: " + err.message);
+      showToast("Error: " + err.message, "error");
     }
   }
 
@@ -246,11 +246,7 @@ export default function AdminUsers() {
                           <button
                             className="action-btn-hover suspend-btn"
                             title="Suspend Access"
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to suspend access for ${u.full_name}?`)) {
-                                handleUpdateStatus(u.id, "rejected");
-                              }
-                            }}
+                            onClick={() => handleUpdateStatus(u.id, "rejected")}
                           >
                             <ShieldAlert size={14} />
                           </button>
@@ -290,9 +286,23 @@ export default function AdminUsers() {
           )}
         </div>
       </div>
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: "24px", right: "24px", zIndex: 9999,
+          background: toast.type === "success" ? "var(--surface)" : "var(--surface)",
+          border: `1px solid ${toast.type === "success" ? "rgba(22,163,74,0.4)" : "rgba(220,38,38,0.4)"}`,
+          color: toast.type === "success" ? "#16a34a" : "#dc2626",
+          padding: "12px 20px", borderRadius: "var(--radius-sm)", fontSize: "13px",
+          fontWeight: 500, boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+          animation: "slideUp 0.3s ease",
+        }}>
+          {toast.message}
+        </div>
+      )}
       <style jsx>{`
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         
         .search-input:focus {
           border-color: rgba(0, 0, 0, 0.15) !important;

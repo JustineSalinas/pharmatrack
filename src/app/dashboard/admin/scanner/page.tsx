@@ -56,9 +56,11 @@ export default function ScannerPage() {
         
         setAdmin(user);
         
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
         const { data: events, error } = await supabase
           .from("events")
           .select("*")
+          .gte("date", sevenDaysAgo)
           .order("date", { ascending: false });
         
         if (error) throw error;
@@ -165,8 +167,8 @@ export default function ScannerPage() {
     setScanResult(null);
     setIsScanning(true);
 
-    // Wait for DOM container reader element to render
-    setTimeout(async () => {
+    // Wait for the DOM element to be painted before initialising the scanner
+    requestAnimationFrame(() => requestAnimationFrame(async () => {
       try {
         const qrScanner = new Html5Qrcode("reader");
         scannerRef.current = qrScanner;
@@ -185,9 +187,9 @@ export default function ScannerPage() {
       } catch (err: any) {
         console.error("Camera start error", err);
         setIsScanning(false);
-        alert("Could not start camera: " + (err.message || "Permissions denied"));
+        setScanResult({ success: false, message: "Camera Error", submessage: err.message || "Camera permissions denied." });
       }
-    }, 100);
+    }));
   };
 
   const stopCamera = async () => {
@@ -207,101 +209,45 @@ export default function ScannerPage() {
   async function onScanSuccess(decodedText: string) {
     if (!selectedEventId || !admin) return;
 
-    // Pause camera scanning
     await stopCamera();
-    setScanResult({ success: true, message: "Verifying credentials...", submessage: `Code: ${decodedText}` });
+    setScanResult({ success: true, message: "Verifying...", submessage: `Code: ${decodedText}` });
 
     try {
-      // 1. Find the student by QR Code ID
-      const { data: student, error: studentErr } = await supabase
-        .from("student_profiles")
-        .select("*, users(full_name)")
-        .eq("qr_code_id", decodedText)
-        .maybeSingle();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-      if (studentErr || !student) {
-        setScanResult({ 
-          success: false, 
-          message: "Invalid QR Code", 
-          submessage: "Student record not found in the system database." 
-        });
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ qr_code_id: decodedText, event_id: selectedEventId }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setScanResult({ success: false, message: "Scan Failed", submessage: json.error || "An error occurred." });
         return;
       }
 
-      const studentName = (student.users as any).full_name;
-      const studentUserId = student.user_id;
-
-      // 2. Fetch the event details
-      const { data: event } = await supabase.from("events").select("*").eq("id", selectedEventId).single();
-      if (!event) throw new Error("Event not found");
-
-      // 3. Logic for Posting Attendance
-      const now = new Date();
-      let status = "present";
-
-      // Time threshold checks
-      if (now > new Date(event.check_in_late)) {
-        status = "late";
-      }
-      if (now > new Date(event.check_in_end)) {
-         setScanResult({ 
-           success: false, 
-           message: "Check-in Closed", 
-           submessage: `Attendance window ended at ${new Date(event.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-         });
-         return;
-      }
-
-      // Check if already checked in
-      const { data: existingRecord } = await supabase
-        .from("attendance_records")
-        .select("*")
-        .eq("student_id", studentUserId)
-        .eq("event_id", selectedEventId)
-        .maybeSingle();
-
-      if (existingRecord) {
-        // Handle Check-out
-        if (!existingRecord.time_out) {
-           const { error: outErr } = await supabase
-             .from("attendance_records")
-             .update({ time_out: now.toISOString() })
-             .eq("id", existingRecord.id);
-           
-           if (outErr) throw outErr;
-           setScanResult({ 
-             success: true, 
-             message: "Check-out Recorded!", 
-             submessage: `${studentName} has checked out successfully.` 
-           });
-        } else {
-           setScanResult({ 
-             success: false, 
-             message: "Already Logged", 
-             submessage: `${studentName} has already recorded both check-in and check-out.` 
-           });
-        }
-      } else {
-        // Perform Check-in
-        const { error: insErr } = await supabase
-          .from("attendance_records")
-          .insert({
-            student_id: studentUserId,
-            event_id: selectedEventId,
-            status: status,
-            time_in: now.toISOString(),
-            scanned_by: admin.id
-          });
-
-        if (insErr) throw insErr;
-        setScanResult({ 
-          success: true, 
-          message: `${status.toUpperCase()}!`, 
-          submessage: `${studentName} checked in successfully.` 
+      if (json.action === "time_in") {
+        setScanResult({
+          success: true,
+          message: `${(json.status || "present").toUpperCase()}!`,
+          submessage: "Student checked in successfully.",
         });
+      } else if (json.action === "time_out") {
+        setScanResult({
+          success: true,
+          message: "Check-out Recorded!",
+          submessage: "Student has checked out successfully.",
+        });
+      } else {
+        setScanResult({ success: false, message: "Scan Failed", submessage: json.message || json.error || "Unexpected response." });
       }
-      
-      // Refresh list
+
       fetchRecentScans(selectedEventId);
     } catch (err: any) {
       console.error(err);

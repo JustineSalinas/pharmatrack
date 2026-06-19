@@ -70,20 +70,14 @@ export default function AdminDashboard() {
         .eq("account_type", "facilitator")
         .eq("status", "pending");
 
-      // Attendance Rate
-      const { data: allAtt } = await supabase
-        .from("attendance_records")
-        .select("id, created_at, status");
-
-      let presentLateCount = 0;
-      let totalLogs = 0;
-      if (allAtt && allAtt.length > 0) {
-        totalLogs = allAtt.length;
-        allAtt.forEach(att => {
-          if (att.status === "present" || att.status === "late") presentLateCount++;
-        });
-      }
-      const rate = totalLogs > 0 ? parseFloat(((presentLateCount / totalLogs) * 100).toFixed(1)) : 0;
+      // Attendance Rate — use server-side counts instead of fetching all rows
+      const [{ count: totalLogs }, { count: presentLateCount }] = await Promise.all([
+        supabase.from("attendance_records").select("*", { count: "exact", head: true }),
+        supabase.from("attendance_records").select("*", { count: "exact", head: true }).in("status", ["present", "late"]),
+      ]);
+      const rate = (totalLogs ?? 0) > 0
+        ? parseFloat((((presentLateCount ?? 0) / (totalLogs ?? 1)) * 100).toFixed(1))
+        : 0;
 
       setStats({
         totalStudents: studentCount || 0,
