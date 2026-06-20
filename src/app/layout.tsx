@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat", weight: ["500", "700", "800", "900"] });
 
 export const metadata: Metadata = {
   title: "PharmaTrack — Attendance Monitoring",
@@ -19,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="msapplication-navbutton-color" content="#0F0F13" />
       </head>
-      <body className={inter.variable}>{children}</body>
+      <body className={`${inter.variable} ${montserrat.variable}`}>{children}</body>
     </html>
   );
 }
