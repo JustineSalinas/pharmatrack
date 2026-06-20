@@ -129,10 +129,10 @@
         University of San Agustin &mdash; Pharmacy Department
       </div>
       <h1>PharmaTrack — Feature & Architecture Report</h1>
-      <p class="subtitle">Complete Frontend, Backend, and Role-Based Feature Inventory &mdash; June 19, 2026</p>
+      <p class="subtitle">Complete Frontend, Backend, and Role-Based Feature Inventory &mdash; June 20, 2026</p>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
-      <span class="badge badge-gold">v1.0 Production Ready</span>
+      <span class="badge badge-danger">2 Security Issues Open</span>
       <div style="display:flex;gap:6px;">
         <span class="badge badge-student">Student</span>
         <span class="badge badge-facilitator">Facilitator</span>
@@ -767,16 +767,44 @@
   ═══════════════════════════════════════════════════════════════ -->
   <div class="section">
     <div class="section-title">Security Model</div>
+
+    <!-- Open Issues Banner -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.35);border-radius:10px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span class="badge badge-danger">Critical</span>
+          <span style="font-size:13px;font-weight:600;color:var(--white);">Unauthenticated Account Deletion</span>
+        </div>
+        <div class="security-text">
+          <code>/api/auth/cleanup</code> calls <code>admin.deleteUser(userId)</code> with <strong>no authentication guard</strong>. Anyone on the internet can POST any UUID and permanently delete that user's auth account.
+          <br /><br />
+          <strong style="color:var(--danger);">Fix:</strong> Delete this file entirely. Inline cleanup in <code>/api/auth/register</code> (lines 113 &amp; 132) already handles orphan accounts correctly.
+        </div>
+        <div style="font-size:11px;color:var(--dimmed);margin-top:10px;font-family:var(--mono);">src/app/api/auth/cleanup/route.ts</div>
+      </div>
+      <div style="background:rgba(249,115,22,0.06);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span class="badge badge-warning">Medium</span>
+          <span style="font-size:13px;font-weight:600;color:var(--white);">userId Override — No Ownership Check</span>
+        </div>
+        <div class="security-text">
+          <code>/api/auth/register</code> accepts a <code>userId</code> param without verifying the caller's session matches. An attacker with a victim's UUID can create or overwrite that victim's profile without their password.
+          <br /><br />
+          <strong style="color:var(--warning);">Fix:</strong> When <code>userId</code> is provided without <code>password</code>, assert <code>getBackendUser(req).id === userId</code>.
+        </div>
+        <div style="font-size:11px;color:var(--dimmed);margin-top:10px;font-family:var(--mono);">src/app/api/auth/register/route.ts:33,47</div>
+      </div>
+    </div>
+
     <div class="security-list">
       <div class="security-item"><span class="security-icon">🔒</span><div class="security-text"><strong>RLS on all 7 tables.</strong> Students can only read their own records. Facilitators can read/write events and scan records. Admins have broader write access via RLS policies. Service-role client used only in API routes, never exposed to the browser.</div></div>
       <div class="security-item"><span class="security-icon">🍪</span><div class="security-text"><strong>httpOnly cookie session</strong> (<code>pharmatrack_token</code>). Access token set on login via API route — never accessible to JavaScript. <code>secure: true, sameSite: lax</code>. 7-day expiry.</div></div>
       <div class="security-item"><span class="security-icon">🧱</span><div class="security-text"><strong>Rate limiting (Upstash Redis sliding window)</strong>: scan 600/min · register 60/min · reset-password 5/min · events 20/min. Distributed across Vercel instances. Fails open on Redis outage so scan traffic is never blocked by infrastructure.</div></div>
       <div class="security-item"><span class="security-icon">🌐</span><div class="security-text"><strong>signUp() proxied through Vercel server.</strong> GoTrue rate-limits by the Vercel IP, not individual student campus WiFi IPs. Removes the shared-IP signup throttle issue for bulk onboarding.</div></div>
-      <div class="security-item"><span class="security-icon">🗑️</span><div class="security-text"><strong>No orphan auth users.</strong> If DB profile creation fails after signUp(), the server immediately calls <code>admin.deleteUser()</code> via the cleanup route. Students can retry registration cleanly.</div></div>
-      <div class="security-item"><span class="security-icon">📧</span><div class="security-text"><strong>Password reset links never returned in API responses.</strong> Reset link is sent to the student's inbox only. Admin sees a success toast, never the token. Previous bug (token shown in <code>window.prompt</code>) was fixed in Session 1.</div></div>
-      <div class="security-item"><span class="security-icon">✉️</span><div class="security-text"><strong>Email enumeration protection preserved.</strong> Phantom user detection (empty <code>identities[]</code>) happens server-side in <code>/api/auth/register</code>, surfaced as a clear "already registered" 409 — consistent with Supabase's own protection, no leakage.</div></div>
+      <div class="security-item"><span class="security-icon">📧</span><div class="security-text"><strong>Password reset links never returned in API responses.</strong> Reset link is sent to the student's inbox only. Admin sees a success toast, never the token.</div></div>
+      <div class="security-item"><span class="security-icon">✉️</span><div class="security-text"><strong>Email enumeration protection preserved.</strong> Phantom user detection (empty <code>identities[]</code>) happens server-side in <code>/api/auth/register</code>, surfaced as a clear "already registered" 409.</div></div>
       <div class="security-item"><span class="security-icon">🔍</span><div class="security-text"><strong>QR scans validated server-side only.</strong> The scan page never writes to Supabase directly. All scans go through <code>POST /api/scan</code> which enforces time windows, checks student approval status, prevents duplicates, and records who scanned.</div></div>
-      <div class="security-item"><span class="security-icon">🧹</span><div class="security-text"><strong>Token validation uses <code>getUser()</code> not <code>getSession()</code>.</strong> <code>getUser()</code> validates the JWT against the Supabase Auth server on every call — no stale local-storage session can pass. Used in <code>getCurrentUser()</code> throughout all protected pages.</div></div>
+      <div class="security-item"><span class="security-icon">🧹</span><div class="security-text"><strong>Token validation uses <code>getUser()</code> not <code>getSession()</code>.</strong> <code>getUser()</code> validates the JWT against the Supabase Auth server on every call — no stale local-storage session can pass.</div></div>
     </div>
   </div>
 
@@ -882,7 +910,7 @@
   <!-- Footer -->
   <div class="meta-footer">
     <p>PharmaTrack &mdash; University of San Agustin Pharmacy Department</p>
-    <p style="margin-top:4px;">Feature Report generated by Claude Code &bull; June 19, 2026 &bull; Branch: main</p>
+    <p style="margin-top:4px;">Feature Report generated by Claude Code &bull; June 20, 2026 &bull; Branch: main &bull; Security Audit: 2 issues open</p>
   </div>
 
 </div>

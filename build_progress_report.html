@@ -314,15 +314,15 @@
       <p class="subtitle">QR Attendance System &mdash; Architecture, Security &amp; Infrastructure Review</p>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
-      <span class="badge badge-gold">v1.0 Production Ready</span>
-      <span style="font-size:12px;color:var(--dimmed);">Updated: June 19, 2026</span>
+      <span class="badge badge-danger">2 Security Issues Open</span>
+      <span style="font-size:12px;color:var(--dimmed);">Updated: June 20, 2026</span>
     </div>
   </div>
 
   <!-- Stats -->
   <div class="stats-row">
     <div class="stat-card">
-      <div class="stat-number" style="color:var(--success);">13</div>
+      <div class="stat-number" style="color:var(--success);">15</div>
       <div class="stat-label">Issues Audited</div>
     </div>
     <div class="stat-card">
@@ -330,8 +330,8 @@
       <div class="stat-label">Issues Resolved</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number" style="color:var(--gold);">800</div>
-      <div class="stat-label">Users Supported</div>
+      <div class="stat-number" style="color:var(--danger);">2</div>
+      <div class="stat-label">Security Issues Open</div>
     </div>
     <div class="stat-card">
       <div class="stat-number" style="color:#a5b4fc;">0</div>
@@ -464,6 +464,70 @@
             <span class="file-tag">events(date)</span>
             <span class="file-tag">users(account_type)</span>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session 3 Security Audit -->
+  <div class="section">
+    <div class="section-title">Security Audit — Session 3 (June 20, 2026)</div>
+
+    <!-- CRITICAL -->
+    <div class="rec-card" style="border-color:rgba(239,68,68,0.4);background:linear-gradient(135deg,var(--surface),rgba(239,68,68,0.05));">
+      <div class="rec-icon" style="background:rgba(239,68,68,0.15);font-size:20px;">🔓</div>
+      <div class="rec-content">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span class="badge badge-danger">Critical</span>
+          <div class="rec-title" style="margin-bottom:0;">Unauthenticated Account Deletion — <code>/api/auth/cleanup</code></div>
+        </div>
+        <div class="rec-desc">
+          The cleanup route accepts any <code>userId</code> and calls <code>supabase.auth.admin.deleteUser(userId)</code> with the service-role key — <strong>with zero authentication check</strong>. Anyone on the internet can POST to this endpoint and permanently delete any user's auth account. The route comment says "only callable server-side" but it is a public HTTP endpoint.
+          <br /><br />
+          <strong>Fix:</strong> Delete this file entirely. The inline cleanup in <code>/api/auth/register</code> (lines 113 and 132) already handles orphan cleanup correctly — the standalone HTTP route is both unnecessary and dangerous.
+        </div>
+        <div class="rec-effort">
+          <span class="dot dot-high"></span> <span style="color:var(--danger);">Open — Must fix before production</span>
+          &bull; <code>src/app/api/auth/cleanup/route.ts</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDIUM -->
+    <div class="rec-card" style="border-color:rgba(249,115,22,0.3);background:linear-gradient(135deg,var(--surface),rgba(249,115,22,0.04));">
+      <div class="rec-icon" style="background:rgba(249,115,22,0.12);font-size:20px;">👤</div>
+      <div class="rec-content">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span class="badge badge-warning">Medium</span>
+          <div class="rec-title" style="margin-bottom:0;"><code>userId</code> override in <code>/api/auth/register</code> — no ownership proof</div>
+        </div>
+        <div class="rec-desc">
+          When a <code>userId</code> is supplied without a <code>password</code>, the register endpoint skips <code>signUp()</code> and directly inserts a <code>public.users</code> + profile row for that UUID — without verifying the caller's session token matches that <code>userId</code>. This path exists for OAuth onboarding but is unguarded.
+          <br /><br />
+          <strong>Impact:</strong> An attacker who knows a victim's Supabase auth UUID can create or overwrite that victim's profile. They cannot elevate to admin (account_type is validated), but they can corrupt a student identity.
+          <br /><br />
+          <strong>Fix:</strong> When <code>userId</code> is provided without <code>password</code>, validate that <code>getBackendUser(req).id === userId</code> before proceeding.
+        </div>
+        <div class="rec-effort">
+          <span class="dot dot-med"></span> <span style="color:var(--warning);">Open — Must fix before production</span>
+          &bull; <code>src/app/api/auth/register/route.ts:33,47</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO -->
+    <div class="rec-card" style="opacity:0.75;">
+      <div class="rec-icon" style="background:rgba(255,255,255,0.05);font-size:20px;">📦</div>
+      <div class="rec-content">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span class="badge badge-dim">Info</span>
+          <div class="rec-title" style="margin-bottom:0;">Dead dependencies — <code>nodemailer</code> and <code>pg</code></div>
+        </div>
+        <div class="rec-desc">
+          Both packages appear in <code>package.json</code> but are not imported in any API route. Email is handled by the Resend SDK; DB access is handled by the Supabase client. No security risk, but they increase the attack surface of the dependency tree unnecessarily.
+        </div>
+        <div class="rec-effort">
+          <span class="dot dot-low"></span> Low priority &bull; Run <code>npm uninstall nodemailer pg</code>
         </div>
       </div>
     </div>
@@ -898,10 +962,10 @@
             <td><span class="issue-num">F3</span></td>
             <td><span class="badge badge-dim">30 min</span></td>
             <td>
-              <div class="issue-text">Add ghost-account cleanup in <code>registerStudent()</code> and <code>registerFacilitator()</code>: on <code>POST /api/auth/register</code> failure, calls <code>POST /api/auth/cleanup</code> (new service-role route) to delete the orphan auth user so the student can retry.</div>
+              <div class="issue-text">Ghost-account cleanup implemented in <code>/api/auth/register</code> (inline at lines 113 &amp; 132) — works correctly. However the standalone <code>/api/auth/cleanup</code> route created alongside it has <strong>no auth check</strong> and allows unauthenticated deletion of any account. That route must be deleted.</div>
             </td>
             <td><div class="issue-file">lib/auth-client.ts · api/auth/cleanup/route.ts</div></td>
-            <td><span class="status-fixed">Done</span></td>
+            <td><span class="badge badge-danger">⚠ Security Issue</span></td>
           </tr>
         </tbody>
       </table>
@@ -911,7 +975,7 @@
   <!-- Footer -->
   <div class="meta-footer">
     <p>PharmaTrack &mdash; University of San Agustin Pharmacy Department</p>
-    <p style="margin-top:4px;">Report generated by Claude Code &bull; Last updated: June 19, 2026 &bull; Branch: main</p>
+    <p style="margin-top:4px;">Report generated by Claude Code &bull; Last updated: June 20, 2026 &bull; Branch: main</p>
   </div>
 
 </div>
