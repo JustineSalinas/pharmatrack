@@ -3350,11 +3350,11 @@ html {
 }
 
 .sd-panel-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  color: var(--white-shade);
-  letter-spacing: -0.02em;
-  margin: 0;
+  color: var(--white);
+  margin-top: 2px;
+  margin-bottom: 0;
 }
 
 .sd-qr-body {
@@ -3607,7 +3607,9 @@ html {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 .sd-see-all {
@@ -5745,52 +5747,40 @@ input[type="password"]::-ms-clear {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px;
-}
-
-.cal-weekday-row {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.cal-weekday {
-  text-align: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 6px 0;
+  padding: 16px 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .cal-cell {
-  min-height: 130px;
-  padding: 12px;
+  flex: 1;
+  min-width: 0;
+  min-height: 100px;
   background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  text-align: center;
-  color: var(--white-shade);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  box-sizing: border-box;
+  text-align: left;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  padding: 10px;
   gap: 6px;
-  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 
 .cal-cell:hover:not(:disabled) {
-  border-color: var(--gold);
   background: rgba(232, 184, 75, 0.05);
+  box-shadow: inset 0 0 0 1px var(--gold);
 }
 
 .cal-cell:disabled {
@@ -5803,75 +5793,56 @@ input[type="password"]::-ms-clear {
 }
 
 .cal-cell.today {
-  border-color: #b45309;
   background: rgba(217, 119, 6, 0.05);
+  box-shadow: inset 0 0 0 1px #b45309;
 }
 
 .cal-cell.selected {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.18);
+  border: 2px solid var(--teal);
+  box-shadow: 0 4px 12px rgba(45, 212, 191, 0.15);
 }
 
-.cal-cell.has-events .cal-cell-num {
-  color: #b45309;
-  font-weight: 800;
-}
-
-.cal-cell-num {
+.cal-cell-header {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  justify-content: space-between;
+  align-items: baseline;
   width: 100%;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--white-shade);
 }
 
 .cal-cell-day-label {
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  line-height: 1.2;
+  color: var(--muted);
+  text-align: left;
 }
 
 .cal-cell-date-label {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--dimmed);
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.cal-cell-date-today {
-  color: rgba(232, 184, 75, 0.8);
-  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
 }
 
 .cal-cell-events {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 4px;
   width: 100%;
-  margin-top: 2px;
+  margin-top: auto;
 }
 
 .cal-cell-event-pill {
-  display: block;
   width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11px;
-  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
   background: rgba(217, 119, 6, 0.08);
   color: #b45309;
   border: 1px solid rgba(217, 119, 6, 0.15);
-  border-radius: 6px;
-  padding: 3px 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: left;
+  box-sizing: border-box;
 }
 
 .cal-cell-more {
@@ -5880,12 +5851,68 @@ input[type="password"]::-ms-clear {
   font-weight: 600;
 }
 
-.cal-drawer {
-  margin-top: 16px;
+/* ── Side-by-side panels row ── */
+.sd-panels-row {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sd-panels-row > .cal-drawer,
+.sd-panels-row > .sd-event-panel {
+  flex: 1 1 0%;
+  min-width: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.sd-panels-row > .cal-drawer {
+  display: flex;
+  flex-direction: column;
+}
+
+.sd-panels-row > .cal-drawer .cal-drawer-list {
+  flex: 1;
+}
+
+.sd-panels-row > .sd-event-panel {
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 20px;
+  padding: 20px 24px;
+  box-sizing: border-box;
+}
+
+.sd-events-list-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .sd-panels-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .sd-panels-row > .cal-drawer,
+  .sd-panels-row > .sd-event-panel {
+    width: 100%;
+  }
+}
+
+.cal-drawer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 0;
+  position: relative;
+  box-sizing: border-box;
 }
 
 .cal-drawer-header {
@@ -5916,6 +5943,10 @@ input[type="password"]::-ms-clear {
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  box-sizing: border-box;
 }
 
 .cal-drawer-close:hover {
@@ -5946,6 +5977,7 @@ input[type="password"]::-ms-clear {
   border-left: 3px solid var(--gold);
   border-radius: 8px;
   padding: 14px;
+  box-sizing: border-box;
 }
 
 .cal-event-name {
@@ -5977,15 +6009,54 @@ input[type="password"]::-ms-clear {
   font-weight: 500;
 }
 
-@media (max-width: 720px) {
-  .cal-cell {
-    min-height: 64px;
-    padding: 6px;
-  }
+.sd-page-wrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 28px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  width: 100%;
+}
 
-  .cal-cell-event-pill {
-    font-size: 9.5px;
-    padding: 1px 4px;
+.upcoming-events-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.single-upcoming-event {
+  grid-column: 1 / -1;
+  max-width: 50%;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .sd-page-wrapper {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 639px) {
+  .cal-grid {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .cal-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .cal-cell {
+    min-width: 80px;
+    min-height: 80px;
+    scroll-snap-align: start;
+  }
+  .upcoming-events-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .single-upcoming-event {
+    max-width: 100%;
   }
 }
 
