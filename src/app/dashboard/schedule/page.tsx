@@ -308,179 +308,182 @@ export default function SchedulePage() {
         )}
       </div>
 
-      {/* Selected Day Details (Drawer) */}
-      {selectedDay && (
-        <div className="cal-drawer" style={{ marginTop: "24px" }}>
-          <div className="cal-drawer-header">
-            <div>
-              <p className="sd-panel-label">Selected Day</p>
-              <h3 className="cal-drawer-title">
-                {getFullDateString(selectedDay)}
-              </h3>
+      {/* ── Side-by-side panels: Selected Day + Upcoming Events ── */}
+      <div className="sd-panels-row" style={{ marginTop: "16px" }}>
+        {/* Selected Day Details (Drawer) */}
+        {selectedDay && (
+          <div className="cal-drawer">
+            <div className="cal-drawer-header">
+              <div>
+                <p className="sd-panel-label">Selected Day</p>
+                <h3 className="cal-drawer-title">
+                  {getFullDateString(selectedDay)}
+                </h3>
+              </div>
+              <button className="cal-drawer-close" onClick={() => setSelectedDay(null)} aria-label="Close">
+                <X size={16} />
+              </button>
             </div>
-            <button className="cal-drawer-close" onClick={() => setSelectedDay(null)} aria-label="Close">
-              <X size={16} />
-            </button>
-          </div>
 
-          {(!grouped[selectedDay] || grouped[selectedDay].length === 0) ? (
-            <div className="cal-drawer-empty">
-              <Calendar size={22} color="var(--dimmed)" />
-              <p>No events scheduled for this day.</p>
-            </div>
-          ) : (
-            <div className="cal-drawer-list">
-              {grouped[selectedDay].map((ev) => {
-                const isSchoolEvent = ev.type === "event";
-                const ts = isSchoolEvent ? getEventTypeStyle(ev.eventType) : null;
-                return (
-                  <div
-                    key={ev.sessionId}
-                    className="cal-event-card"
-                    style={isSchoolEvent && ts ? { borderLeftColor: ts.color } : undefined}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "6px" }}>
-                      <h4 className="cal-event-name">{ev.subject}</h4>
-                      <span style={{
-                        fontSize: "9px",
-                        fontWeight: "700",
-                        padding: "2px 6px",
-                        borderRadius: "4px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        background: isSchoolEvent && ts ? ts.bg : "rgba(232, 184, 75, 0.1)",
-                        color: isSchoolEvent && ts ? ts.color : "var(--gold)",
-                        border: isSchoolEvent && ts ? `1px solid ${ts.border}` : "1px solid rgba(232, 184, 75, 0.2)",
-                        flexShrink: 0,
-                      }}>
-                        {isSchoolEvent ? (ts?.label ?? "School Event") : "Class Session"}
-                      </span>
-                    </div>
-                    <div className="cal-event-meta-row">
-                      <span className="cal-event-meta-item">
-                        <Clock size={12} /> {ev.time}
-                      </span>
-                      <span className="cal-event-meta-item">
-                        <MapPin size={12} /> {isSchoolEvent ? (ev.location || "—") : (studentInfo?.section ?? "—")}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Upcoming School Events ── */}
-      <div className="sd-event-panel" style={{ marginTop: "32px" }}>
-        <div className="sd-event-panel-header">
-          <div>
-            <p className="sd-panel-label">School Events</p>
-            <h2 className="sd-panel-title">Upcoming &amp; Future Events</h2>
-          </div>
-        </div>
-
-        {upcomingEvents.length > 0 ? (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-              {visibleEvents.map((event) => {
-                const days = daysUntilEvent(event.date);
-                const ts = getEventTypeStyle(event.event_type);
-                return (
-                  <div key={event.id} className="sd-event-card" style={{ borderLeftColor: ts.color }}>
-                    <div className="sd-event-date-block" style={{ minWidth: "44px" }}>
-                      <span className="sd-event-month">
-                        {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short" })}
-                      </span>
-                      <span className="sd-event-day">
-                        {parseDateLocal(event.date).toLocaleDateString("en-US", { day: "numeric" })}
-                      </span>
-                      <span className="sd-event-days-pill" style={{
-                        fontSize: "9px",
-                        padding: "2px 8px",
-                        background: days === 0 ? "rgba(74,222,128,0.15)" : days === 1 ? "rgba(232,184,75,0.15)" : "rgba(255,255,255,0.06)",
-                        color: days === 0 ? "var(--success)" : days === 1 ? "var(--gold)" : "var(--dimmed)",
-                        border: days === 0 ? "1px solid rgba(74,222,128,0.25)" : days === 1 ? "1px solid rgba(232,184,75,0.25)" : "1px solid rgba(255,255,255,0.08)",
-                      }}>
-                        {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days}d`}
-                      </span>
-                    </div>
-                    <div className="sd-event-detail">
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                        <h3 className="sd-event-name" style={{ fontSize: "13px", margin: 0 }}>{event.name}</h3>
+            {(!grouped[selectedDay] || grouped[selectedDay].length === 0) ? (
+              <div className="cal-drawer-empty">
+                <Calendar size={22} color="var(--dimmed)" />
+                <p>No events scheduled for this day.</p>
+              </div>
+            ) : (
+              <div className="cal-drawer-list">
+                {grouped[selectedDay].map((ev) => {
+                  const isSchoolEvent = ev.type === "event";
+                  const ts = isSchoolEvent ? getEventTypeStyle(ev.eventType) : null;
+                  return (
+                    <div
+                      key={ev.sessionId}
+                      className="cal-event-card"
+                      style={isSchoolEvent && ts ? { borderLeftColor: ts.color } : undefined}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "6px" }}>
+                        <h4 className="cal-event-name">{ev.subject}</h4>
                         <span style={{
                           fontSize: "9px",
-                          fontWeight: 700,
-                          padding: "1px 5px",
+                          fontWeight: "700",
+                          padding: "2px 6px",
                           borderRadius: "4px",
                           textTransform: "uppercase",
                           letterSpacing: "0.05em",
-                          background: ts.bg,
-                          color: ts.color,
-                          border: `1px solid ${ts.border}`,
+                          background: isSchoolEvent && ts ? ts.bg : "rgba(232, 184, 75, 0.1)",
+                          color: isSchoolEvent && ts ? ts.color : "var(--gold)",
+                          border: isSchoolEvent && ts ? `1px solid ${ts.border}` : "1px solid rgba(232, 184, 75, 0.2)",
                           flexShrink: 0,
                         }}>
-                          {ts.label}
+                          {isSchoolEvent ? (ts?.label ?? "School Event") : "Class Session"}
                         </span>
                       </div>
-                      <div className="sd-event-meta">
-                        <span className="sd-event-meta-item">
-                          <Clock size={11} />
-                          {new Date(event.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          {" – "}
-                          {new Date(event.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      <div className="cal-event-meta-row">
+                        <span className="cal-event-meta-item">
+                          <Clock size={12} /> {ev.time}
                         </span>
-                        <span className="sd-event-meta-item">
-                          <MapPin size={11} />
-                          {event.location}
+                        <span className="cal-event-meta-item">
+                          <MapPin size={12} /> {isSchoolEvent ? (ev.location || "—") : (studentInfo?.section ?? "—")}
                         </span>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {upcomingEvents.length > EVENTS_PREVIEW && (
-              <button
-                type="button"
-                onClick={() => setShowAllEvents(!showAllEvents)}
-                style={{
-                  marginTop: "16px",
-                  width: "100%",
-                  padding: "10px",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--radius-sm)",
-                  color: "var(--gold)",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  transition: "all 0.15s ease",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(232,184,75,0.06)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-              >
-                {showAllEvents ? (
-                  <><ChevronRight size={14} style={{ transform: "rotate(-90deg)" }} /> Show Less</>
-                ) : (
-                  <><ChevronRight size={14} style={{ transform: "rotate(90deg)" }} /> See {upcomingEvents.length - EVENTS_PREVIEW} More Event{upcomingEvents.length - EVENTS_PREVIEW > 1 ? "s" : ""}</>
-                )}
-              </button>
+                  );
+                })}
+              </div>
             )}
-          </>
-        ) : (
-          <div className="sd-event-empty">
-            <Calendar size={28} color="var(--dimmed)" />
-            <p>No upcoming school events right now.</p>
-            <span>Check back later or enjoy your free time!</span>
           </div>
         )}
+
+        {/* ── Upcoming School Events ── */}
+        <div className="sd-event-panel">
+          <div className="sd-event-panel-header">
+            <div>
+              <p className="sd-panel-label">School Events</p>
+              <h2 className="sd-panel-title">Upcoming &amp; Future Events</h2>
+            </div>
+          </div>
+
+          {upcomingEvents.length > 0 ? (
+            <>
+              <div className="sd-events-list-vertical">
+                {visibleEvents.map((event) => {
+                  const days = daysUntilEvent(event.date);
+                  const ts = getEventTypeStyle(event.event_type);
+                  return (
+                    <div key={event.id} className="sd-event-card" style={{ borderLeftColor: ts.color }}>
+                      <div className="sd-event-date-block" style={{ minWidth: "44px" }}>
+                        <span className="sd-event-month">
+                          {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short" })}
+                        </span>
+                        <span className="sd-event-day">
+                          {parseDateLocal(event.date).toLocaleDateString("en-US", { day: "numeric" })}
+                        </span>
+                        <span className="sd-event-days-pill" style={{
+                          fontSize: "9px",
+                          padding: "2px 8px",
+                          background: days === 0 ? "rgba(74,222,128,0.15)" : days === 1 ? "rgba(232,184,75,0.15)" : "rgba(255,255,255,0.06)",
+                          color: days === 0 ? "var(--success)" : days === 1 ? "var(--gold)" : "var(--dimmed)",
+                          border: days === 0 ? "1px solid rgba(74,222,128,0.25)" : days === 1 ? "1px solid rgba(232,184,75,0.25)" : "1px solid rgba(255,255,255,0.08)",
+                        }}>
+                          {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days}d`}
+                        </span>
+                      </div>
+                      <div className="sd-event-detail">
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                          <h3 className="sd-event-name" style={{ fontSize: "13px", margin: 0 }}>{event.name}</h3>
+                          <span style={{
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            padding: "1px 5px",
+                            borderRadius: "4px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            background: ts.bg,
+                            color: ts.color,
+                            border: `1px solid ${ts.border}`,
+                            flexShrink: 0,
+                          }}>
+                            {ts.label}
+                          </span>
+                        </div>
+                        <div className="sd-event-meta">
+                          <span className="sd-event-meta-item">
+                            <Clock size={11} />
+                            {new Date(event.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            {" – "}
+                            {new Date(event.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          <span className="sd-event-meta-item">
+                            <MapPin size={11} />
+                            {event.location}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {upcomingEvents.length > EVENTS_PREVIEW && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllEvents(!showAllEvents)}
+                  style={{
+                    marginTop: "16px",
+                    width: "100%",
+                    padding: "10px",
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-sm)",
+                    color: "var(--gold)",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(232,184,75,0.06)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                >
+                  {showAllEvents ? (
+                    <><ChevronRight size={14} style={{ transform: "rotate(-90deg)" }} /> Show Less</>
+                  ) : (
+                    <><ChevronRight size={14} style={{ transform: "rotate(90deg)" }} /> See {upcomingEvents.length - EVENTS_PREVIEW} More Event{upcomingEvents.length - EVENTS_PREVIEW > 1 ? "s" : ""}</>
+                  )}
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="sd-event-empty">
+              <Calendar size={28} color="var(--dimmed)" />
+              <p>No upcoming school events right now.</p>
+              <span>Check back later or enjoy your free time!</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
