@@ -30,6 +30,7 @@ import {
   uploadMerchImages,
   deleteMerchImages,
 } from "@/lib/merch";
+import { productDraftSchema } from "@/lib/validations";
 
 export default function MerchCataloguePage() {
   const [merchItems, setMerchItems] = useState<MerchItem[]>([]);
@@ -165,7 +166,7 @@ export default function MerchCataloguePage() {
 
   const handleAddProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || !user) return;
+    if (!user) return;
 
     setSubmitting(true);
     setActionError(null);
@@ -181,7 +182,7 @@ export default function MerchCataloguePage() {
         newImageFiles.has(url) ? uploadedUrls[uploadIdx++] : url
       );
 
-      const draft: ProductDraft = {
+      const draftInput = {
         name: newName,
         category: newCategory,
         pricePlaceholder: newPrice,
@@ -193,6 +194,13 @@ export default function MerchCataloguePage() {
         features: parseLineList(newFeatures),
         images: finalImages,
       };
+
+      const validation = productDraftSchema.safeParse(draftInput);
+      if (!validation.success) {
+        setActionError(validation.error.errors[0].message);
+        return;
+      }
+      const draft: ProductDraft = validation.data;
 
       const { data, error } = await supabase
         .from("products")
@@ -258,7 +266,7 @@ export default function MerchCataloguePage() {
         editImageFiles.has(url) ? uploadedUrls[uploadIdx++] : url
       );
 
-      const draft: ProductDraft = {
+      const draftInput = {
         name: editName,
         category: editCategory,
         pricePlaceholder: editPrice,
@@ -270,6 +278,13 @@ export default function MerchCataloguePage() {
         features: parseLineList(editFeatures),
         images: finalImages,
       };
+
+      const validation = productDraftSchema.safeParse(draftInput);
+      if (!validation.success) {
+        setActionError(validation.error.errors[0].message);
+        return;
+      }
+      const draft: ProductDraft = validation.data;
 
       const { data, error } = await supabase
         .from("products")

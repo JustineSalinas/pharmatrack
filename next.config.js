@@ -18,21 +18,25 @@ const nextConfig = {
   },
 };
 
-module.exports = withSentryConfig(nextConfig, {
-  // Sentry build-time options
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  silent: !process.env.CI,
+// Sentry's webpack instrumentation adds real overhead to every dev compile
+// and isn't useful outside production error tracking, so skip it locally.
+module.exports = process.env.NODE_ENV === "production"
+  ? withSentryConfig(nextConfig, {
+      // Sentry build-time options
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      silent: !process.env.CI,
 
-  // Disable source map upload unless SENTRY_AUTH_TOKEN is set
-  sourcemaps: {
-    disable: !process.env.SENTRY_AUTH_TOKEN,
-  },
+      // Disable source map upload unless SENTRY_AUTH_TOKEN is set
+      sourcemaps: {
+        disable: !process.env.SENTRY_AUTH_TOKEN,
+      },
 
-  // Tree-shake Sentry debug code in production
-  disableLogger: true,
+      // Tree-shake Sentry debug code in production
+      disableLogger: true,
 
-  // Don't auto-instrument routes we handle manually
-  autoInstrumentServerFunctions: true,
-  autoInstrumentMiddleware: true,
-});
+      // Don't auto-instrument routes we handle manually
+      autoInstrumentServerFunctions: true,
+      autoInstrumentMiddleware: true,
+    })
+  : nextConfig;

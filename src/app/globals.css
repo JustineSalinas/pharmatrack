@@ -5779,7 +5779,8 @@ input[type="password"]::-ms-clear {
 }
 
 .cal-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   gap: 8px;
   align-items: stretch;
   padding: 0;
@@ -5787,7 +5788,6 @@ input[type="password"]::-ms-clear {
 }
 
 .cal-cell {
-  flex: 1;
   min-width: 0;
   min-height: 100px;
   background: var(--surface2);
@@ -6065,6 +6065,8 @@ input[type="password"]::-ms-clear {
 
 @media (max-width: 639px) {
   .cal-grid {
+    display: flex;
+    flex-wrap: nowrap;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;

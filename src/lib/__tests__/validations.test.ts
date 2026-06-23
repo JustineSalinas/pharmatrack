@@ -4,7 +4,8 @@ import {
   studentRegisterSchema,
   facilitatorRegisterSchema,
   adminRegisterSchema,
-  qrSessionSchema
+  qrSessionSchema,
+  productDraftSchema
 } from '../validations'
 import { UpdateProfileSchema } from '../schema'
 
@@ -200,6 +201,63 @@ describe('Validation Schemas', () => {
       if (!result.success) {
         expect(result.error.errors[0].message).toBe('Full name must be at least 2 characters')
       }
+    })
+  })
+
+  describe('productDraftSchema', () => {
+    const validDraft = {
+      name: 'Pharmacy Cap',
+      category: 'apparel' as const,
+      pricePlaceholder: 'PHP 250.00',
+      description: 'A cap.',
+      status: 'Showcase Only' as const,
+      material: 'Cotton',
+      sizes: ['S', 'M'],
+      colors: ['Green'],
+      features: ['Adjustable strap'],
+      images: ['https://example.com/cap.png'],
+    }
+
+    it('should validate a correct product draft', () => {
+      const result = productDraftSchema.safeParse(validDraft)
+      expect(result.success).toBe(true)
+    })
+
+    it('should fail if name is empty', () => {
+      const result = productDraftSchema.safeParse({ ...validDraft, name: '   ' })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.errors[0].message).toBe('Product name is required')
+      }
+    })
+
+    it('should fail if category is not apparel or accessories', () => {
+      const result = productDraftSchema.safeParse({ ...validDraft, category: 'electronics' })
+      expect(result.success).toBe(false)
+    })
+
+    it('should fail if status is not a recognized value', () => {
+      const result = productDraftSchema.safeParse({ ...validDraft, status: 'On Sale' })
+      expect(result.success).toBe(false)
+    })
+
+    it('should fail if name exceeds 200 characters', () => {
+      const result = productDraftSchema.safeParse({ ...validDraft, name: 'a'.repeat(201) })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.errors[0].message).toBe('Product name is too long')
+      }
+    })
+
+    it('should allow empty sizes/colors/features/images arrays (defaults are applied later)', () => {
+      const result = productDraftSchema.safeParse({
+        ...validDraft,
+        sizes: [],
+        colors: [],
+        features: [],
+        images: [],
+      })
+      expect(result.success).toBe(true)
     })
   })
 })
