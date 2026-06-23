@@ -5778,6 +5778,25 @@ input[type="password"]::-ms-clear {
   box-sizing: border-box;
 }
 
+.cal-weekday-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cal-weekday {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 0;
+}
+
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -6064,6 +6083,9 @@ input[type="password"]::-ms-clear {
 }
 
 @media (max-width: 639px) {
+  .cal-weekday-row {
+    display: none !important;
+  }
   .cal-grid {
     display: flex;
     flex-wrap: nowrap;

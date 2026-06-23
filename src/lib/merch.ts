@@ -115,6 +115,11 @@ export function extractStoragePath(publicUrl: string, bucket: string): string | 
   return publicUrl.slice(idx + marker.length);
 }
 
+/** Strips a filename down to a safe character set and length for use in a Storage object path. */
+function sanitizeFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9.\-_]/g, "_").slice(-100);
+}
+
 /** Uploads each file to Storage under a unique path and returns their public URLs, in input order. */
 export async function uploadMerchImages(
   files: File[],
@@ -122,7 +127,7 @@ export async function uploadMerchImages(
 ): Promise<string[]> {
   const urls: string[] = [];
   for (const file of files) {
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${sanitizeFilename(file.name)}`;
     const { error } = await uploader.upload(path, file);
     if (error) throw new Error(error.message);
     const { data } = uploader.getPublicUrl(path);

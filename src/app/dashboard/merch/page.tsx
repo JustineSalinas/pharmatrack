@@ -32,6 +32,20 @@ import {
 } from "@/lib/merch";
 import { productDraftSchema } from "@/lib/validations";
 
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+/** Rejects files that aren't an allowed image type or exceed the size cap; returns an error message or null. */
+function validateImageFile(file: File): string | null {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return `"${file.name}" isn't a supported image type. Use PNG, JPEG, WEBP, or GIF.`;
+  }
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    return `"${file.name}" is too large. Images must be 5MB or smaller.`;
+  }
+  return null;
+}
+
 export default function MerchCataloguePage() {
   const [merchItems, setMerchItems] = useState<MerchItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +125,7 @@ export default function MerchCataloguePage() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) {
+        console.error("Failed to load products", error);
         setActionError("Failed to load merchandise. Please refresh the page.");
       } else {
         setMerchItems((data as ProductRow[]).map(mapRowToMerchItem));
@@ -128,6 +143,11 @@ export default function MerchCataloguePage() {
       const urls: string[] = [];
       const fileMap = new Map(newImageFiles);
       for (let i = 0; i < files.length; i++) {
+        const error = validateImageFile(files[i]);
+        if (error) {
+          setActionError(error);
+          continue;
+        }
         const url = URL.createObjectURL(files[i]);
         urls.push(url);
         fileMap.set(url, files[i]);
@@ -149,6 +169,11 @@ export default function MerchCataloguePage() {
       const urls: string[] = [];
       const fileMap = new Map(editImageFiles);
       for (let i = 0; i < files.length; i++) {
+        const error = validateImageFile(files[i]);
+        if (error) {
+          setActionError(error);
+          continue;
+        }
         const url = URL.createObjectURL(files[i]);
         urls.push(url);
         fileMap.set(url, files[i]);

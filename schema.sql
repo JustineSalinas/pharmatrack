@@ -38,6 +38,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- Without these grants, every RLS policy that calls is_admin()/is_council()
 -- fails with "permission denied for function is_admin" — which blocks even a
 -- user reading their own profile row, and therefore breaks login entirely.
+--
+-- The `anon` grant specifically trips the Supabase linter's "Public Can
+-- Execute SECURITY DEFINER Function" warning. This is an accepted,
+-- intentional exception, not an oversight: both functions only return a
+-- boolean about the *calling* session and read no data the caller couldn't
+-- already infer, so granting `anon` EXECUTE leaks nothing. Revoking it would
+-- re-risk the exact failure mode described above for any future RLS policy
+-- that pairs USING(true) with one of these functions.
 GRANT EXECUTE ON FUNCTION public.is_admin()   TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.is_council() TO authenticated, anon;
 
@@ -451,7 +459,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 DROP TRIGGER IF EXISTS trigger_products_updated_at ON public.products;
 CREATE TRIGGER trigger_products_updated_at
@@ -466,8 +474,11 @@ ON CONFLICT (id) DO NOTHING;
 
 DROP POLICY IF EXISTS "Public read merch images" ON storage.objects;
 DROP POLICY IF EXISTS "Council manages merch images" ON storage.objects;
-CREATE POLICY "Public read merch images" ON storage.objects FOR SELECT
-  USING (bucket_id = 'merch-images');
+-- No SELECT policy needed: the bucket's public=true flag already serves
+-- objects via /storage/v1/object/public/... without consulting RLS. A
+-- permissive SELECT policy here would only add the ability to enumerate
+-- every file in the bucket via the Storage API's list(), which the app
+-- never needs (images are read from the URLs already stored on products).
 CREATE POLICY "Council manages merch images" ON storage.objects FOR ALL
   USING (bucket_id = 'merch-images' AND public.is_council());
 
