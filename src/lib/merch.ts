@@ -94,3 +94,53 @@ export function toProductRecord(draft: ProductDraft): Omit<ProductRow, "id"> {
     images: draft.images.length > 0 ? draft.images : ["/merch/shirt.png"],
   };
 }
+
+export interface MerchImageUploader {
+  upload(
+    path: string,
+    file: File
+  ): Promise<{ data: { path: string } | null; error: { message: string } | null }>;
+  getPublicUrl(path: string): { data: { publicUrl: string } };
+}
+
+export interface MerchImageRemover {
+  remove(paths: string[]): Promise<{ error: { message: string } | null }>;
+}
+
+/** Extracts the object path from a Supabase Storage public URL, or null if the URL isn't from this bucket. */
+export function extractStoragePath(publicUrl: string, bucket: string): string | null {
+  const marker = `/${bucket}/`;
+  const idx = publicUrl.indexOf(marker);
+  if (idx === -1) return null;
+  return publicUrl.slice(idx + marker.length);
+}
+
+/** Uploads each file to Storage under a unique path and returns their public URLs, in input order. */
+export async function uploadMerchImages(
+  files: File[],
+  uploader: MerchImageUploader
+): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+    const { error } = await uploader.upload(path, file);
+    if (error) throw new Error(error.message);
+    const { data } = uploader.getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
+}
+
+/** Deletes any of the given URLs that belong to the bucket; preset (non-Storage) URLs are ignored. */
+export async function deleteMerchImages(
+  urls: string[],
+  remover: MerchImageRemover,
+  bucket = "merch-images"
+): Promise<void> {
+  const paths = urls
+    .map((url) => extractStoragePath(url, bucket))
+    .filter((p): p is string => p !== null);
+  if (paths.length === 0) return;
+  const { error } = await remover.remove(paths);
+  if (error) throw new Error(error.message);
+}

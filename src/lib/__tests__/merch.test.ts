@@ -5,7 +5,12 @@ import {
   formatPriceLabel,
   mapRowToMerchItem,
   toProductRecord,
+  uploadMerchImages,
+  deleteMerchImages,
+  extractStoragePath,
   type ProductRow,
+  type MerchImageUploader,
+  type MerchImageRemover,
 } from '../merch'
 
 describe('parseCommaList', () => {
@@ -146,5 +151,95 @@ describe('toProductRecord', () => {
     expect(record.colors).toEqual(['Green'])
     expect(record.features).toEqual(['Adjustable strap'])
     expect(record.images).toEqual(['https://example.com/cap.png'])
+  })
+})
+
+describe('extractStoragePath', () => {
+  it('extracts the object path from a Supabase public URL', () => {
+    const url = 'https://xyz.supabase.co/storage/v1/object/public/merch-images/123-cap.png'
+    expect(extractStoragePath(url, 'merch-images')).toBe('123-cap.png')
+  })
+
+  it('returns null for a URL that does not contain the bucket segment', () => {
+    expect(extractStoragePath('/merch/hoodie.png', 'merch-images')).toBeNull()
+  })
+})
+
+describe('uploadMerchImages', () => {
+  it('uploads each file and returns their public URLs in order', async () => {
+    const uploadCalls: string[] = []
+    const fakeUploader: MerchImageUploader = {
+      upload: async (path) => {
+        uploadCalls.push(path)
+        return { data: { path }, error: null }
+      },
+      getPublicUrl: (path) => ({ data: { publicUrl: `https://cdn.example.com/${path}` } }),
+    }
+    const fileA = new File(['a'], 'a.png', { type: 'image/png' })
+    const fileB = new File(['b'], 'b.png', { type: 'image/png' })
+
+    const urls = await uploadMerchImages([fileA, fileB], fakeUploader)
+
+    expect(urls).toEqual([
+      `https://cdn.example.com/${uploadCalls[0]}`,
+      `https://cdn.example.com/${uploadCalls[1]}`,
+    ])
+    expect(uploadCalls).toHaveLength(2)
+  })
+
+  it('throws if a file upload fails', async () => {
+    const fakeUploader: MerchImageUploader = {
+      upload: async () => ({ data: null, error: { message: 'storage quota exceeded' } }),
+      getPublicUrl: (path) => ({ data: { publicUrl: `https://cdn.example.com/${path}` } }),
+    }
+    const file = new File(['a'], 'a.png', { type: 'image/png' })
+
+    await expect(uploadMerchImages([file], fakeUploader)).rejects.toThrow('storage quota exceeded')
+  })
+})
+
+describe('deleteMerchImages', () => {
+  it('removes only the URLs that belong to the given bucket', async () => {
+    const removedPaths: string[][] = []
+    const fakeRemover: MerchImageRemover = {
+      remove: async (paths) => {
+        removedPaths.push(paths)
+        return { error: null }
+      },
+    }
+
+    await deleteMerchImages(
+      ['https://xyz.supabase.co/storage/v1/object/public/merch-images/a.png', '/merch/hoodie.png'],
+      fakeRemover
+    )
+
+    expect(removedPaths).toEqual([['a.png']])
+  })
+
+  it('does nothing if no URLs belong to the bucket', async () => {
+    let called = false
+    const fakeRemover: MerchImageRemover = {
+      remove: async (paths) => {
+        called = true
+        return { error: null }
+      },
+    }
+
+    await deleteMerchImages(['/merch/hoodie.png'], fakeRemover)
+
+    expect(called).toBe(false)
+  })
+
+  it('throws if removal fails', async () => {
+    const fakeRemover: MerchImageRemover = {
+      remove: async () => ({ error: { message: 'permission denied' } }),
+    }
+
+    await expect(
+      deleteMerchImages(
+        ['https://xyz.supabase.co/storage/v1/object/public/merch-images/a.png'],
+        fakeRemover
+      )
+    ).rejects.toThrow('permission denied')
   })
 })
