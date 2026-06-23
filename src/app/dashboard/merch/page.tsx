@@ -1,122 +1,40 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  ShoppingBag, 
-  Shirt, 
-  Tag, 
-  Sparkles, 
-  X, 
-  Search, 
-  Layers, 
+import {
+  ShoppingBag,
+  Shirt,
+  Tag,
+  Sparkles,
+  X,
+  Search,
+  Layers,
   Grid,
   Info,
   Plus,
   Pencil,
-  Trash2
+  Trash2,
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-client";
-
-interface MerchItem {
-  id: string;
-  name: string;
-  category: "apparel" | "accessories";
-  pricePlaceholder: string;
-  image: string;
-  images?: string[];
-  description: string;
-  status: "Showcase Only" | "Coming Soon";
-  details: {
-    material: string;
-    sizes?: string[];
-    colors: string[];
-    features: string[];
-  };
-}
-
-const MERCH_ITEMS: MerchItem[] = [
-  {
-    id: "hoodie",
-    name: "Pharmacy Premium Hoodie",
-    category: "apparel",
-    pricePlaceholder: "PHP 1,299.00",
-    image: "/merch/hoodie.png",
-    description: "Premium heavyweight cotton hoodie featuring forest green coloring with signature gold embroidered 'Pharmacy' lettering across the chest.",
-    status: "Coming Soon",
-    details: {
-      material: "80% Organic Cotton / 20% Polyester Blend (380 GSM)",
-      sizes: ["S", "M", "L", "XL", "XXL"],
-      colors: ["Forest Green with Gold Embroidery"],
-      features: [
-        "Double-lined hood with adjustable drawstrings",
-        "Ribbed cuffs and waistband",
-        "Front kangaroo pocket",
-        "Embroidered premium detailing"
-      ]
-    }
-  },
-  {
-    id: "shirt",
-    name: "Pharmacy Signature Shirt",
-    category: "apparel",
-    pricePlaceholder: "PHP 599.00",
-    image: "/merch/shirt.png",
-    description: "Minimalist off-white signature tee designed for everyday comfort, featuring a clean green 'Pharmacy' chest print.",
-    status: "Showcase Only",
-    details: {
-      material: "100% Ring-Spun Combed Cotton (200 GSM)",
-      sizes: ["XS", "S", "M", "L", "XL", "XXL"],
-      colors: ["Off-White / Cream with Green Printing"],
-      features: [
-        "Pre-shrunk fabric",
-        "Side-seamed construction",
-        "Double-needle topstitched collar",
-        "Soft and breathable wear"
-      ]
-    }
-  },
-  {
-    id: "tote",
-    name: "Pharmacy Official Tote Bag",
-    category: "accessories",
-    pricePlaceholder: "PHP 350.00",
-    image: "/merch/tote.png",
-    description: "Durable white canvas tote bag with a stylish green leather-styled handle, featuring the centered 'Pharmacy' branding.",
-    status: "Coming Soon",
-    details: {
-      material: "Heavy-Duty 12oz Cotton Canvas / Vegan Leather Straps",
-      colors: ["Natural White Canvas with Forest Green Straps"],
-      features: [
-        "Spacious main compartment",
-        "Zippered top closure for security",
-        "Reinforced base and stitching",
-        "Inner pocket for smartphones or keys"
-      ]
-    }
-  },
-  {
-    id: "lanyard",
-    name: "Pharmacy Event Lanyard",
-    category: "accessories",
-    pricePlaceholder: "PHP 120.00",
-    image: "/merch/lanyard.png",
-    description: "Official event lanyard with forest green strap and premium gold text printing, complete with a secure silver clasp.",
-    status: "Showcase Only",
-    details: {
-      material: "High-Density Smooth Satin Polyester",
-      colors: ["Forest Green with Gold Print"],
-      features: [
-        "Heavy-duty metal trigger hook",
-        "Safety breakaway clasp at the neck",
-        "Optimal 20mm width for comfort",
-        "Dual-sided logo printing"
-      ]
-    }
-  }
-];
+import { supabase } from "@/lib/supabase";
+import {
+  type MerchItem,
+  type ProductRow,
+  type ProductDraft,
+  parseCommaList,
+  parseLineList,
+  mapRowToMerchItem,
+  toProductRecord,
+  uploadMerchImages,
+} from "@/lib/merch";
 
 export default function MerchCataloguePage() {
-  const [merchItems, setMerchItems] = useState<MerchItem[]>(MERCH_ITEMS);
+  const [merchItems, setMerchItems] = useState<MerchItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState<"all" | "apparel" | "accessories">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<MerchItem | null>(null);
@@ -134,6 +52,7 @@ export default function MerchCataloguePage() {
   const [newColors, setNewColors] = useState("");
   const [newFeatures, setNewFeatures] = useState("");
   const [newImagesList, setNewImagesList] = useState<string[]>([]);
+  const [newImageFiles, setNewImageFiles] = useState<Map<string, File>>(new Map());
 
   // Delete confirmation state
   const [deletingItem, setDeletingItem] = useState<MerchItem | null>(null);
@@ -182,16 +101,36 @@ export default function MerchCataloguePage() {
     loadUser();
   }, []);
 
-  const isFacilitator = user?.account_type === "facilitator";
+  useEffect(() => {
+    async function loadProducts() {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) {
+        setActionError("Failed to load merchandise. Please refresh the page.");
+      } else {
+        setMerchItems((data as ProductRow[]).map(mapRowToMerchItem));
+      }
+      setLoading(false);
+    }
+    loadProducts();
+  }, []);
+
+  const canManage = user?.account_type === "facilitator" || user?.account_type === "admin";
 
   const handleAddImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       const urls: string[] = [];
+      const fileMap = new Map(newImageFiles);
       for (let i = 0; i < files.length; i++) {
-        urls.push(URL.createObjectURL(files[i]));
+        const url = URL.createObjectURL(files[i]);
+        urls.push(url);
+        fileMap.set(url, files[i]);
       }
       setNewImagesList([...newImagesList, ...urls]);
+      setNewImageFiles(fileMap);
     }
   };
 
@@ -218,49 +157,66 @@ export default function MerchCataloguePage() {
     }
   };
 
-  const handleAddProductSubmit = (e: React.FormEvent) => {
+  const handleAddProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newName.trim() || !user) return;
 
-    if (!newName.trim()) return;
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      const pendingFiles = newImagesList
+        .map((url) => newImageFiles.get(url))
+        .filter((f): f is File => f !== undefined);
+      const uploadedUrls = pendingFiles.length > 0
+        ? await uploadMerchImages(pendingFiles, supabase.storage.from("merch-images"))
+        : [];
+      let uploadIdx = 0;
+      const finalImages = newImagesList.map((url) =>
+        newImageFiles.has(url) ? uploadedUrls[uploadIdx++] : url
+      );
 
-    const details = {
-      material: newMaterial || "N/A",
-      sizes: newSizes ? newSizes.split(",").map(s => s.trim()).filter(Boolean) : undefined,
-      colors: newColors ? newColors.split(",").map(c => c.trim()).filter(Boolean) : ["N/A"],
-      features: newFeatures ? newFeatures.split("\n").map(f => f.trim()).filter(Boolean) : ["N/A"]
-    };
+      const draft: ProductDraft = {
+        name: newName,
+        category: newCategory,
+        pricePlaceholder: newPrice,
+        description: newDescription,
+        status: newStatus,
+        material: newMaterial,
+        sizes: parseCommaList(newSizes),
+        colors: parseCommaList(newColors),
+        features: parseLineList(newFeatures),
+        images: finalImages,
+      };
 
-    let finalImages = newImagesList.length > 0 ? newImagesList : ["/merch/shirt.png"];
-    let primaryImage = finalImages[0];
+      const { data, error } = await supabase
+        .from("products")
+        .insert({ ...toProductRecord(draft), created_by: user.id })
+        .select()
+        .single();
+      if (error) throw error;
 
-    const newItem: MerchItem = {
-      id: `custom-${Date.now()}`,
-      name: newName,
-      category: newCategory,
-      pricePlaceholder: newPrice ? (newPrice.toUpperCase().startsWith("PHP") ? newPrice : `PHP ${newPrice}`) : "PHP 0.00",
-      image: primaryImage,
-      images: finalImages,
-      description: newDescription || "No description provided.",
-      status: newStatus,
-      details
-    };
+      setMerchItems([mapRowToMerchItem(data as ProductRow), ...merchItems]);
 
-    setMerchItems([newItem, ...merchItems]);
+      // Reset Form
+      setNewName("");
+      setNewCategory("apparel");
+      setNewPrice("");
+      setNewDescription("");
+      setNewStatus("Showcase Only");
+      setNewMaterial("");
+      setNewSizes("");
+      setNewColors("");
+      setNewFeatures("");
+      setNewImagesList([]);
+      setNewImageFiles(new Map());
 
-    // Reset Form
-    setNewName("");
-    setNewCategory("apparel");
-    setNewPrice("");
-    setNewDescription("");
-    setNewStatus("Showcase Only");
-    setNewMaterial("");
-    setNewSizes("");
-    setNewColors("");
-    setNewFeatures("");
-    setNewImagesList([]);
-
-    // Close Modal
-    setShowAddModal(false);
+      // Close Modal
+      setShowAddModal(false);
+    } catch (err: any) {
+      setActionError(err.message || "Failed to add product. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEditProductClick = (item: MerchItem) => {
@@ -332,6 +288,8 @@ export default function MerchCataloguePage() {
     return matchesFilter && matchesSearch;
   });
 
+  if (loading) return <div className="sp-center-screen"><Loader2 className="sp-spinner" size={36} /></div>;
+
   return (
     <div className="fade-in sd-root" style={{ paddingBottom: "60px" }}>
       {/* Header */}
@@ -341,6 +299,12 @@ export default function MerchCataloguePage() {
           <h1 className="sd-header-title">Merch Catalogue</h1>
         </div>
       </header>
+
+      {actionError && (
+        <div className="sp-error-banner">
+          <AlertTriangle size={16} /> {actionError}
+        </div>
+      )}
 
       {/* Controls Bar */}
       <div className="mc-controls">
@@ -394,7 +358,7 @@ export default function MerchCataloguePage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          {isFacilitator && (
+          {canManage && (
             <button className="mc-add-btn" onClick={() => setShowAddModal(true)}>
               <Plus size={15} />
               <span>Add new product</span>
@@ -437,7 +401,7 @@ export default function MerchCataloguePage() {
                   <span>{item.status}</span>
                 </span>
 
-                {isFacilitator && (
+                {canManage && (
                   <div className="mc-card-actions" onClick={(e) => e.stopPropagation()}>
                     <button 
                       className="mc-card-action-btn edit-btn"
@@ -595,7 +559,7 @@ export default function MerchCataloguePage() {
                 </div>
 
                 {/* Facilitator actions */}
-                {isFacilitator && (
+                {canManage && (
                   <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
                     <button 
                       className="mc-add-btn" 
