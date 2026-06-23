@@ -28,6 +28,7 @@ import {
   mapRowToMerchItem,
   toProductRecord,
   uploadMerchImages,
+  deleteMerchImages,
 } from "@/lib/merch";
 
 export default function MerchCataloguePage() {
@@ -69,6 +70,7 @@ export default function MerchCataloguePage() {
   const [editColors, setEditColors] = useState("");
   const [editFeatures, setEditFeatures] = useState("");
   const [editImagesList, setEditImagesList] = useState<string[]>([]);
+  const [editImageFiles, setEditImageFiles] = useState<Map<string, File>>(new Map());
 
   // Lightbox carousel state
   const [activeImage, setActiveImage] = useState<string>("");
@@ -144,10 +146,14 @@ export default function MerchCataloguePage() {
     const files = e.target.files;
     if (files) {
       const urls: string[] = [];
+      const fileMap = new Map(editImageFiles);
       for (let i = 0; i < files.length; i++) {
-        urls.push(URL.createObjectURL(files[i]));
+        const url = URL.createObjectURL(files[i]);
+        urls.push(url);
+        fileMap.set(url, files[i]);
       }
       setEditImagesList([...editImagesList, ...urls]);
+      setEditImageFiles(fileMap);
     }
   };
 
@@ -231,54 +237,92 @@ export default function MerchCataloguePage() {
     setEditColors(item.details.colors.join(", "));
     setEditFeatures(item.details.features.join("\n"));
     setEditImagesList(item.images && item.images.length > 0 ? item.images : [item.image]);
+    setEditImageFiles(new Map());
   };
 
-  const handleEditProductSubmit = (e: React.FormEvent) => {
+  const handleEditProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
 
-    const details = {
-      material: editMaterial || "N/A",
-      sizes: editSizes ? editSizes.split(",").map(s => s.trim()).filter(Boolean) : undefined,
-      colors: editColors ? editColors.split(",").map(c => c.trim()).filter(Boolean) : ["N/A"],
-      features: editFeatures ? editFeatures.split("\n").map(f => f.trim()).filter(Boolean) : ["N/A"]
-    };
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      const pendingFiles = editImagesList
+        .map((url) => editImageFiles.get(url))
+        .filter((f): f is File => f !== undefined);
+      const uploadedUrls = pendingFiles.length > 0
+        ? await uploadMerchImages(pendingFiles, supabase.storage.from("merch-images"))
+        : [];
+      let uploadIdx = 0;
+      const finalImages = editImagesList.map((url) =>
+        editImageFiles.has(url) ? uploadedUrls[uploadIdx++] : url
+      );
 
-    let finalImages = editImagesList.length > 0 ? editImagesList : ["/merch/shirt.png"];
-    let primaryImage = finalImages[0];
+      const draft: ProductDraft = {
+        name: editName,
+        category: editCategory,
+        pricePlaceholder: editPrice,
+        description: editDescription,
+        status: editStatus,
+        material: editMaterial,
+        sizes: parseCommaList(editSizes),
+        colors: parseCommaList(editColors),
+        features: parseLineList(editFeatures),
+        images: finalImages,
+      };
 
-    const updatedItem: MerchItem = {
-      ...editingItem,
-      name: editName,
-      category: editCategory,
-      pricePlaceholder: editPrice ? (editPrice.toUpperCase().startsWith("PHP") ? editPrice : `PHP ${editPrice}`) : "PHP 0.00",
-      image: primaryImage,
-      images: finalImages,
-      description: editDescription || "No description provided.",
-      status: editStatus,
-      details
-    };
+      const { data, error } = await supabase
+        .from("products")
+        .update(toProductRecord(draft))
+        .eq("id", editingItem.id)
+        .select()
+        .single();
+      if (error) throw error;
 
-    setMerchItems(merchItems.map(item => item.id === editingItem.id ? updatedItem : item));
-    
-    if (selectedItem?.id === editingItem.id) {
-      setSelectedItem(updatedItem);
+      const updatedItem = mapRowToMerchItem(data as ProductRow);
+      setMerchItems(merchItems.map((item) => (item.id === editingItem.id ? updatedItem : item)));
+
+      if (selectedItem?.id === editingItem.id) {
+        setSelectedItem(updatedItem);
+      }
+
+      setEditingItem(null);
+      setEditImageFiles(new Map());
+    } catch (err: any) {
+      setActionError(err.message || "Failed to update product. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-
-    setEditingItem(null);
   };
 
   const handleDeleteProductClick = (item: MerchItem) => {
     setDeletingItem(item);
   };
 
-  const confirmDeleteProduct = () => {
+  const confirmDeleteProduct = async () => {
     if (!deletingItem) return;
-    setMerchItems(merchItems.filter(item => item.id !== deletingItem.id));
-    if (selectedItem?.id === deletingItem.id) {
-      setSelectedItem(null);
+
+    setActionError(null);
+    try {
+      const { error } = await supabase.from("products").delete().eq("id", deletingItem.id);
+      if (error) throw error;
+
+      // Best-effort cleanup — the row is already gone either way, so a
+      // Storage failure here shouldn't block the delete from completing.
+      await deleteMerchImages(
+        deletingItem.images && deletingItem.images.length > 0 ? deletingItem.images : [deletingItem.image],
+        supabase.storage.from("merch-images")
+      ).catch((err) => console.error("Failed to clean up product images:", err));
+
+      setMerchItems(merchItems.filter((item) => item.id !== deletingItem.id));
+      if (selectedItem?.id === deletingItem.id) {
+        setSelectedItem(null);
+      }
+      setDeletingItem(null);
+    } catch (err: any) {
+      setActionError(err.message || "Failed to delete product. Please try again.");
+      setDeletingItem(null);
     }
-    setDeletingItem(null);
   };
 
   const filteredItems = merchItems.filter((item) => {
