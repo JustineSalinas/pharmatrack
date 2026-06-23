@@ -418,3 +418,88 @@ INSERT INTO public.system_config (key, value) VALUES
   ('registrationMode',     'approval')
 ON CONFLICT (key) DO NOTHING;
 
+-- ============================================================
+-- PRODUCTS (Merch Catalogue)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.products (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name         TEXT NOT NULL,
+  category     TEXT NOT NULL CHECK (category IN ('apparel', 'accessories')),
+  price_label  TEXT NOT NULL DEFAULT 'PHP 0.00',
+  description  TEXT,
+  status       TEXT NOT NULL CHECK (status IN ('Showcase Only', 'Coming Soon')) DEFAULT 'Showcase Only',
+  material     TEXT,
+  sizes        TEXT[],
+  colors       TEXT[],
+  features     TEXT[],
+  images       TEXT[] NOT NULL,
+  created_by   UUID REFERENCES public.users(id),
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Everyone views products" ON public.products;
+DROP POLICY IF EXISTS "Council manages products" ON public.products;
+CREATE POLICY "Everyone views products" ON public.products FOR SELECT USING (true);
+CREATE POLICY "Council manages products" ON public.products FOR ALL USING (public.is_council());
+
+-- Keep updated_at current on every UPDATE
+CREATE OR REPLACE FUNCTION public.set_products_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_products_updated_at ON public.products;
+CREATE TRIGGER trigger_products_updated_at
+  BEFORE UPDATE ON public.products
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_products_updated_at();
+
+-- Storage bucket for product images
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('merch-images', 'merch-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public read merch images" ON storage.objects;
+DROP POLICY IF EXISTS "Council manages merch images" ON storage.objects;
+CREATE POLICY "Public read merch images" ON storage.objects FOR SELECT
+  USING (bucket_id = 'merch-images');
+CREATE POLICY "Council manages merch images" ON storage.objects FOR ALL
+  USING (bucket_id = 'merch-images' AND public.is_council());
+
+-- Seed: existing curated products (safe to re-run — skips rows whose name
+-- already exists)
+INSERT INTO public.products (name, category, price_label, description, status, material, sizes, colors, features, images)
+SELECT * FROM (VALUES
+  ('Pharmacy Premium Hoodie', 'apparel', 'PHP 1,299.00',
+   'Premium heavyweight cotton hoodie featuring forest green coloring with signature gold embroidered ''Pharmacy'' lettering across the chest.',
+   'Coming Soon', '80% Organic Cotton / 20% Polyester Blend (380 GSM)',
+   ARRAY['S','M','L','XL','XXL'], ARRAY['Forest Green with Gold Embroidery'],
+   ARRAY['Double-lined hood with adjustable drawstrings','Ribbed cuffs and waistband','Front kangaroo pocket','Embroidered premium detailing'],
+   ARRAY['/merch/hoodie.png']),
+  ('Pharmacy Signature Shirt', 'apparel', 'PHP 599.00',
+   'Minimalist off-white signature tee designed for everyday comfort, featuring a clean green ''Pharmacy'' chest print.',
+   'Showcase Only', '100% Ring-Spun Combed Cotton (200 GSM)',
+   ARRAY['XS','S','M','L','XL','XXL'], ARRAY['Off-White / Cream with Green Printing'],
+   ARRAY['Pre-shrunk fabric','Side-seamed construction','Double-needle topstitched collar','Soft and breathable wear'],
+   ARRAY['/merch/shirt.png']),
+  ('Pharmacy Official Tote Bag', 'accessories', 'PHP 350.00',
+   'Durable white canvas tote bag with a stylish green leather-styled handle, featuring the centered ''Pharmacy'' branding.',
+   'Coming Soon', 'Heavy-Duty 12oz Cotton Canvas / Vegan Leather Straps',
+   NULL::TEXT[], ARRAY['Natural White Canvas with Forest Green Straps'],
+   ARRAY['Spacious main compartment','Zippered top closure for security','Reinforced base and stitching','Inner pocket for smartphones or keys'],
+   ARRAY['/merch/tote.png']),
+  ('Pharmacy Event Lanyard', 'accessories', 'PHP 120.00',
+   'Official event lanyard with forest green strap and premium gold text printing, complete with a secure silver clasp.',
+   'Showcase Only', 'High-Density Smooth Satin Polyester',
+   NULL::TEXT[], ARRAY['Forest Green with Gold Print'],
+   ARRAY['Heavy-duty metal trigger hook','Safety breakaway clasp at the neck','Optimal 20mm width for comfort','Dual-sided logo printing'],
+   ARRAY['/merch/lanyard.png'])
+) AS seed(name, category, price_label, description, status, material, sizes, colors, features, images)
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.products p WHERE p.name = seed.name
+);
