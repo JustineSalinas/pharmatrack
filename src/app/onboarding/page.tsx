@@ -77,7 +77,7 @@ export default function OnboardingPage() {
               <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
             </div>
             <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 1.8rem)", lineHeight: 1.2 }}>Complete Your Profile</h2>
-            <p>You&apos;re almost there! We just need a few more details to set up your account.</p>
+            <p>Add a few more details to finish setting up your account.</p>
           </div>
 
           <div className="role-toggle" style={{ marginBottom: "20px" }}>

@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
               <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
             </div>
             <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 2.2rem)", lineHeight: 1.2 }}>Reset Password</h2>
-            <p>{sent ? "Check your inbox" : "We'll email you a secure reset link."}</p>
+            <p>{sent ? "Check your inbox" : "We'll email you a reset link."}</p>
           </div>
 
           {sent ? (

@@ -36,7 +36,7 @@ function buildEventNotif(event: Event): NotificationItem {
 
   const timePart = startTime && endTime ? `${startTime} – ${endTime}` : startTime ?? null;
   const dateLine = [displayDate, timePart].filter(Boolean).join(" · ");
-  const locationLine = event.location ? `📍 ${event.location}` : null;
+  const locationLine = event.location ? event.location : null;
   const descLine = event.description ?? null;
   const body = [dateLine, locationLine, descLine].filter(Boolean).join(" — ");
 

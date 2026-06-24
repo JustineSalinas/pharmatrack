@@ -339,7 +339,6 @@ export default function SchedulePage() {
                     <div
                       key={ev.sessionId}
                       className="cal-event-card"
-                      style={isSchoolEvent && ts ? { borderLeftColor: ts.color } : undefined}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "6px" }}>
                         <h4 className="cal-event-name">{ev.subject}</h4>
@@ -390,7 +389,7 @@ export default function SchedulePage() {
                   const days = daysUntilEvent(event.date);
                   const ts = getEventTypeStyle(event.event_type);
                   return (
-                    <div key={event.id} className="sd-event-card" style={{ borderLeftColor: ts.color }}>
+                    <div key={event.id} className="sd-event-card">
                       <div className="sd-event-date-block" style={{ minWidth: "44px" }}>
                         <span className="sd-event-month">
                           {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short" })}

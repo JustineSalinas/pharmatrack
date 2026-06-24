@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginUser, getCurrentUser, getAuthUser, logoutUser } from "@/lib/auth-client";
 import { Suspense } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Clock, CheckCircle2 } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -185,9 +185,9 @@ function LoginForm() {
                   width: "80px", height: "80px", borderRadius: "50%",
                   background: "rgba(251, 191, 36, 0.1)", border: "2px solid rgba(251, 191, 36, 0.3)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto 20px", fontSize: "2rem"
+                  margin: "0 auto 20px"
                 }}>
-                  ⏳
+                  <Clock size={32} color="#FBBF24" strokeWidth={1.5} />
                 </div>
 
                 <p style={{ color: "var(--white)", marginBottom: "16px", lineHeight: "1.6", fontSize: "0.95rem" }}>
@@ -216,7 +216,7 @@ function LoginForm() {
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
                   <img src="/usa.png" alt="University Logo" style={{ height: "85px", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }} />
                 </div>
-                <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 2.2rem)", lineHeight: 1.2 }}>Welcome, Pharmates!</h2>
+                <h2 style={{ fontSize: "clamp(1.5rem, 5vw, 2.2rem)", lineHeight: 1.2 }}>Welcome back</h2>
                 <p>Access your official Pharmatrack portal.</p>
               </div>
 
@@ -231,9 +231,13 @@ function LoginForm() {
                     fontSize: "0.85rem",
                     padding: "12px",
                     borderRadius: "10px",
-                    marginBottom: "10px"
+                    marginBottom: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
                   }}>
-                    ✓ {successMsg}
+                    <CheckCircle2 size={14} /> {successMsg}
                   </div>
                 )}
 

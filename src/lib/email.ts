@@ -1,4 +1,22 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
+
+export function getTransporter() {
+  const { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS } = process.env;
+
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT) || 587,
+    secure: SMTP_SECURE === "true",
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+}
 
 export interface EventBroadcastInput {
   name: string;
@@ -13,14 +31,12 @@ export interface EventBroadcastInput {
 }
 
 export async function sendEventBroadcast(event: EventBroadcastInput) {
-  const apiKey = process.env.RESEND_API_KEY;
+  const transporter = getTransporter();
 
-  if (!apiKey) {
-    console.warn("[Email Service] RESEND_API_KEY not set — skipping broadcast.");
+  if (!transporter) {
+    console.warn("[Email Service] SMTP not configured — skipping broadcast.");
     return;
   }
-
-  const resend = new Resend(apiKey);
 
   const localDate = new Date(event.date);
   const displayDate = localDate.toLocaleDateString("en-US", {
@@ -59,7 +75,7 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
       ? event.targetYearLevels.join(", ")
       : "All Year Levels";
 
-  const fromAddress = process.env.RESEND_FROM || "PharmaTrack <notifications@usa.edu.ph>";
+  const fromAddress = process.env.SMTP_FROM || "PharmaTrack <notifications@usa.edu.ph>";
 
   const buildHtml = (studentName: string) => `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px; background-color: #ffffff; color: #333333;">
@@ -121,9 +137,8 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
     </div>
   `;
 
-  console.log(`[Email Service] Preparing Resend broadcast for "${event.name}" to ${event.recipients.length} students.`);
+  console.log(`[Email Service] Preparing Gmail SMTP broadcast for "${event.name}" to ${event.recipients.length} students.`);
 
-  // Resend batch API accepts up to 100 emails per call
   const BATCH_SIZE = 100;
   let sent = 0;
   let failed = 0;
@@ -131,21 +146,25 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
   for (let i = 0; i < event.recipients.length; i += BATCH_SIZE) {
     const batch = event.recipients.slice(i, i + BATCH_SIZE);
 
-    const { data, error } = await resend.batch.send(
-      batch.map((student) => ({
-        from: fromAddress,
-        to: student.email,
-        subject: `[${displayEventType}] New Event Scheduled: ${event.name}`,
-        html: buildHtml(student.full_name),
-      }))
+    const results = await Promise.allSettled(
+      batch.map((student) =>
+        transporter.sendMail({
+          from: fromAddress,
+          to: student.email,
+          subject: `[${displayEventType}] New Event Scheduled: ${event.name}`,
+          html: buildHtml(student.full_name),
+        })
+      )
     );
 
-    if (error) {
-      failed += batch.length;
-      console.error(`[Email Service] Batch ${Math.floor(i / BATCH_SIZE) + 1} failed:`, error.message);
-    } else {
-      sent += data?.data?.length ?? batch.length;
-    }
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled") {
+        sent += 1;
+      } else {
+        failed += 1;
+        console.error(`[Email Service] Failed to send to ${batch[idx].email}:`, result.reason);
+      }
+    });
   }
 
   console.log(`[Email Service] Broadcast complete — sent: ${sent}, failed: ${failed}`);

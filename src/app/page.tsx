@@ -31,10 +31,10 @@ export default function LandingPage() {
         <section className="hero fade-in delay-1" style={{ paddingTop: "6vh" }}>
           <div className="hero-badge">University of San Agustin — Pharmacy Dept.</div>
 
-          <h1 className="hero-title">PHARMATRACK</h1>
+          <h1 className="hero-title">PHARMA<span className="hero-title-accent">TRACK</span></h1>
           <h2 className="attendance-title">QR Attendance, done right.</h2>
 
-          <p style={{ maxWidth: "480px", margin: "0 auto 40px", fontSize: "0.98rem", color: "rgba(255,255,255,0.45)", lineHeight: "1.8" }}>
+          <p style={{ maxWidth: "480px", margin: "0 auto 40px", fontSize: "0.98rem", color: "rgba(255,255,255,0.72)", lineHeight: "1.8" }}>
             No clipboards, no manual rollcalls. Students scan in seconds — facilitators see who's present, late, or absent in real time.
           </p>
 
@@ -47,19 +47,13 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="feature-preview">
-            <div className="f-item">
-              <span className="f-stat">800+</span>
-              <span className="f-label">Students</span>
-            </div>
-            <div className="f-item">
-              <span className="f-stat">&lt;1s</span>
-              <span className="f-label">Scan Time</span>
-            </div>
-            <div className="f-item">
-              <span className="f-stat">Live</span>
-              <span className="f-label">Dashboard</span>
-            </div>
+          <div className="hero-status-strip">
+            <span className="hss-dot" />
+            <span className="hss-item"><strong>800+</strong> Students</span>
+            <span className="hss-sep">·</span>
+            <span className="hss-item"><strong>&lt;1s</strong> Scan Time</span>
+            <span className="hss-sep">·</span>
+            <span className="hss-item">Live Dashboard</span>
           </div>
 
           {/* SCROLL INDICATOR */}

@@ -986,7 +986,7 @@ export default function FacultyReports() {
                         </div>
                       ) : (
                         <div style={{ padding: "48px 24px", textAlign: "center", color: "#16a34a", fontWeight: 500 }}>
-                          🎉 Excellent! No students are currently in the at-risk attendance threshold.
+                          No students are currently in the at-risk attendance threshold.
                         </div>
                       )}
                     </td>

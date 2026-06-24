@@ -210,7 +210,7 @@ export default function CalendarPage() {
               {selectedEvents.map((ev) => {
                 const ts = getEventTypeStyle(ev.event_type);
                 return (
-                  <div key={ev.id} className="cal-event-card" style={{ borderLeftColor: ts.color }}>
+                  <div key={ev.id} className="cal-event-card">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "6px" }}>
                       <h4 className="cal-event-name">{ev.name}</h4>
                       <span style={{

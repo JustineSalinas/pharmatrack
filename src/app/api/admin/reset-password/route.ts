@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
 import { getBackendUser } from "@/lib/auth";
+import { getTransporter } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -59,24 +59,27 @@ export async function POST(req: NextRequest) {
     const actionLink = data?.properties?.action_link;
     if (!actionLink) throw new Error("Failed to generate reset link");
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const from = process.env.RESEND_FROM || "PharmaTrack <notifications@usa.edu.ph>";
+    const transporter = getTransporter();
+    if (!transporter) {
+      throw new Error("SMTP is not configured. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS.");
+    }
+    const from = process.env.SMTP_FROM || "PharmaTrack <notifications@usa.edu.ph>";
 
-    const { error: emailErr } = await resend.emails.send({
-      from,
-      to: email,
-      subject: "Password Reset — PharmaTrack",
-      html: `
-        <p>Hello,</p>
-        <p>An administrator has requested a password reset for your PharmaTrack account.</p>
-        <p><a href="${actionLink}" style="background:#4f46e5;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;">Reset Password</a></p>
-        <p>This link expires in 24 hours. If you did not request this, you can ignore this email.</p>
-        <p style="color:#6b7280;font-size:12px;">— PharmaTrack System</p>
-      `,
-    });
-
-    if (emailErr) {
-      console.error(`[ResetPassword API] Resend email failed for ${email}:`, emailErr);
+    try {
+      await transporter.sendMail({
+        from,
+        to: email,
+        subject: "Password Reset — PharmaTrack",
+        html: `
+          <p>Hello,</p>
+          <p>An administrator has requested a password reset for your PharmaTrack account.</p>
+          <p><a href="${actionLink}" style="background:#4f46e5;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;">Reset Password</a></p>
+          <p>This link expires in 24 hours. If you did not request this, you can ignore this email.</p>
+          <p style="color:#6b7280;font-size:12px;">— PharmaTrack System</p>
+        `,
+      });
+    } catch (emailErr: any) {
+      console.error(`[ResetPassword API] SMTP email failed for ${email}:`, emailErr);
       throw new Error("Failed to send reset email: " + emailErr.message);
     }
 

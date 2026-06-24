@@ -4,7 +4,7 @@ import { registerStudent, registerFacilitator } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Mail, Eye, EyeOff } from "lucide-react";
+import { Mail, Eye, EyeOff, AlertTriangle, Lightbulb } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -141,8 +141,8 @@ export default function RegisterPage() {
                     marginTop: "16px",
                     marginBottom: "8px"
                   }}>
-                    <p style={{ color: "var(--gold)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>
-                      ⚠ Facilitator Accounts Require Approval
+                    <p style={{ color: "var(--gold)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <AlertTriangle size={14} /> Facilitator Accounts Require Approval
                     </p>
                     <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem", lineHeight: "1.5" }}>
                       After verifying your email, the System Administrator must approve your account before you can access the portal.
@@ -158,8 +158,8 @@ export default function RegisterPage() {
                   marginTop: "16px",
                   marginBottom: "24px"
                 }}>
-                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.78rem", lineHeight: "1.5" }}>
-                    💡 Didn&apos;t receive the email? Check your spam folder. The link expires in 24 hours.
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.78rem", lineHeight: "1.5", display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                    <Lightbulb size={14} style={{ flexShrink: 0, marginTop: "2px" }} /> Didn&apos;t receive the email? Check your spam folder. The link expires in 24 hours.
                   </p>
                 </div>
 

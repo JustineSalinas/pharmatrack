@@ -332,9 +332,6 @@ function StudentDashboardContent() {
             </div>
             <div className="sd-tile-number">{stats?.present_count ?? 0}</div>
             <div className="sd-tile-label">Present</div>
-            <div className="sd-tile-bar">
-              <div className="sd-tile-bar-fill" style={{ width: `${stats?.total_records ? (stats.present_count / stats.total_records) * 100 : 0}%`, background: "var(--success)" }} />
-            </div>
           </div>
 
           <div className="sd-stat-tile sd-tile-late">
@@ -343,9 +340,6 @@ function StudentDashboardContent() {
             </div>
             <div className="sd-tile-number">{stats?.late_count ?? 0}</div>
             <div className="sd-tile-label">Late</div>
-            <div className="sd-tile-bar">
-              <div className="sd-tile-bar-fill" style={{ width: `${stats?.total_records ? (stats.late_count / stats.total_records) * 100 : 0}%`, background: "#d97706" }} />
-            </div>
           </div>
 
           <div className="sd-stat-tile sd-tile-absent">
@@ -354,9 +348,6 @@ function StudentDashboardContent() {
             </div>
             <div className="sd-tile-number">{stats?.absent_count ?? 0}</div>
             <div className="sd-tile-label">Absent</div>
-            <div className="sd-tile-bar">
-              <div className="sd-tile-bar-fill" style={{ width: `${stats?.total_records ? (stats.absent_count / stats.total_records) * 100 : 0}%`, background: "var(--danger)" }} />
-            </div>
           </div>
         </div>
       </div>
@@ -456,7 +447,7 @@ function StudentDashboardContent() {
                     const days = daysUntilEvent(event.date);
                     const ts = getEventTypeStyle(event.event_type);
                     return (
-                      <div key={event.id} className="sd-event-card" style={{ padding: "10px 12px", borderLeftColor: ts.color }}>
+                      <div key={event.id} className="sd-event-card" style={{ padding: "10px 12px" }}>
                         <div className="sd-event-date-block" style={{ minWidth: "44px" }}>
                           <span className="sd-event-month">
                             {parseDateLocal(event.date).toLocaleDateString("en-US", { month: "short" })}
