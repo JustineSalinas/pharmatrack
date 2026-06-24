@@ -24,7 +24,8 @@ export function renderEmailShell(opts: { eyebrow: string; bodyHtml: string }): s
           <div style="font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">
             <span style="color:#ffffff;">PHARMA</span><span style="color:${BRAND.gold};">TRACK</span>
           </div>
-          <div style="color: rgba(255,255,255,0.55); font-size: 12px; margin-top: 4px;">${opts.eyebrow}</div>
+          <div style="color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 4px;">University of San Agustin Pharmacy Department</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 12px; margin-top: 8px;">${opts.eyebrow}</div>
         </div>
         <div style="padding: 28px; color: ${BRAND.ink}; font-size: 14px; line-height: 1.6;">
           ${opts.bodyHtml}
