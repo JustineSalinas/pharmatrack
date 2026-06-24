@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid account type" }, { status: 400 });
   }
 
+  try {
   const supabase = getServiceClient();
 
   // ── Step 1: Create auth user (only when registering with a password) ──────
@@ -62,14 +63,17 @@ export async function POST(req: NextRequest) {
     });
 
     if (authErr) {
-      const msg = authErr.message.toLowerCase();
+      const msg = (authErr.message || "").toLowerCase();
       if (msg.includes("rate limit")) {
         return NextResponse.json(
           { error: "Too many sign-up attempts right now. Please wait a few minutes and try again." },
           { status: 429 }
         );
       }
-      return NextResponse.json({ error: authErr.message }, { status: 400 });
+      return NextResponse.json(
+        { error: authErr.message || "Sign-up failed. Please try again." },
+        { status: 400 }
+      );
     }
 
     if (!authData.user) {
@@ -144,4 +148,11 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, userId });
+  } catch (err: any) {
+    console.error("[Register API] Unexpected error:", err);
+    return NextResponse.json(
+      { error: err?.message || "Unexpected server error. Please try again." },
+      { status: 500 }
+    );
+  }
 }
