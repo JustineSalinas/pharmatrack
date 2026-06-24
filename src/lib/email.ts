@@ -72,6 +72,13 @@ export function getTransporter() {
       user: SMTP_USER,
       pass: SMTP_PASS,
     },
+    // Reuse a small pool of connections instead of opening one TCP/TLS
+    // connection per email — Gmail throttles/drops bursts of simultaneous
+    // connections, which is what batches of 100 concurrent sendMail() calls
+    // would otherwise trigger.
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
   });
 }
 

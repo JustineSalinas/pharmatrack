@@ -1,4 +1,7 @@
 export const dynamic = "force-dynamic";
+// Broadcasting to hundreds of students over SMTP can take a while — give the
+// serverless function enough runway to finish before it gets torn down.
+export const maxDuration = 120;
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -98,20 +101,23 @@ export async function POST(req: NextRequest) {
     if (studentsErr) {
       console.error("[Events API] Failed to fetch student recipients for broadcast:", studentsErr.message);
     } else if (students && students.length > 0) {
-      // Fire-and-forget — don't block the response while 800 emails send
-      sendEventBroadcast({
-        name,
-        location,
-        date,
-        checkInStart: check_in_start,
-        checkInLate: check_in_late,
-        checkInEnd: check_in_end,
-        eventType: event_type ?? null,
-        targetYearLevels: targetYears,
-        recipients: students,
-      }).catch((broadcastErr) => {
+      // Awaited — on serverless, the function is torn down once the response
+      // is sent, which would kill an unawaited broadcast mid-flight.
+      try {
+        await sendEventBroadcast({
+          name,
+          location,
+          date,
+          checkInStart: check_in_start,
+          checkInLate: check_in_late,
+          checkInEnd: check_in_end,
+          eventType: event_type ?? null,
+          targetYearLevels: targetYears,
+          recipients: students,
+        });
+      } catch (broadcastErr: any) {
         console.error("[Events API] Email broadcast failed:", broadcastErr.message);
-      });
+      }
     } else {
       console.log("[Events API] No approved students found to broadcast to.");
     }
