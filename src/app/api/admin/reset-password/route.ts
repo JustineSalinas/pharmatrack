@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getBackendUser } from "@/lib/auth";
-import { getTransporter } from "@/lib/email";
+import { getTransporter, renderEmailShell } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -66,17 +66,20 @@ export async function POST(req: NextRequest) {
     const from = process.env.SMTP_FROM || "PharmaTrack <notifications@usa.edu.ph>";
 
     try {
+      const bodyHtml = `
+        <p>Hello,</p>
+        <p>An administrator has requested a password reset for your PharmaTrack account.</p>
+        <p style="margin: 24px 0;">
+          <a href="${actionLink}" style="background-color:#E8B84B; color:#1e1432; padding:12px 24px; border-radius:6px; text-decoration:none; font-weight:bold; display:inline-block;">Reset Password</a>
+        </p>
+        <p>This link expires in 24 hours. If you did not request this, you can ignore this email.</p>
+      `;
+
       await transporter.sendMail({
         from,
         to: email,
         subject: "Password Reset — PharmaTrack",
-        html: `
-          <p>Hello,</p>
-          <p>An administrator has requested a password reset for your PharmaTrack account.</p>
-          <p><a href="${actionLink}" style="background:#4f46e5;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;">Reset Password</a></p>
-          <p>This link expires in 24 hours. If you did not request this, you can ignore this email.</p>
-          <p style="color:#6b7280;font-size:12px;">— PharmaTrack System</p>
-        `,
+        html: renderEmailShell({ eyebrow: "Password Reset", bodyHtml }),
       });
     } catch (emailErr: any) {
       console.error(`[ResetPassword API] SMTP email failed for ${email}:`, emailErr);

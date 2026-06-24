@@ -1,4 +1,61 @@
 import nodemailer from "nodemailer";
+import { getEventTypeStyle } from "./event-type";
+
+const BRAND = {
+  bg: "#f4f4f7",
+  surface: "#ffffff",
+  ink: "#1e1432",
+  muted: "#6b7280",
+  border: "#e5e7eb",
+  panel: "#f7f7f9",
+  gold: "#E8B84B",
+};
+
+/**
+ * Shared shell every PharmaTrack email renders inside of — keeps the
+ * wordmark header, body padding, and footer disclaimer identical across
+ * the event broadcast, password reset, and SMTP test emails.
+ */
+export function renderEmailShell(opts: { eyebrow: string; bodyHtml: string }): string {
+  return `
+    <div style="background-color:${BRAND.bg}; padding: 32px 16px; font-family: Arial, Helvetica, sans-serif;">
+      <div style="max-width: 560px; margin: 0 auto; background-color:${BRAND.surface}; border: 1px solid ${BRAND.border}; border-radius: 10px; overflow: hidden;">
+        <div style="background-color:${BRAND.ink}; padding: 24px 28px;">
+          <div style="font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">
+            <span style="color:#ffffff;">PHARMA</span><span style="color:${BRAND.gold};">TRACK</span>
+          </div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 12px; margin-top: 4px;">${opts.eyebrow}</div>
+        </div>
+        <div style="padding: 28px; color: ${BRAND.ink}; font-size: 14px; line-height: 1.6;">
+          ${opts.bodyHtml}
+        </div>
+        <div style="padding: 16px 28px; border-top: 1px solid ${BRAND.border}; color: ${BRAND.muted}; font-size: 11px; text-align: center;">
+          This is an automated message from PharmaTrack — University of San Agustin Pharmacy Department. Please do not reply directly to this email.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/** A label/value details panel, styled identically wherever it appears. */
+export function renderDetailsPanel(rows: Array<{ label: string; value: string }>): string {
+  const rowsHtml = rows
+    .map(
+      (row) => `
+        <tr>
+          <td style="padding: 6px 0; color: ${BRAND.muted}; width: 130px; vertical-align: top;">${row.label}</td>
+          <td style="padding: 6px 0; font-weight: bold; color: ${BRAND.ink};">${row.value}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  return `
+    <div style="background-color: ${BRAND.panel}; border: 1px solid ${BRAND.border}; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <table style="width: 100%; border-collapse: collapse;">${rowsHtml}</table>
+    </div>
+  `;
+}
 
 export function getTransporter() {
   const { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS } = process.env;
@@ -63,12 +120,7 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
   const endTimeStr = formatTime(event.checkInEnd);
 
   const displayEventType = event.eventType ?? "Department";
-  const eventTypeColorMap: Record<string, string> = {
-    "University Wide": "#ef4444",
-    "Pharmacy": "#a78bfa",
-    "Department": "#D4AF37",
-  };
-  const eventTypeColor = eventTypeColorMap[displayEventType] ?? "#D4AF37";
+  const ts = getEventTypeStyle(displayEventType);
 
   const displayYearLevels =
     event.targetYearLevels && event.targetYearLevels.length > 0
@@ -77,65 +129,26 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
 
   const fromAddress = process.env.SMTP_FROM || "PharmaTrack <notifications@usa.edu.ph>";
 
-  const buildHtml = (studentName: string) => `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px; background-color: #ffffff; color: #333333;">
-      <div style="text-align: center; border-bottom: 2px solid #E8B84B; padding-bottom: 15px; margin-bottom: 20px;">
-        <h2 style="color: #1e1432; margin: 0;">PharmaTrack Portal</h2>
-        <span style="color: #666666; font-size: 14px;">University of San Agustin Pharmacy Department</span>
-      </div>
+  const buildHtml = (studentName: string) => {
+    const typeBadge = `<span style="display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; background-color: ${ts.bg}; color: ${ts.color}; border: 1px solid ${ts.border};">${ts.label}</span>`;
 
+    const bodyHtml = `
       <p>Dear <strong>${studentName}</strong>,</p>
-
-      <p>A new <strong style="color: ${eventTypeColor};">${displayEventType}</strong> event has been scheduled for <strong>${displayYearLevels}</strong>. Please find the details below:</p>
-
-      <div style="background-color: #f7f7f9; border-left: 4px solid ${eventTypeColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 6px 0; font-weight: bold; color: #666666; width: 130px;">Event Name:</td>
-            <td style="padding: 6px 0; font-weight: bold; color: #1e1432;">${event.name}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 0; color: #666666;">Event Type:</td>
-            <td style="padding: 6px 0;">
-              <span style="display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; background-color: ${eventTypeColor}20; color: ${eventTypeColor}; border: 1px solid ${eventTypeColor}40;">
-                ${displayEventType}
-              </span>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 0; color: #666666;">For Year Levels:</td>
-            <td style="padding: 6px 0; font-weight: bold; color: #1e1432;">${displayYearLevels}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 0; color: #666666;">Date:</td>
-            <td style="padding: 6px 0;">${displayDate}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 0; color: #666666;">Location:</td>
-            <td style="padding: 6px 0;">${event.location}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 0; color: #666666;">Check-in:</td>
-            <td style="padding: 6px 0;">${startTimeStr}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 0; color: #f97316;">Mark Late At:</td>
-            <td style="padding: 6px 0; color: #f97316; font-weight: bold;">${lateTimeStr}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 0; color: #dc2626;">Check-in Ends:</td>
-            <td style="padding: 6px 0; color: #dc2626; font-weight: bold;">${endTimeStr}</td>
-          </tr>
-        </table>
-      </div>
-
+      <p>A new ${typeBadge} event has been scheduled for <strong>${displayYearLevels}</strong>. Please find the details below:</p>
+      ${renderDetailsPanel([
+        { label: "Event Name", value: event.name },
+        { label: "For Year Levels", value: displayYearLevels },
+        { label: "Date", value: displayDate },
+        { label: "Location", value: event.location },
+        { label: "Check-in", value: startTimeStr },
+        { label: "Mark Late At", value: lateTimeStr },
+        { label: "Check-in Ends", value: endTimeStr },
+      ])}
       <p>Make sure to bring your <strong>PharmaTrack Student QR Code Pass</strong> to verify your attendance at the venue.</p>
+    `;
 
-      <p style="margin-top: 30px; font-size: 12px; color: #777777; border-top: 1px solid #eaeaea; padding-top: 15px; text-align: center;">
-        This is an automated notification from PharmaTrack. Please do not reply directly to this email.
-      </p>
-    </div>
-  `;
+    return renderEmailShell({ eyebrow: "Event Notification", bodyHtml });
+  };
 
   console.log(`[Email Service] Preparing Gmail SMTP broadcast for "${event.name}" to ${event.recipients.length} students.`);
 

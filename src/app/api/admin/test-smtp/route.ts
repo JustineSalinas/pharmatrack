@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getBackendUser } from "@/lib/auth";
-import { getTransporter } from "@/lib/email";
+import { getTransporter, renderEmailShell, renderDetailsPanel } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -44,46 +44,23 @@ export async function POST(req: NextRequest) {
     console.log(`[TestEmail API] Admin ${caller.email} sending Gmail SMTP test email.`);
 
     try {
+      const bodyHtml = `
+        <p>Dear <strong>${callerProfile.full_name}</strong>,</p>
+        <p>This is a test notification confirming that your Gmail SMTP email service is connected and working correctly.</p>
+        ${renderDetailsPanel([
+          { label: "Status", value: "Connected" },
+          { label: "Verified Timestamp", value: new Date().toLocaleString("en-US") },
+          { label: "Service", value: "Gmail SMTP" },
+          { label: "Sender", value: fromAddress },
+        ])}
+        <p>Email delivery is active and ready to broadcast to students.</p>
+      `;
+
       await transporter.sendMail({
         from: fromAddress,
         to: callerProfile.email,
         subject: "PharmaTrack: Email Service Test Successful",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px; background-color: #ffffff; color: #333333;">
-            <div style="text-align: center; border-bottom: 2px solid #E8B84B; padding-bottom: 15px; margin-bottom: 20px;">
-              <h2 style="color: #1e1432; margin: 0;">PharmaTrack Portal</h2>
-              <span style="color: #666666; font-size: 14px;">System Control Center</span>
-            </div>
-
-            <p>Dear <strong>${callerProfile.full_name}</strong>,</p>
-
-            <p>This is a test notification confirming that your Gmail SMTP email service is connected and working correctly.</p>
-
-            <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 4px; color: #14532d;">
-              <strong style="display: block; font-size: 15px; margin-bottom: 4px;">✓ SMTP Connected!</strong>
-              Email delivery is active and ready to broadcast to students.
-            </div>
-
-            <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;">
-              <tr style="border-bottom: 1px solid #eaeaea;">
-                <td style="padding: 8px 0; color: #666666; width: 150px;">Verified Timestamp:</td>
-                <td style="padding: 8px 0; font-weight: bold; color: #1e1432;">${new Date().toLocaleString("en-US")}</td>
-              </tr>
-              <tr style="border-bottom: 1px solid #eaeaea;">
-                <td style="padding: 8px 0; color: #666666;">Service:</td>
-                <td style="padding: 8px 0; color: #1e1432;">Gmail SMTP</td>
-              </tr>
-              <tr style="border-bottom: 1px solid #eaeaea;">
-                <td style="padding: 8px 0; color: #666666;">Sender:</td>
-                <td style="padding: 8px 0; color: #1e1432;">${fromAddress}</td>
-              </tr>
-            </table>
-
-            <p style="margin-top: 30px; font-size: 12px; color: #777777; border-top: 1px solid #eaeaea; padding-top: 15px; text-align: center;">
-              This is an automated system verification from PharmaTrack.
-            </p>
-          </div>
-        `,
+        html: renderEmailShell({ eyebrow: "System Control Center", bodyHtml }),
       });
     } catch (error: any) {
       console.error("[TestEmail API] SMTP error:", error.message);

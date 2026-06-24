@@ -71,6 +71,17 @@ export async function GET(request: NextRequest) {
       }
       return response;
     }
+    // Email scanners (Gmail, Outlook) auto-follow links and consume the one-time
+    // token before the user clicks it. The email IS confirmed; guide them to log in
+    // instead of showing a scary failure for what's actually a success.
+    const code = (error as { code?: string }).code;
+    const msg = error.message.toLowerCase();
+    if (code === "otp_expired" || msg.includes("expired") || msg.includes("invalid")) {
+      const linkUsedUrl = new URL("/login", origin);
+      linkUsedUrl.searchParams.set("error", "link_already_used");
+      return NextResponse.redirect(linkUsedUrl);
+    }
+
     console.error("Email verification failed:", error.message);
     const errUrl = new URL("/login", origin);
     errUrl.searchParams.set("error", `verification_failed:${error.message}`);
