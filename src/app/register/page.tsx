@@ -361,8 +361,8 @@ export default function RegisterPage() {
 
                 {/* Data Privacy Act Notice */}
                 <div style={{
-                  background: "rgba(139, 92, 246, 0.07)",
-                  border: "1px solid rgba(139, 92, 246, 0.25)",
+                  background: "rgba(239, 68, 68, 0.06)",
+                  border: "1px solid rgba(239, 68, 68, 0.25)",
                   borderRadius: "12px",
                   overflow: "hidden",
                   marginTop: "10px",
@@ -373,12 +373,12 @@ export default function RegisterPage() {
                     alignItems: "center",
                     gap: "10px",
                     padding: "14px 18px",
-                    borderBottom: "1px solid rgba(139, 92, 246, 0.15)",
-                    background: "rgba(139, 92, 246, 0.08)",
+                    borderBottom: "1px solid rgba(239, 68, 68, 0.15)",
+                    background: "rgba(239, 68, 68, 0.08)",
                   }}>
-                    <ShieldCheck size={16} color="#c084fc" style={{ flexShrink: 0 }} />
+                    <ShieldCheck size={16} color="#f87171" style={{ flexShrink: 0 }} />
                     <div>
-                      <p style={{ color: "#c084fc", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", margin: 0 }}>
+                      <p style={{ color: "#f87171", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", margin: 0 }}>
                         Data Privacy Notice
                       </p>
                       <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.7rem", margin: 0 }}>
@@ -410,8 +410,8 @@ export default function RegisterPage() {
                   cursor: "pointer",
                   marginTop: "14px",
                   padding: "12px 14px",
-                  background: privacyAgreed ? "rgba(139, 92, 246, 0.08)" : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${privacyAgreed ? "rgba(139, 92, 246, 0.35)" : "rgba(255,255,255,0.08)"}`,
+                  background: privacyAgreed ? "rgba(239, 68, 68, 0.08)" : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${privacyAgreed ? "rgba(239, 68, 68, 0.35)" : "rgba(255,255,255,0.08)"}`,
                   borderRadius: "10px",
                   transition: "background 0.2s, border-color 0.2s",
                 }}>
@@ -419,10 +419,10 @@ export default function RegisterPage() {
                     type="checkbox"
                     checked={privacyAgreed}
                     onChange={(e) => setPrivacyAgreed(e.target.checked)}
-                    style={{ marginTop: "2px", width: "16px", height: "16px", accentColor: "#a855f7", flexShrink: 0, cursor: "pointer" }}
+                    style={{ marginTop: "2px", width: "16px", height: "16px", accentColor: "#ef4444", flexShrink: 0, cursor: "pointer" }}
                   />
                   <span style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.6)", lineHeight: "1.55" }}>
-                    I have read and understood the <strong style={{ color: privacyAgreed ? "#c084fc" : "rgba(255,255,255,0.75)" }}>Data Privacy Notice</strong> above, and I consent to the collection and use of my personal information for attendance monitoring and academic record-keeping purposes in accordance with <strong style={{ color: privacyAgreed ? "#c084fc" : "rgba(255,255,255,0.75)" }}>RA 10173</strong>.
+                    I have read and understood the <strong style={{ color: privacyAgreed ? "#f87171" : "rgba(255,255,255,0.75)" }}>Data Privacy Notice</strong> above, and I consent to the collection and use of my personal information for attendance monitoring and academic record-keeping purposes in accordance with <strong style={{ color: privacyAgreed ? "#f87171" : "rgba(255,255,255,0.75)" }}>RA 10173</strong>.
                   </span>
                 </label>
 
