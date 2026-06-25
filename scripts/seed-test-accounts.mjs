@@ -23,7 +23,7 @@ const supabase = createClient(URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const PASSWORD = "PharmaTrack#2026";
+const PASSWORD = process.env.SEED_PASSWORD || "PharmaTrack#2026";
 
 const ACCOUNTS = [
   {

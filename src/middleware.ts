@@ -5,6 +5,7 @@ import { Redis } from "@upstash/redis";
 const RULES = [
   { path: "/api/scan",                 limit: 600, windowMs: 60_000 },
   { path: "/api/auth/register",        limit: 60,  windowMs: 60_000 },
+  { path: "/api/auth",                 limit: 20,  windowMs: 60_000 },
   { path: "/api/admin/reset-password", limit: 5,   windowMs: 60_000 },
   { path: "/api/events",               limit: 20,  windowMs: 60_000 },
 ] as const;
@@ -93,7 +94,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/api/scan",
-    "/api/auth/register",
+    "/api/auth/:path*",
     "/api/admin/reset-password",
     "/api/events",
   ],

@@ -9,12 +9,18 @@ if (!supabaseUrl || !supabaseKey) {
   process.exit(1);
 }
 
+const email = process.env.ADMIN_EMAIL;
+const newPassword = process.env.ADMIN_PASSWORD;
+
+if (!email || !newPassword) {
+  console.error("Set ADMIN_EMAIL and ADMIN_PASSWORD environment variables before running.");
+  console.error("Example: ADMIN_EMAIL=>admin@[REDACTED] ADMIN_PASSWORD=... node scratch/ensure-admin-password.js");
+  process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function setPassword() {
-  const email = '>admin@[REDACTED]';
-  const newPassword = '>[REDACTED]';
-
   console.log(`Searching for auth user by email: ${email}`);
   const { data: users, error: listErr } = await supabase.auth.admin.listUsers();
   if (listErr) {
@@ -39,7 +45,7 @@ async function setPassword() {
     process.exit(1);
   }
 
-  console.log(`Successfully set password for ${email} to ${newPassword}`);
+  console.log(`Successfully set password for ${email}`);
 }
 
 setPassword();
