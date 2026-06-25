@@ -9,6 +9,7 @@ import {
   TrendingUp, Calendar, Clock,
 } from "lucide-react";
 import ChangePassword from "@/components/ChangePassword";
+import AvatarUpload from "@/components/AvatarUpload";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -19,6 +20,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"profile" | "security">("profile");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const formatDate = (dateStr: string | undefined | null) => {
     if (!dateStr) return "—";
@@ -53,6 +55,7 @@ export default function ProfilePage() {
             section: sp.section || "",
             current_year: sp.current_year || "",
           });
+          if (u.avatar_url) setAvatarUrl(u.avatar_url);
           if (u.account_type === "student") {
             const { data } = await supabase
               .from("student_attendance_summary").select("*").eq("student_id", u.id).single();
@@ -127,7 +130,12 @@ export default function ProfilePage() {
       <div className="sp-profile-grid">
         {/* Avatar / Stats Sidebar */}
         <div className="sp-avatar-panel">
-          <div className="sp-avatar-circle">{initials}</div>
+          <AvatarUpload
+            userId={user.id}
+            avatarUrl={avatarUrl}
+            initials={initials}
+            onUploaded={(url) => setAvatarUrl(url)}
+          />
           <h2 className="sp-avatar-name">{form.full_name || "—"}</h2>
           <p className="sp-avatar-email">{form.email}</p>
 

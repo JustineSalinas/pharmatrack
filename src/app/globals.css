@@ -4750,6 +4750,208 @@ html {
   margin-bottom: 16px;
 }
 
+/* ── Avatar Upload ── */
+.sp-avatar-upload-trigger {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.sp-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.sp-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: #fff;
+}
+
+.sp-avatar-upload-trigger:hover .sp-avatar-overlay {
+  opacity: 1;
+}
+
+.sp-avatar-uploading .sp-avatar-overlay {
+  opacity: 1;
+}
+
+.sp-avatar-overlay-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sp-avatar-upload-error {
+  font-size: 11px;
+  color: var(--danger);
+  margin-top: -8px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+/* ── Modal Primitives ── */
+.sp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.sp-modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Avatar Upload Warning Modal ── */
+.sp-modal-warning {
+  max-width: 560px;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+.sp-modal-warning-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 28px 28px 24px;
+}
+
+.sp-modal-warning-icon-wrap {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ca8a04;
+  margin-top: 2px;
+}
+
+.sp-modal-warning-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--dimmed);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.sp-modal-warning-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.3;
+}
+
+.sp-modal-warning-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 28px;
+}
+
+.sp-modal-warning-intro {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  padding: 20px 28px 0;
+}
+
+.sp-modal-warning-list {
+  font-size: 13px;
+  color: var(--white-shade);
+  line-height: 1.65;
+  padding: 16px 28px 0 44px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sp-modal-warning-list li {
+  padding-left: 4px;
+}
+
+.sp-modal-warning-list strong {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.sp-modal-warning-footer {
+  padding: 20px 28px 28px;
+}
+
+.sp-modal-warning-confirm-text {
+  font-size: 12px;
+  color: var(--dimmed);
+  line-height: 1.5;
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+.sp-modal-warning-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.sp-modal-cancel-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.sp-modal-cancel-btn:hover {
+  border-color: var(--white-shade);
+  color: var(--white);
+}
+
+.sp-modal-confirm-btn {
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--gold);
+  border: none;
+  color: #000;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sp-modal-confirm-btn:hover {
+  opacity: 0.88;
+}
+
 .sp-avatar-name {
   font-size: 18px;
   font-weight: 700;

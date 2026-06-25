@@ -7,17 +7,22 @@ import {
   ShieldCheck, Calendar, Clock,
 } from "lucide-react";
 import ChangePassword from "@/components/ChangePassword";
+import AvatarUpload from "@/components/AvatarUpload";
 
 export default function FacilitatorProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"profile" | "security">("profile");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
         const u = await getCurrentUser();
-        if (u) setUser(u);
+        if (u) {
+          setUser(u);
+          if (u.avatar_url) setAvatarUrl(u.avatar_url);
+        }
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     }
@@ -80,9 +85,12 @@ export default function FacilitatorProfilePage() {
 
       <div className="sp-profile-grid">
         <div className="sp-avatar-panel">
-          <div className="sp-avatar-circle" style={{ overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", padding: "4px" }}>
-            <img src="/usa.png" alt="USA Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-          </div>
+          <AvatarUpload
+            userId={user.id}
+            avatarUrl={avatarUrl}
+            initials={initials}
+            onUploaded={(url) => setAvatarUrl(url)}
+          />
           <h2 className="sp-avatar-name">{fullName}</h2>
           <p className="sp-avatar-email">{user?.email}</p>
           <div className="sp-avatar-tags">
