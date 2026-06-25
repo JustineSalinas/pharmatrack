@@ -4,22 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { logoutUser } from "@/lib/auth-client";
-import { 
-  Home, 
-  Camera, 
-  ClipboardList, 
-  Calendar, 
-  User, 
-  Bell, 
-  QrCode, 
-  Users, 
-  BarChart, 
+import {
+  Home,
+  Camera,
+  ClipboardList,
+  Calendar,
+  User,
+  Bell,
+  QrCode,
+  Users,
+  BarChart,
   Settings,
   LogOut,
   HeadphonesIcon,
   AlertTriangle,
   Mail,
-  ShoppingBag
+  ShoppingBag,
+  CheckCircle2,
 } from "lucide-react";
 
 interface NavItem { href: string; label: string; icon: React.ReactNode; }
@@ -124,6 +125,9 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
   const [supportCategory, setSupportCategory] = useState("");
   const [supportDesc, setSupportDesc] = useState("");
   const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
+  const [sendError, setSendError] = useState("");
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -131,7 +135,34 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
     window.location.href = "/login";
   };
 
-  function buildSupportEmail() {
+  async function handleSendEmail() {
+    if (!supportDesc.trim()) return;
+    setSending(true);
+    setSendError("");
+    try {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: supportCategory,
+          description: supportDesc,
+          userName,
+          userRole: userSub,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send.");
+      }
+      setSendSuccess(true);
+    } catch (err: any) {
+      setSendError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleCopyMessage() {
     const subject = `PharmaTrack Support: ${supportCategory || "General"} — ${userName}`;
     const body = [
       `Name: ${userName}`,
@@ -144,24 +175,12 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
       `---`,
       `Sent from PharmaTrack Portal`,
     ].join("\n");
-    return { subject, body };
-  }
-
-  function handleOpenEmail() {
-    const { subject, body } = buildSupportEmail();
-    const mailtoUrl = `mailto:cdg.solutionsph@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoUrl, "_blank");
-  }
-
-  async function handleCopyMessage() {
-    const { subject, body } = buildSupportEmail();
     const full = `To: cdg.solutionsph@gmail.com\nSubject: ${subject}\n\n${body}`;
     try {
       await navigator.clipboard.writeText(full);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // fallback for browsers that block clipboard API
       alert(`Copy this and send to cdg.solutionsph@gmail.com:\n\n${full}`);
     }
   }
@@ -170,6 +189,8 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
     setSupportCategory("");
     setSupportDesc("");
     setCopied(false);
+    setSendSuccess(false);
+    setSendError("");
     setShowSupportModal(true);
   }
 
@@ -321,52 +342,79 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
               <span>Sending as <strong>{userName}</strong> · {userSub}</span>
             </div>
 
-            {/* Form */}
-            <div className="support-form">
-              <div className="support-field">
-                <label className="support-field-label">Issue Category</label>
-                <select
-                  className="support-select"
-                  value={supportCategory}
-                  onChange={(e) => setSupportCategory(e.target.value)}
-                >
-                  <option value="">Select a category…</option>
-                  {SUPPORT_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+            {sendSuccess ? (
+              /* ── Success state ── */
+              <div style={{ textAlign: "center", padding: "24px 0 8px" }}>
+                <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "rgba(74,222,128,0.1)", border: "2px solid rgba(74,222,128,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                  <CheckCircle2 size={28} color="#4ade80" />
+                </div>
+                <p style={{ color: "#ffffff", fontWeight: 700, fontSize: "15px", marginBottom: "6px" }}>Message Sent!</p>
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "13px", lineHeight: "1.5", marginBottom: "24px" }}>
+                  Your support request has been sent to our team. We&apos;ll get back to you as soon as possible.
+                </p>
+                <button className="support-send-btn" style={{ width: "100%" }} onClick={() => setShowSupportModal(false)}>
+                  Close
+                </button>
               </div>
+            ) : (
+              <>
+                {/* Form */}
+                <div className="support-form">
+                  <div className="support-field">
+                    <label className="support-field-label">Issue Category</label>
+                    <select
+                      className="support-select"
+                      value={supportCategory}
+                      onChange={(e) => setSupportCategory(e.target.value)}
+                    >
+                      <option value="">Select a category…</option>
+                      {SUPPORT_CATEGORIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="support-field">
-                <label className="support-field-label">Describe your issue</label>
-                <textarea
-                  className="support-textarea"
-                  placeholder="What happened? What were you trying to do?"
-                  value={supportDesc}
-                  onChange={(e) => setSupportDesc(e.target.value)}
-                  rows={4}
-                />
-              </div>
-            </div>
+                  <div className="support-field">
+                    <label className="support-field-label">Describe your issue</label>
+                    <textarea
+                      className="support-textarea"
+                      placeholder="What happened? What were you trying to do?"
+                      value={supportDesc}
+                      onChange={(e) => setSupportDesc(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
 
-            {/* Footer */}
-            <div className="support-footer">
-              <button className="support-cancel-btn" onClick={() => setShowSupportModal(false)}>
-                Cancel
-              </button>
-              <button className="support-send-btn" onClick={handleOpenEmail}>
-                <Mail size={14} />
-                Send via Email
-              </button>
-            </div>
+                  {sendError && (
+                    <p style={{ fontSize: "12px", color: "#fca5a5", marginTop: "4px" }}>{sendError}</p>
+                  )}
+                </div>
 
-            {/* Clipboard fallback */}
-            <div className="support-copy-row">
-              <span>No email app?</span>
-              <button className="support-copy-link" onClick={handleCopyMessage}>
-                {copied ? "✓ Copied!" : "Copy message"}
-              </button>
-            </div>
+                {/* Footer */}
+                <div className="support-footer">
+                  <button className="support-cancel-btn" onClick={() => setShowSupportModal(false)}>
+                    Cancel
+                  </button>
+                  <button
+                    className="support-send-btn"
+                    onClick={handleSendEmail}
+                    disabled={sending || !supportDesc.trim()}
+                    style={{ opacity: (sending || !supportDesc.trim()) ? 0.5 : 1, cursor: (sending || !supportDesc.trim()) ? "not-allowed" : "pointer" }}
+                  >
+                    <Mail size={14} />
+                    {sending ? "Sending…" : "Send Message"}
+                  </button>
+                </div>
+
+                {/* Clipboard fallback */}
+                <div className="support-copy-row">
+                  <span>Want a copy?</span>
+                  <button className="support-copy-link" onClick={handleCopyMessage}>
+                    {copied ? "✓ Copied!" : "Copy message"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
