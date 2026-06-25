@@ -410,8 +410,8 @@ export default function RegisterPage() {
                   cursor: "pointer",
                   marginTop: "14px",
                   padding: "12px 14px",
-                  background: privacyAgreed ? "rgba(239, 68, 68, 0.08)" : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${privacyAgreed ? "rgba(239, 68, 68, 0.35)" : "rgba(255,255,255,0.08)"}`,
+                  background: privacyAgreed ? "rgba(74, 222, 128, 0.08)" : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${privacyAgreed ? "rgba(74, 222, 128, 0.35)" : "rgba(255,255,255,0.08)"}`,
                   borderRadius: "10px",
                   transition: "background 0.2s, border-color 0.2s",
                 }}>
@@ -419,10 +419,10 @@ export default function RegisterPage() {
                     type="checkbox"
                     checked={privacyAgreed}
                     onChange={(e) => setPrivacyAgreed(e.target.checked)}
-                    style={{ marginTop: "2px", width: "16px", height: "16px", accentColor: "#ef4444", flexShrink: 0, cursor: "pointer" }}
+                    style={{ marginTop: "2px", width: "16px", height: "16px", accentColor: "#4ade80", flexShrink: 0, cursor: "pointer" }}
                   />
                   <span style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.6)", lineHeight: "1.55" }}>
-                    I have read and understood the <strong style={{ color: privacyAgreed ? "#f87171" : "rgba(255,255,255,0.75)" }}>Data Privacy Notice</strong> above, and I consent to the collection and use of my personal information for attendance monitoring and academic record-keeping purposes in accordance with <strong style={{ color: privacyAgreed ? "#f87171" : "rgba(255,255,255,0.75)" }}>RA 10173</strong>.
+                    I have read and understood the <strong style={{ color: privacyAgreed ? "#4ade80" : "rgba(255,255,255,0.75)" }}>Data Privacy Notice</strong> above, and I consent to the collection and use of my personal information for attendance monitoring and academic record-keeping purposes in accordance with <strong style={{ color: privacyAgreed ? "#4ade80" : "rgba(255,255,255,0.75)" }}>RA 10173</strong>.
                   </span>
                 </label>
 
