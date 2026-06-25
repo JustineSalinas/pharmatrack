@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [section, setSection] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
 
   // Post-registration states
   const [registrationComplete, setRegistrationComplete] = useState(false);
@@ -401,11 +402,35 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
+                {/* Consent Checkbox */}
+                <label style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "12px",
+                  cursor: "pointer",
+                  marginTop: "14px",
+                  padding: "12px 14px",
+                  background: privacyAgreed ? "rgba(139, 92, 246, 0.08)" : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${privacyAgreed ? "rgba(139, 92, 246, 0.35)" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: "10px",
+                  transition: "background 0.2s, border-color 0.2s",
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={privacyAgreed}
+                    onChange={(e) => setPrivacyAgreed(e.target.checked)}
+                    style={{ marginTop: "2px", width: "16px", height: "16px", accentColor: "#a855f7", flexShrink: 0, cursor: "pointer" }}
+                  />
+                  <span style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.6)", lineHeight: "1.55" }}>
+                    I have read and understood the <strong style={{ color: privacyAgreed ? "#c084fc" : "rgba(255,255,255,0.75)" }}>Data Privacy Notice</strong> above, and I consent to the collection and use of my personal information for attendance monitoring and academic record-keeping purposes in accordance with <strong style={{ color: privacyAgreed ? "#c084fc" : "rgba(255,255,255,0.75)" }}>RA 10173</strong>.
+                  </span>
+                </label>
+
                 <button
                   type="submit"
-                  className={`btn btn-gold pulse-btn ${loading ? 'opacity-50' : ''}`}
-                  style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem" }}
-                  disabled={loading}
+                  className={`btn btn-gold pulse-btn`}
+                  style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem", opacity: (!privacyAgreed || loading) ? 0.45 : 1, cursor: (!privacyAgreed || loading) ? "not-allowed" : "pointer", transition: "opacity 0.2s" }}
+                  disabled={loading || !privacyAgreed}
                 >
                   {loading ? "Creating Account..." : `Create ${role === "student" ? "Student" : "Facilitator"} Account`}
                 </button>
