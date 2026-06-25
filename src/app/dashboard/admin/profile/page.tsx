@@ -6,14 +6,12 @@ import {
   Loader2, User, Mail, Crown, Calendar, Clock, ShieldCheck,
 } from "lucide-react";
 import ChangePassword from "@/components/ChangePassword";
-import AvatarUpload from "@/components/AvatarUpload";
 
 export default function AdminProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [tab, setTab] = useState<"profile" | "security">("profile");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const formatDate = (dateStr: string | undefined | null) => {
     if (!dateStr) return "—";
@@ -41,7 +39,6 @@ export default function AdminProfilePage() {
         if (u) {
           setUser(u);
           setFullName(u.full_name || "");
-          if (u.avatar_url) setAvatarUrl(u.avatar_url);
         }
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
@@ -82,12 +79,9 @@ export default function AdminProfilePage() {
 
       <div className="sp-profile-grid">
         <div className="sp-avatar-panel">
-          <AvatarUpload
-            userId={user.id}
-            avatarUrl={avatarUrl}
-            initials={(fullName || "A").split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase()}
-            onUploaded={(url) => setAvatarUrl(url)}
-          />
+          <div className="sp-avatar-circle" style={{ overflow: "hidden", background: "var(--surface2)", padding: "6px" }}>
+            <img src="/usa.png" alt="USA Logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "50%" }} />
+          </div>
           <h2 className="sp-avatar-name">{fullName || "—"}</h2>
           <p className="sp-avatar-email">{user?.email}</p>
           <div className="sp-avatar-tags">

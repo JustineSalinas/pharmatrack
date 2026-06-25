@@ -4,7 +4,7 @@ import { registerStudent, registerFacilitator } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Mail, Eye, EyeOff, AlertTriangle, Lightbulb } from "lucide-react";
+import { Mail, Eye, EyeOff, AlertTriangle, Lightbulb, ShieldCheck } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -356,6 +356,22 @@ export default function RegisterPage() {
                       {showConfirmPassword ? <Eye size={18} /> : <EyeOff size={18} />}
                     </button>
                   </div>
+                </div>
+
+                {/* Data Privacy Act Notice */}
+                <div style={{
+                  background: "rgba(139, 92, 246, 0.06)",
+                  border: "1px solid rgba(139, 92, 246, 0.2)",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  marginTop: "8px",
+                }}>
+                  <p style={{ color: "#c084fc", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    <ShieldCheck size={13} /> Data Privacy Notice — RA 10173
+                  </p>
+                  <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.78rem", lineHeight: "1.6", margin: 0 }}>
+                    In compliance with the <strong style={{ color: "rgba(255,255,255,0.7)" }}>Data Privacy Act of 2012 (Republic Act No. 10173)</strong>, the University of Southeastern Asia — Department of Pharmacy informs you that the personal information you provide (including your name, institutional email, student ID, and academic details) will be collected, stored, and processed solely for the purpose of <strong style={{ color: "rgba(255,255,255,0.7)" }}>attendance monitoring and academic record-keeping</strong> within the PharmaTrack system. Your data will not be shared with third parties without your consent and will be handled in accordance with applicable data protection laws. By creating an account, you acknowledge and consent to the collection and use of your information for these stated purposes.
+                  </p>
                 </div>
 
                 <button
