@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   ShoppingBag,
   Shirt,
@@ -531,8 +532,8 @@ export default function MerchCataloguePage() {
       )}
 
       {/* Lightbox / Modal */}
-      {selectedItem && (
-        <div 
+      {selectedItem && createPortal(
+        <div
           className="mc-modal-overlay"
           onClick={() => setSelectedItem(null)}
         >
@@ -666,11 +667,12 @@ export default function MerchCataloguePage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Add Product Modal */}
-      {showAddModal && (
+      {showAddModal && createPortal(
         <div className="mc-modal-overlay" onClick={() => setShowAddModal(false)}>
           <div className="mc-form-card" onClick={(e) => e.stopPropagation()}>
             <div className="mc-form-header">
@@ -880,11 +882,12 @@ export default function MerchCataloguePage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Product Modal */}
-      {editingItem && (
+      {editingItem && createPortal(
         <div className="mc-modal-overlay" onClick={() => setEditingItem(null)}>
           <div className="mc-form-card" onClick={(e) => e.stopPropagation()}>
             <div className="mc-form-header">
@@ -1094,11 +1097,12 @@ export default function MerchCataloguePage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirmation Modal */}
-      {deletingItem && (
+      {deletingItem && createPortal(
         <div className="mc-modal-overlay" onClick={() => setDeletingItem(null)}>
           <div className="mc-delete-card" onClick={(e) => e.stopPropagation()}>
             <div className="mc-delete-icon-wrap">
@@ -1123,7 +1127,8 @@ export default function MerchCataloguePage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Styled JSX */}
@@ -1220,6 +1225,7 @@ export default function MerchCataloguePage() {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
           gap: 24px;
+          align-items: stretch;
         }
 
         .mc-card {
@@ -1231,6 +1237,7 @@ export default function MerchCataloguePage() {
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
           display: flex;
           flex-direction: column;
+          height: 100%;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
           outline: none;
         }
@@ -1434,8 +1441,11 @@ export default function MerchCataloguePage() {
           border-radius: 20px;
           width: 100%;
           max-width: 820px;
+          max-height: calc(100vh - 48px);
           overflow: hidden;
           position: relative;
+          display: flex;
+          flex-direction: column;
           box-shadow: 0 30px 80px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.8);
           animation: scaleUpCard 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
@@ -1471,12 +1481,13 @@ export default function MerchCataloguePage() {
         .mc-modal-grid {
           display: grid;
           grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+          flex: 1;
+          min-height: 0;
         }
 
         @media (max-width: 768px) {
           .mc-modal-grid {
             grid-template-columns: 1fr;
-            max-height: 85vh;
             overflow-y: auto;
           }
         }
@@ -1489,6 +1500,7 @@ export default function MerchCataloguePage() {
           justify-content: center;
           border-right: 1px solid var(--border);
           min-width: 0;
+          overflow: hidden;
         }
 
         @media (max-width: 768px) {
@@ -1529,6 +1541,7 @@ export default function MerchCataloguePage() {
           flex-direction: column;
           gap: 18px;
           min-width: 0;
+          overflow-y: auto;
         }
 
         @media (max-width: 768px) {

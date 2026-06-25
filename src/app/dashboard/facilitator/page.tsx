@@ -240,9 +240,8 @@ export default function FacilitatorOverview() {
               flexDirection: "column", 
               background: item.bg, 
               border: `1px solid ${item.border}`, 
-              borderRadius: "var(--radius)", 
-              padding: "18px 20px", 
-              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+              borderRadius: "var(--radius)",
+              padding: "18px 20px",
             }}
           >
              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>

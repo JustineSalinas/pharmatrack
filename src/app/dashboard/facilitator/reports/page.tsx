@@ -1119,6 +1119,12 @@ export default function FacultyReports() {
           display: flex !important;
           align-items: center !important;
           gap: 14px !important;
+          transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+        }
+
+        .facilitator-reports-page .reports-stat-tile:hover {
+          transform: translateY(-2px) !important;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
         }
 
         .facilitator-reports-page .tile-icon-wrap {

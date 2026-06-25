@@ -140,7 +140,7 @@ html {
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -985,7 +985,7 @@ html {
 @keyframes fadeUp {
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -1966,10 +1966,12 @@ html {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
 .admin-stat-card:hover {
   background: var(--surface2);
+  transform: translateY(-2px);
 }
 
 .stat-icon-badge {
@@ -2008,6 +2010,15 @@ html {
 }
 
 /* Custom Stat Cards - Attendance Records */
+.stat-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
 .stat-card-custom {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2017,10 +2028,11 @@ html {
   flex-direction: column;
   gap: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: transform 0.2s;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
 .stat-card-custom:hover {
+  background: var(--surface2);
   transform: translateY(-2px);
 }
 
@@ -2211,6 +2223,11 @@ html {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
+  transition: border-color 0.18s ease;
+}
+
+.trend-panel:hover {
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .trend-header {
@@ -2308,7 +2325,7 @@ html {
   text-decoration: none;
   border: 1px solid var(--border);
   background: var(--surface);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.18s ease, border-color 0.18s ease;
 }
 
 .action-card:hover {
@@ -2358,6 +2375,11 @@ html {
   padding: 20px;
   display: flex;
   justify-content: space-between;
+  transition: border-color 0.18s ease;
+}
+
+.quick-stats-card:hover {
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .quick-stat-item {
@@ -2398,6 +2420,11 @@ html {
   border-radius: var(--radius);
   padding: 0;
   overflow: hidden;
+  transition: border-color 0.18s ease;
+}
+
+.recent-scans:hover {
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .recent-scans-header {
@@ -2515,6 +2542,11 @@ html {
   flex-direction: column;
   align-items: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.18s ease;
+}
+
+.student-qr-card:hover {
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .student-qr-card h3 {
@@ -3138,7 +3170,7 @@ html {
   gap: 28px;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.18s ease;
 }
 
 .sd-overview-card::before {
@@ -3248,11 +3280,12 @@ html {
   gap: 14px;
   position: relative;
   overflow: hidden;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
 .sd-stat-tile:hover {
   background: var(--surface2);
+  transform: translateY(-2px);
 }
 
 .sd-tile-icon-wrap {
@@ -3298,7 +3331,7 @@ html {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.18s ease;
 }
 
 .sd-qr-panel:hover {
@@ -3593,7 +3626,7 @@ html {
   border-radius: 12px;
   padding: 18px 20px;
   flex: 1;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.18s ease;
 }
 
 .sd-event-panel:hover {
@@ -3633,6 +3666,11 @@ html {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 16px;
+  transition: border-color 0.18s ease;
+}
+
+.sd-event-card:hover {
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .sd-event-date-block {
@@ -3755,14 +3793,14 @@ html {
   border-radius: 9px;
   padding: 11px 13px;
   text-decoration: none;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
   cursor: pointer;
 }
 
 .sd-quick-card:hover {
   background: var(--surface2);
   border-color: rgba(0, 0, 0, 0.12);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .sd-quick-icon {
@@ -4672,7 +4710,7 @@ html {
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 800px) {
@@ -4796,6 +4834,8 @@ html {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 32px;
+  display: flex;
+  flex-direction: column;
 }
 
 .sp-form-error,
@@ -4825,6 +4865,7 @@ html {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  flex: 1;
 }
 
 .sp-form-section-title {
@@ -5049,7 +5090,7 @@ input[type="password"]::-ms-clear {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: auto;
   padding-top: 16px;
   border-top: 1px solid var(--border);
 }
@@ -5779,7 +5820,7 @@ input[type="password"]::-ms-clear {
 
 .cal-cell {
   min-width: 0;
-  min-height: 100px;
+  min-height: 128px;
   background: var(--surface2);
   border: 2px solid transparent;
   border-radius: 8px;
@@ -5789,8 +5830,8 @@ input[type="password"]::-ms-clear {
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
-  padding: 10px;
-  gap: 6px;
+  padding: 14px;
+  gap: 10px;
   box-shadow: inset 0 0 0 1px var(--border);
 }
 
@@ -5825,18 +5866,28 @@ input[type="password"]::-ms-clear {
   width: 100%;
 }
 
+.cal-cell-num {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px;
+  width: 100%;
+}
+
 .cal-cell-day-label {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--muted);
   text-align: left;
 }
 
 .cal-cell-date-label {
-  font-size: 12px;
-  color: var(--muted);
-  text-align: right;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--white-shade);
+  text-align: left;
 }
 
 .cal-cell-events {
