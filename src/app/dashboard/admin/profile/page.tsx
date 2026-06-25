@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
-  Loader2, User, Mail, Crown, Calendar, Clock, ShieldCheck,
+  Loader2, User, Mail, Crown, ShieldCheck,
 } from "lucide-react";
 import ChangePassword from "@/components/ChangePassword";
 
@@ -12,25 +12,6 @@ export default function AdminProfilePage() {
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [tab, setTab] = useState<"profile" | "security">("profile");
-
-  const formatDate = (dateStr: string | undefined | null) => {
-    if (!dateStr) return "—";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  };
-
-  const formatLastUpdated = (updatedAt: string | undefined | null, createdAt: string | undefined | null) => {
-    if (!updatedAt) return "Never updated";
-    if (createdAt && updatedAt) {
-      const uTime = new Date(updatedAt).getTime();
-      const cTime = new Date(createdAt).getTime();
-      if (Math.abs(uTime - cTime) < 5000) {
-        return "Never updated";
-      }
-    }
-    const d = new Date(updatedAt);
-    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  };
 
   useEffect(() => {
     async function load() {
@@ -115,18 +96,6 @@ export default function AdminProfilePage() {
                 <p className="sp-input-hint">Email is managed by the institution and cannot be changed.</p>
               </div>
 
-              <div className="sp-date-info-row">
-                <div className="sp-date-info-item">
-                  <Calendar size={13} className="sp-date-info-icon" />
-                  <span className="sp-date-info-label">Account Created:</span>
-                  <span className="sp-date-info-value">{formatDate(user?.created_at)}</span>
-                </div>
-                <div className="sp-date-info-item">
-                  <Clock size={13} className="sp-date-info-icon" />
-                  <span className="sp-date-info-label">Last Updated:</span>
-                  <span className="sp-date-info-value">{formatLastUpdated(user?.updated_at, user?.created_at)}</span>
-                </div>
-              </div>
             </div>
           ) : (
             <ChangePassword />

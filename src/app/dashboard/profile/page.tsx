@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
   Loader2, User, Mail, Hash, BookOpen,
   Layers, CheckCircle2, ShieldCheck, AlertCircle,
-  TrendingUp, Calendar, Clock,
+  TrendingUp,
 } from "lucide-react";
 import ChangePassword from "@/components/ChangePassword";
-import AvatarUpload from "@/components/AvatarUpload";
+import AvatarUpload, { AvatarUploadRef } from "@/components/AvatarUpload";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -21,25 +21,7 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"profile" | "security">("profile");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-
-  const formatDate = (dateStr: string | undefined | null) => {
-    if (!dateStr) return "—";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  };
-
-  const formatLastUpdated = (updatedAt: string | undefined | null, createdAt: string | undefined | null) => {
-    if (!updatedAt) return "Never updated";
-    if (createdAt && updatedAt) {
-      const uTime = new Date(updatedAt).getTime();
-      const cTime = new Date(createdAt).getTime();
-      if (Math.abs(uTime - cTime) < 5000) {
-        return "Never updated";
-      }
-    }
-    const d = new Date(updatedAt);
-    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  };
+  const avatarUploadRef = useRef<AvatarUploadRef>(null);
 
   useEffect(() => {
     async function load() {
@@ -131,6 +113,7 @@ export default function ProfilePage() {
         {/* Avatar / Stats Sidebar */}
         <div className="sp-avatar-panel">
           <AvatarUpload
+            ref={avatarUploadRef}
             userId={user.id}
             avatarUrl={avatarUrl}
             initials={initials}
@@ -208,49 +191,81 @@ export default function ProfilePage() {
               </div>
 
               {isStudent && (
-                <div className="sp-three-col">
-                  <div className="sp-input-group">
-                    <label className="sp-input-label">Student ID</label>
-                    <div className="sp-input-wrap">
-                      <Hash size={15} className="sp-input-icon" />
-                      <input className="sp-input" value={form.student_id_number} disabled style={{ opacity: 0.5 }} />
+                <>
+                  <div className="sp-three-col">
+                    <div className="sp-input-group">
+                      <label className="sp-input-label">Student ID</label>
+                      <div className="sp-input-wrap">
+                        <Hash size={15} className="sp-input-icon" />
+                        <input className="sp-input" value={form.student_id_number} disabled style={{ opacity: 0.5 }} />
+                      </div>
+                    </div>
+                    <div className="sp-input-group">
+                      <label className="sp-input-label">Year Level</label>
+                      <div className="sp-input-wrap">
+                        <Layers size={15} className="sp-input-icon" />
+                        <select className="sp-input sp-select" value={form.current_year} disabled style={{ opacity: 0.5 }}>
+                          {["1st Year", "2nd Year", "3rd Year", "4th Year"].map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="sp-input-group">
+                      <label className="sp-input-label">Block / Section</label>
+                      <div className="sp-input-wrap">
+                        <BookOpen size={15} className="sp-input-icon" />
+                        <input className="sp-input" value={form.section} disabled style={{ opacity: 0.5 }} />
+                      </div>
                     </div>
                   </div>
-                  <div className="sp-input-group">
-                    <label className="sp-input-label">Year Level</label>
-                    <div className="sp-input-wrap">
-                      <Layers size={15} className="sp-input-icon" />
-                      <select className="sp-input sp-select" value={form.current_year} disabled style={{ opacity: 0.5 }}>
-                        {["1st Year", "2nd Year", "3rd Year", "4th Year"].map((y) => (
-                          <option key={y} value={y}>{y}</option>
-                        ))}
-                      </select>
+
+                  <div className="sp-input-group" style={{ marginTop: "24px" }}>
+                    <label className="sp-input-label">Profile Photo</label>
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "16px",
+                      padding: "14px 18px",
+                      background: "var(--surface2)",
+                      border: "1px dashed var(--border)",
+                      borderRadius: "12px",
+                      marginTop: "8px"
+                    }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--white)" }}>
+                          Manage Profile Picture
+                        </span>
+                        <span style={{ fontSize: "11px", color: "var(--muted)" }}>
+                          Need to update your profile photo? Make sure it complies with institutional guidelines.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => avatarUploadRef.current?.triggerUpload()}
+                        className="sp-modal-confirm-btn"
+                        style={{
+                          padding: "8px 16px",
+                          fontSize: "12px",
+                          height: "fit-content",
+                          borderRadius: "8px",
+                          background: "var(--gold)",
+                          color: "#fff",
+                          border: "none",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(212, 163, 89, 0.15)"
+                        }}
+                      >
+                        Change Picture
+                      </button>
                     </div>
                   </div>
-                  <div className="sp-input-group">
-                    <label className="sp-input-label">Block / Section</label>
-                    <div className="sp-input-wrap">
-                      <BookOpen size={15} className="sp-input-icon" />
-                      <input className="sp-input" value={form.section} disabled style={{ opacity: 0.5 }} />
-                    </div>
-                  </div>
-                </div>
+                </>
               )}
 
-              {/* Profile fields are read-only; no save changes button is needed here */}
-
-              <div className="sp-date-info-row">
-                <div className="sp-date-info-item">
-                  <Calendar size={13} className="sp-date-info-icon" />
-                  <span className="sp-date-info-label">Account Created:</span>
-                  <span className="sp-date-info-value">{formatDate(user?.created_at)}</span>
-                </div>
-                <div className="sp-date-info-item">
-                  <Clock size={13} className="sp-date-info-icon" />
-                  <span className="sp-date-info-label">Last Updated:</span>
-                  <span className="sp-date-info-value">{formatLastUpdated(user?.updated_at, user?.created_at)}</span>
-                </div>
-              </div>
             </div>
           ) : (
             <ChangePassword />
