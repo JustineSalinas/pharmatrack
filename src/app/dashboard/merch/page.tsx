@@ -1280,17 +1280,16 @@ export default function MerchCataloguePage() {
           right: 12px;
           height: 22px;
           padding: 0 10px;
-          border-radius: 99px;
+          border-radius: 6px;
           font-size: 10px;
-          font-weight: 700;
+          font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.6px;
           display: flex;
           align-items: center;
           gap: 4px;
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
           transition: all 0.2s ease;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
 
         .mc-card:hover .mc-card-status {
@@ -1300,15 +1299,15 @@ export default function MerchCataloguePage() {
         }
 
         .status-soon {
-          background: rgba(245, 158, 11, 0.1);
-          border: 1px solid rgba(245, 158, 11, 0.25);
-          color: #d97706;
+          background: #d97706;
+          color: #fff;
+          border: none;
         }
 
         .status-showcase {
-          background: rgba(13, 148, 136, 0.1);
-          border: 1px solid rgba(13, 148, 136, 0.25);
-          color: #0d9488;
+          background: #0d9488;
+          color: #fff;
+          border: none;
         }
 
         .mc-card-info {
@@ -1523,16 +1522,15 @@ export default function MerchCataloguePage() {
           left: 16px;
           height: 24px;
           padding: 0 12px;
-          border-radius: 99px;
+          border-radius: 6px;
           font-size: 11px;
-          font-weight: 700;
+          font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.6px;
           display: flex;
           align-items: center;
           gap: 4px;
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .mc-modal-specs {
