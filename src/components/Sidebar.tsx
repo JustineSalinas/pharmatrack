@@ -185,7 +185,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
               <img
                 src="/pham-logo.png"
                 alt="PharmaTrack Logo"
-                style={{ width: "20px", height: "20px", objectFit: "contain" }}
+                style={{ width: "40px", height: "40px", objectFit: "contain" }}
               />
             </div>
             <span
