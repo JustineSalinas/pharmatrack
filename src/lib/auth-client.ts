@@ -142,7 +142,9 @@ export async function logoutUser() {
  */
 export async function sendPasswordReset(email: string) {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
-  const redirectTo = `${base}/auth/callback?next=/reset-password`;
+  // /reset-password exchanges the ?code= itself (client-side), so point
+  // Supabase straight there. This must be in Supabase's redirect allow list.
+  const redirectTo = `${base}/reset-password`;
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) throw new Error(error.message);
 }

@@ -13,9 +13,10 @@ function AuthErrorRedirect() {
       || new URLSearchParams(window.location.hash.slice(1)).get("error_code");
 
     if (code) {
-      // PKCE code landed at root because Supabase rejected the redirectTo path.
-      // Forward to the auth callback which knows how to exchange it.
-      router.replace(`/auth/callback?code=${encodeURIComponent(code)}&next=/reset-password`);
+      // PKCE code landed at root because Supabase fell back to the Site URL
+      // instead of our redirectTo. Forward to /reset-password, which exchanges
+      // the code and lets the user set a new password.
+      router.replace(`/reset-password?code=${encodeURIComponent(code)}`);
     } else if (errorCode === "otp_expired") {
       router.replace("/forgot-password?expired=true");
     }
