@@ -20,8 +20,8 @@
     "@upstash/redis": "^1.38.0",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.577.0",
-    "next": "^14.2.0",
-    "nodemailer": "^8.0.10",
+    "next": "^15.5.19",
+    "nodemailer": "^9.0.1",
     "pdfkit": "^0.18.0",
     "pg": "^8.21.0",
     "qrcode.react": "^4.2.0",
@@ -39,12 +39,15 @@
     "@types/react-dom": "^18.3.0",
     "dotenv": "^17.3.1",
     "eslint": "^8.57.0",
-    "eslint-config-next": "^14.2.0",
+    "eslint-config-next": "^15.5.19",
     "typescript": "^5.4.0",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.8"
   },
   "optionalDependencies": {
     "@next/swc-win32-x64-msvc": "^16.2.1"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
   }
 }

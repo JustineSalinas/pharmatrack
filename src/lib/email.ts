@@ -158,7 +158,7 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
     return renderEmailShell({ eyebrow: "Event Notification", bodyHtml });
   };
 
-  console.log(`[Email Service] Preparing Gmail SMTP broadcast for "${event.name}" to ${event.recipients.length} students.`);
+  console.log(`[Email Service] Preparing MailerSend SMTP broadcast for "${event.name}" to ${event.recipients.length} students.`);
 
   const BATCH_SIZE = 100;
   let sent = 0;

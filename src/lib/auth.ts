@@ -25,7 +25,7 @@ export async function getBackendUser(req?: NextRequest) {
   // 2. Try cookie
   if (!token) {
     try {
-      const cookieStore = cookies();
+      const cookieStore = await cookies();
       token = cookieStore.get("pharmatrack_token")?.value;
     } catch {
       // cookies() throws when called outside dynamic server request contexts

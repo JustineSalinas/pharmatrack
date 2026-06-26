@@ -41,16 +41,16 @@ export async function POST(req: NextRequest) {
 
     const fromAddress = process.env.SMTP_FROM || "PharmaTrack <notifications@usa.edu.ph>";
 
-    console.log(`[TestEmail API] Admin ${caller.email} sending Gmail SMTP test email.`);
+    console.log(`[TestEmail API] Admin ${caller.email} sending MailerSend SMTP test email.`);
 
     try {
       const bodyHtml = `
         <p>Dear <strong>${callerProfile.full_name}</strong>,</p>
-        <p>This is a test notification confirming that your Gmail SMTP email service is connected and working correctly.</p>
+        <p>This is a test notification confirming that your MailerSend SMTP email service is connected and working correctly.</p>
         ${renderDetailsPanel([
           { label: "Status", value: "Connected" },
           { label: "Verified Timestamp", value: new Date().toLocaleString("en-US") },
-          { label: "Service", value: "Gmail SMTP" },
+          { label: "Service", value: "MailerSend SMTP" },
           { label: "Sender", value: fromAddress },
         ])}
         <p>Email delivery is active and ready to broadcast to students.</p>
