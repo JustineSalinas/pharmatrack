@@ -1,9 +1,26 @@
 "use client";
 
+import { useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+
+function AuthErrorRedirect() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const errorCode = searchParams.get("error_code")
+      || new URLSearchParams(window.location.hash.slice(1)).get("error_code");
+    if (errorCode === "otp_expired") {
+      router.replace("/forgot-password?expired=true");
+    }
+  }, [searchParams, router]);
+  return null;
+}
 
 export default function LandingPage() {
   return (
+    <>
+      <Suspense fallback={null}><AuthErrorRedirect /></Suspense>
     <div className="page-wrapper">
       {/* ANIMATED BACKGROUND */}
       <div className="animated-bg">
@@ -193,5 +210,6 @@ export default function LandingPage() {
         </footer>
       </div>
     </div>
+    </>
   );
 }

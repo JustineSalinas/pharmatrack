@@ -141,7 +141,8 @@ export async function logoutUser() {
  * with a short-lived recovery session, where they can set a new password.
  */
 export async function sendPasswordReset(email: string) {
-  const redirectTo = `${window.location.origin}/reset-password`;
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+  const redirectTo = `${base}/reset-password`;
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) throw new Error(error.message);
 }
