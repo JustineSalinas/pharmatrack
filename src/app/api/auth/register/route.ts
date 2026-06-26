@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getBackendUser } from "@/lib/auth";
 
 // Service-role client — bypasses RLS for profile inserts
 const getServiceClient = () => {
@@ -94,6 +95,16 @@ export async function POST(req: NextRequest) {
 
   if (!userId) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
+  }
+
+  // When userId is supplied without a password (onboarding flow), verify the
+  // caller's session matches — prevents an attacker who knows a victim's UUID
+  // from overwriting their profile without their credentials.
+  if (!password) {
+    const sessionUser = await getBackendUser(req);
+    if (!sessionUser || sessionUser.id !== userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   // ── Step 2: Insert into public.users ──────────────────────────────────────

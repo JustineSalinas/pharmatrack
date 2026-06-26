@@ -40,6 +40,9 @@ next-env.d.ts
 qa-*.png
 .playwright-mcp/
 
+# gstack session data
+.gstack/
+
 # misc
 .DS_Store
 *.pem
