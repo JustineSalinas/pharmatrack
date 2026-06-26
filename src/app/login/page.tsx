@@ -237,7 +237,8 @@ function LoginForm() {
                     justifyContent: "center",
                     gap: "6px"
                   }}>
-                    <CheckCircle2 size={14} style={{ flexShrink: 0, alignSelf: "center" }} /> {successMsg}
+                    <CheckCircle2 size={14} style={{ flexShrink: 0 }} />
+                    <span>{successMsg}</span>
                   </div>
                 )}
 
