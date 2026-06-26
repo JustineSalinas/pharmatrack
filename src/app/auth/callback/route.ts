@@ -19,6 +19,10 @@ export async function GET(request: NextRequest) {
   const oauthError = searchParams.get("error");
   const oauthErrorDesc = searchParams.get("error_description");
 
+  // Validate next param — must be a local path, never an external URL.
+  const rawNext = searchParams.get("next") ?? "";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
+
   const loginUrl = new URL("/login", origin);
 
   // ── Case 0: Google / Supabase returned an OAuth error directly ────────
@@ -110,15 +114,18 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error && data.user) {
-      // New OAuth users have no profile row yet — send them to onboarding
-      // to pick a role; returning users go straight to their dashboard.
-      const { data: profile } = await supabase
-        .from("users")
-        .select("id")
-        .eq("id", data.user.id)
-        .maybeSingle();
+      // Honour an explicit next param (e.g. /reset-password for recovery flow).
+      // Otherwise fall back: returning users → dashboard, new users → onboarding.
+      let dest = next;
+      if (!dest) {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("id")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        dest = profile ? "/dashboard" : "/onboarding";
+      }
 
-      const dest = profile ? "/dashboard" : "/onboarding";
       const response = NextResponse.redirect(new URL(dest, origin));
       if (data.session) {
         response.cookies.set("pharmatrack_token", data.session.access_token, {

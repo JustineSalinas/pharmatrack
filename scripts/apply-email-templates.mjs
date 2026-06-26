@@ -91,6 +91,9 @@ const res = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/con
     mailer_templates_confirmation_content: confirmationTemplate,
     mailer_subjects_recovery: "Reset your PharmaTrack password",
     mailer_templates_recovery_content: recoveryTemplate,
+    // Allow /auth/callback (with any query params) as a redirect target so the
+    // PKCE code lands at our handler rather than the site root.
+    uri_allow_list: "http://localhost:3000/auth/callback,https://*.vercel.app/auth/callback",
   }),
 });
 
@@ -107,3 +110,8 @@ console.log("");
 console.log("✓ Password recovery email template updated successfully.");
 console.log("  Subject: \"Reset your PharmaTrack password\"");
 console.log("  Test by using /forgot-password with a registered email.");
+console.log("");
+console.log("✓ Redirect URL allowlist updated.");
+console.log("  Allowed: http://localhost:3000/auth/callback");
+console.log("  Allowed: https://*.vercel.app/auth/callback");
+console.log("  NOTE: Add your custom production domain manually in Supabase dashboard");
