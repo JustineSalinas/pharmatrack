@@ -6311,24 +6311,55 @@ input[type="password"]::-ms-clear {
 }
 
 @media (max-width: 639px) {
+  .cal-grid-panel {
+    padding: 10px 8px;
+  }
   .cal-weekday-row {
-    display: none !important;
+    display: grid;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+  .cal-weekday {
+    font-size: 10px;
+    padding: 2px 0;
   }
   .cal-grid {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .cal-grid::-webkit-scrollbar {
-    display: none;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    overflow-x: unset;
+    scroll-snap-type: unset;
   }
   .cal-cell {
-    min-width: 80px;
-    min-height: 80px;
-    scroll-snap-align: start;
+    min-width: 0;
+    min-height: 42px;
+    padding: 5px 3px;
+    gap: 3px;
+    border-radius: 6px;
+  }
+  .cal-cell-num {
+    font-size: 11px;
+    font-weight: 600;
+  }
+  /* Replace text pills with small coloured dots on mobile */
+  .cal-cell-events {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-top: 2px;
+  }
+  .cal-cell-event-pill {
+    width: 5px;
+    height: 5px;
+    min-width: 5px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 0;
+    text-indent: -9999px;
+    overflow: hidden;
+  }
+  .cal-cell-more {
+    display: none;
   }
   .upcoming-events-grid {
     grid-template-columns: 1fr !important;
