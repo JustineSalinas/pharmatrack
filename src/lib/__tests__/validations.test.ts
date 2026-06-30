@@ -135,7 +135,7 @@ describe('Validation Schemas', () => {
 
   describe('adminRegisterSchema', () => {
     const validAdminData = {
-      email: '>admin@[REDACTED]',
+      email: 'admin@usa.edu.ph',
       full_name: 'Administrator',
       password: 'adminpassword123',
       confirm_password: 'adminpassword123',

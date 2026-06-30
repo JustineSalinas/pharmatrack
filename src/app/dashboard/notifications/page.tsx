@@ -184,7 +184,7 @@ export default function NotificationsPage() {
         <div className="sp-empty-state">
           <Bell size={32} color="var(--dimmed)" />
           <p>{filter === "unread" ? "No unread notifications" : "No notifications yet"}</p>
-          <span>You're all caught up!</span>
+          <span>You&apos;re all caught up!</span>
         </div>
       ) : (
         <div className="sp-notif-feed">

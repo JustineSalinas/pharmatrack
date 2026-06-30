@@ -317,7 +317,7 @@ export default function AdminSettings() {
               Database migration required
             </strong>
             <p style={{ fontSize: "13px", color: "var(--dimmed)", margin: "4px 0 0 0", lineHeight: 1.6 }}>
-              The <code style={{ background: "var(--surface2)", padding: "1px 5px", borderRadius: 4 }}>system_config</code> table doesn't exist yet.
+              The <code style={{ background: "var(--surface2)", padding: "1px 5px", borderRadius: 4 }}>system_config</code> table doesn&apos;t exist yet.
               Go to <strong style={{ color: "var(--white-shade)" }}>Supabase → SQL Editor</strong> and run the
               block at the bottom of your <code style={{ background: "var(--surface2)", padding: "1px 5px", borderRadius: 4 }}>schema.sql</code> file
               (the SYSTEM CONFIGURATION section). Settings will not save until this is done.

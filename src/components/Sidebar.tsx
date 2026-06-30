@@ -332,7 +332,7 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
               </div>
               <div>
                 <h3 className="support-title">Contact Support</h3>
-                <p className="support-desc">We'll compose a structured email to our support team.</p>
+                <p className="support-desc">We&apos;ll compose a structured email to our support team.</p>
               </div>
             </div>
 
