@@ -457,7 +457,7 @@ export default function MerchCataloguePage() {
         <div className="mc-empty-state">
           <ShoppingBag size={48} className="mc-empty-icon" />
           <h3>No merchandise found</h3>
-          <p>We couldn't find any items matching your current filters or search query.</p>
+          <p>We couldn&apos;t find any items matching your current filters or search query.</p>
         </div>
       ) : (
         <div className="mc-grid">

@@ -59,7 +59,7 @@ export default function LandingPage() {
           <h2 className="attendance-title">QR Attendance, done right.</h2>
 
           <p style={{ maxWidth: "480px", margin: "0 auto 40px", fontSize: "0.98rem", color: "rgba(255,255,255,0.72)", lineHeight: "1.8" }}>
-            No clipboards, no manual rollcalls. Students scan in seconds — facilitators see who's present, late, or absent in real time.
+            No clipboards, no manual rollcalls. Students scan in seconds — facilitators see who&apos;s present, late, or absent in real time.
           </p>
 
           <div className="hero-cta">

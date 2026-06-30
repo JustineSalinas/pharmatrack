@@ -901,7 +901,7 @@ function StudentDashboardContent() {
                     </div>
                     <h3 className="sp-error-title" style={{ fontSize: "16px", fontWeight: "700", color: "var(--white)", marginBottom: "8px" }}>QR Code Unavailable</h3>
                     <p className="sp-error-body" style={{ fontSize: "13px", color: "var(--muted)" }}>
-                      We couldn't link a student profile to your account.
+                      We couldn&apos;t link a student profile to your account.
                     </p>
                   </div>
                 )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Camera, Loader2, AlertTriangle } from "lucide-react";
 
@@ -11,11 +11,24 @@ interface AvatarUploadProps {
   onUploaded: (url: string) => void;
 }
 
-export default function AvatarUpload({ userId, avatarUrl, initials, onUploaded }: AvatarUploadProps) {
+export interface AvatarUploadRef {
+  triggerUpload: () => void;
+}
+
+const AvatarUpload = forwardRef<AvatarUploadRef, AvatarUploadProps>(function AvatarUpload(
+  { userId, avatarUrl, initials, onUploaded },
+  ref
+) {
   const [showWarning, setShowWarning] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    triggerUpload: () => {
+      if (!uploading) setShowWarning(true);
+    },
+  }));
 
   const handleConfirm = () => {
     setShowWarning(false);
@@ -155,4 +168,6 @@ export default function AvatarUpload({ userId, avatarUrl, initials, onUploaded }
       )}
     </>
   );
-}
+});
+
+export default AvatarUpload;

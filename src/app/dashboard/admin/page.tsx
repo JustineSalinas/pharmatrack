@@ -182,7 +182,7 @@ export default function AdminDashboard() {
                   )}
                   {stats.pendingApprovals === 0 && (stats.attendanceRate >= 75 || stats.attendanceRate === 0) && (
                     <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--dimmed)", fontSize: "12px" }}>
-                      You're all caught up!
+                      You&apos;re all caught up!
                     </div>
                   )}
                 </div>
