@@ -390,7 +390,7 @@ export default function RegisterPage() {
                   {/* Body */}
                   <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: "10px" }}>
                     <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.82rem", lineHeight: "1.65", margin: 0 }}>
-                      The <strong style={{ color: "rgba(255,255,255,0.85)" }}>University of Southeastern Asia — Department of Pharmacy</strong> collects the personal information you provide during registration (name, institutional email, student ID, and academic details) solely for the purpose of{" "}
+                      The <strong style={{ color: "rgba(255,255,255,0.85)" }}>University of San Agustin — Department of Pharmacy</strong> collects the personal information you provide during registration (name, institutional email, student ID, and academic details) solely for the purpose of{" "}
                       <strong style={{ color: "rgba(255,255,255,0.85)" }}>attendance monitoring and academic record-keeping</strong> within the PharmaTrack system.
                     </p>
                     <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.82rem", lineHeight: "1.65", margin: 0 }}>
