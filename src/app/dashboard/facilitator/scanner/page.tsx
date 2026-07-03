@@ -227,7 +227,7 @@ export default function FacilitatorScannerPage() {
     try {
       const { data: student, error: studentErr } = await supabase
         .from("student_profiles")
-        .select("user_id, student_id_number, section, current_year, qr_code_id, users(full_name)")
+        .select("user_id, student_id_number, section, current_year, qr_code_id, users(full_name, avatar_url)")
         .eq("qr_code_id", decodedText)
         .maybeSingle();
 
@@ -249,7 +249,8 @@ export default function FacilitatorScannerPage() {
         currentYear: student.current_year,
         section: student.section,
         qrCodeId: student.qr_code_id,
-      });
+        avatarUrl: (student.users as any)?.avatar_url ?? null,
+      } as any);
     } catch (err: any) {
       console.error(err);
       setVerifyingStudent(false);
@@ -473,12 +474,24 @@ export default function FacilitatorScannerPage() {
                   <span>Student Identified — Please Verify</span>
                 </div>
 
-                {/* Avatar initials */}
+                {/* Avatar initials or uploaded profile picture */}
                 <div
                   className="verify-avatar"
-                  style={{ background: avatarColor(verifiedStudent.fullName) }}
+                  style={{ 
+                    background: (verifiedStudent as any).avatarUrl ? "none" : avatarColor(verifiedStudent.fullName),
+                    padding: 0,
+                    overflow: "hidden"
+                  }}
                 >
-                  {initials(verifiedStudent.fullName)}
+                  {(verifiedStudent as any).avatarUrl ? (
+                    <img 
+                      src={(verifiedStudent as any).avatarUrl} 
+                      alt={verifiedStudent.fullName} 
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                    />
+                  ) : (
+                    initials(verifiedStudent.fullName)
+                  )}
                 </div>
 
                 {/* Name */}
