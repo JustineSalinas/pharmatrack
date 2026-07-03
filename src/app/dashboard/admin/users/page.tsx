@@ -13,6 +13,8 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterRole>("All");
   const [search, setSearch] = useState("");
+  const [filterSection, setFilterSection] = useState("All");
+  const [filterYear, setFilterYear] = useState("All");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const router = useRouter();
 
@@ -51,7 +53,22 @@ export default function AdminUsers() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setUsers(data || []);
+
+      const { data: profiles } = await supabase
+        .from("student_profiles")
+        .select("user_id, section, current_year");
+
+      const profileMap = new Map(
+        (profiles || []).map((p: any) => [p.user_id, p])
+      );
+
+      const merged = (data || []).map((u: any) => ({
+        ...u,
+        section: profileMap.get(u.id)?.section ?? null,
+        current_year: profileMap.get(u.id)?.current_year ?? null,
+      }));
+
+      setUsers(merged);
     } catch (err) {
       console.error("Error fetching users", err);
     } finally {
@@ -94,10 +111,15 @@ export default function AdminUsers() {
     }
   }
 
+  const availableSections = Array.from(new Set(users.map(u => u.section).filter(Boolean))).sort() as string[];
+  const availableYears = Array.from(new Set(users.map(u => u.current_year).filter(Boolean))).sort() as string[];
+
   const filtered = users.filter(u => {
     const roleMatch = filter === "All" || u.account_type === filter;
+    const sectionMatch = filterSection === "All" || u.section === filterSection;
+    const yearMatch = filterYear === "All" || u.current_year === filterYear;
     const searchMatch = u.full_name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
-    return roleMatch && searchMatch;
+    return roleMatch && sectionMatch && yearMatch && searchMatch;
   });
 
   const studentsCount = users.filter(u => u.account_type === "student").length;
@@ -135,7 +157,8 @@ export default function AdminUsers() {
       </header>
 
       {/* Role Filters - Tab Style */}
-      <div style={{ display: "flex", gap: "24px", marginBottom: "24px", alignItems: "center", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ display: "flex", gap: "24px", marginBottom: "24px", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
         {(["All", "student", "facilitator", "admin"] as FilterRole[]).map((f) => {
           const count = f === "All" ? users.length : f === "student" ? studentsCount : f === "facilitator" ? facilitatorCount : adminsCount;
           const label = f === "student" ? "Students" : f === "facilitator" ? "Facilitators" : f === "admin" ? "Admins" : "All";
@@ -175,6 +198,29 @@ export default function AdminUsers() {
         })}
       </div>
 
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
+          <div style={{ height: "24px", width: "1px", background: "var(--border)", margin: "0 8px" }} />
+          <select
+            className="search-input select-input"
+            style={{ width: "auto", minWidth: "140px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", fontSize: "13px", padding: "0 12px", outline: "none", cursor: "pointer" }}
+            value={filterSection}
+            onChange={(e) => setFilterSection(e.target.value)}
+          >
+            <option value="All">All Sections</option>
+            {availableSections.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select
+            className="search-input select-input"
+            style={{ width: "auto", minWidth: "140px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", fontSize: "13px", padding: "0 12px", outline: "none", cursor: "pointer" }}
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+          >
+            <option value="All">All Year Levels</option>
+            {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+      </div>
+
       {/* Users Table */}
       <div className="panel indigo-table-panel" style={{ padding: 0, overflow: "hidden" }}>
         <div className="table-wrap">
@@ -184,6 +230,8 @@ export default function AdminUsers() {
                 <th>Profile</th>
                 <th>Institutional Email</th>
                 <th>Access Level</th>
+                <th>Section</th>
+                <th>Year Level</th>
                 <th>Account Status</th>
                 <th>Registration Date</th>
                 <th style={{ textAlign: "right", paddingRight: "24px" }}>Actions</th>
@@ -212,6 +260,8 @@ export default function AdminUsers() {
                     <td style={{ color: "var(--white-shade)", textTransform: "capitalize", fontSize: "13px" }}>
                       {u.account_type}
                     </td>
+                    <td style={{ color: "var(--dimmed)", fontSize: "13px" }}>{u.section || "—"}</td>
+                    <td style={{ color: "var(--dimmed)", fontSize: "13px" }}>{u.current_year || "—"}</td>
                     <td>
                       {u.account_type === "facilitator" || u.status !== "approved" ? (
                         <span className={`status-badge ${u.status === 'approved' ? 'present' : u.status === 'pending' ? 'late' : 'absent'}`} style={{ fontSize: "11px", padding: "4px 8px" }}>
