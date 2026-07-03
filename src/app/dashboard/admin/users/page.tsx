@@ -76,7 +76,7 @@ export default function AdminUsers() {
     }
   }
 
-  async function handleUpdateStatus(userId: string, newStatus: string) {
+  async function handleUpdateStatus(userId: string, newStatus: string, name: string, actionLabel: string) {
     try {
       const { error } = await (supabase.from("users") as any)
         .update({ status: newStatus })
@@ -85,6 +85,7 @@ export default function AdminUsers() {
       if (error) throw error;
 
       setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      showToast(`${actionLabel} for ${name}.`, "success");
     } catch (err: any) {
       showToast("Error updating status: " + err.message, "error");
     }
@@ -301,7 +302,7 @@ export default function AdminUsers() {
                               className="action-btn-hover approve-btn"
                               data-tooltip="Approve User"
                               aria-label="Approve User"
-                              onClick={() => handleUpdateStatus(u.id, "approved")}
+                              onClick={() => handleUpdateStatus(u.id, "approved", u.full_name, "User approved")}
                             >
                               <CheckCircle size={14} />
                             </button>
@@ -309,7 +310,7 @@ export default function AdminUsers() {
                               className="action-btn-hover reject-btn"
                               data-tooltip="Reject User"
                               aria-label="Reject User"
-                              onClick={() => handleUpdateStatus(u.id, "rejected")}
+                              onClick={() => handleUpdateStatus(u.id, "rejected", u.full_name, "User rejected")}
                             >
                               <XCircle size={14} />
                             </button>
@@ -320,7 +321,7 @@ export default function AdminUsers() {
                             className="action-btn-hover suspend-btn"
                             data-tooltip="Suspend Access"
                             aria-label="Suspend Access"
-                            onClick={() => handleUpdateStatus(u.id, "rejected")}
+                            onClick={() => handleUpdateStatus(u.id, "rejected", u.full_name, "Access suspended")}
                           >
                             <ShieldAlert size={14} />
                           </button>
@@ -330,7 +331,7 @@ export default function AdminUsers() {
                             className="action-btn-hover restore-btn"
                             data-tooltip="Restore Access"
                             aria-label="Restore Access"
-                            onClick={() => handleUpdateStatus(u.id, "approved")}
+                            onClick={() => handleUpdateStatus(u.id, "approved", u.full_name, "Access restored")}
                           >
                             Restore
                           </button>
