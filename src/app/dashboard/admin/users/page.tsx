@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
-import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound } from "lucide-react";
+import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type FilterRole = "All" | "student" | "facilitator" | "admin";
@@ -106,6 +106,27 @@ export default function AdminUsers() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       showToast(`Password reset email sent to ${email}.`, "success");
+    } catch (err: any) {
+      showToast("Error: " + err.message, "error");
+    }
+  }
+
+  async function handleForceVerifyEmail(userId: string, email: string) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const res = await fetch("/api/admin/verify-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ userId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      showToast(`Email verified for ${email}.`, "success");
     } catch (err: any) {
       showToast("Error: " + err.message, "error");
     }
@@ -310,15 +331,20 @@ export default function AdminUsers() {
                             Restore
                           </button>
                         )}
-                        {u.account_type !== "student" && (
-                          <button
-                            className="action-btn-hover reset-btn"
-                            title="Reset Password"
-                            onClick={() => handleResetPassword(u.email, u.full_name)}
-                          >
-                            <KeyRound size={13} />
-                          </button>
-                        )}
+                        <button
+                          className="action-btn-hover reset-btn"
+                          title="Reset Password"
+                          onClick={() => handleResetPassword(u.email, u.full_name)}
+                        >
+                          <KeyRound size={13} />
+                        </button>
+                        <button
+                          className="action-btn-hover verify-btn"
+                          title="Force Verify Email"
+                          onClick={() => handleForceVerifyEmail(u.id, u.email)}
+                        >
+                          <MailCheck size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>

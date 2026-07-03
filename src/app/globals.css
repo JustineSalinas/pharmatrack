@@ -5581,6 +5581,18 @@ input[type="password"]::-ms-clear {
   border-color: rgba(232, 184, 75, 0.3);
 }
 
+.verify-btn {
+  color: var(--teal);
+  background: var(--teal-dim);
+  border: 1px solid rgba(45, 212, 191, 0.15);
+}
+
+.verify-btn:hover {
+  color: var(--teal);
+  background: rgba(45, 212, 191, 0.2);
+  border-color: rgba(45, 212, 191, 0.3);
+}
+
 /* ─────────────────────────────────────────────────────────
    Generate QR page (facilitator)
    ───────────────────────────────────────────────────────── */
