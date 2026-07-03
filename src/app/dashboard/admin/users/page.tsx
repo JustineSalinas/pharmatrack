@@ -299,14 +299,16 @@ export default function AdminUsers() {
                           <>
                             <button
                               className="action-btn-hover approve-btn"
-                              title="Approve User"
+                              data-tooltip="Approve User"
+                              aria-label="Approve User"
                               onClick={() => handleUpdateStatus(u.id, "approved")}
                             >
                               <CheckCircle size={14} />
                             </button>
                             <button
                               className="action-btn-hover reject-btn"
-                              title="Reject User"
+                              data-tooltip="Reject User"
+                              aria-label="Reject User"
                               onClick={() => handleUpdateStatus(u.id, "rejected")}
                             >
                               <XCircle size={14} />
@@ -316,7 +318,8 @@ export default function AdminUsers() {
                         {u.status === "approved" && u.account_type !== "admin" && (
                           <button
                             className="action-btn-hover suspend-btn"
-                            title="Suspend Access"
+                            data-tooltip="Suspend Access"
+                            aria-label="Suspend Access"
                             onClick={() => handleUpdateStatus(u.id, "rejected")}
                           >
                             <ShieldAlert size={14} />
@@ -325,7 +328,8 @@ export default function AdminUsers() {
                         {u.status === "rejected" && (
                           <button
                             className="action-btn-hover restore-btn"
-                            title="Restore Access"
+                            data-tooltip="Restore Access"
+                            aria-label="Restore Access"
                             onClick={() => handleUpdateStatus(u.id, "approved")}
                           >
                             Restore
@@ -333,14 +337,16 @@ export default function AdminUsers() {
                         )}
                         <button
                           className="action-btn-hover reset-btn"
-                          title="Reset Password"
+                          data-tooltip="Reset Password"
+                          aria-label="Reset Password"
                           onClick={() => handleResetPassword(u.email, u.full_name)}
                         >
                           <KeyRound size={13} />
                         </button>
                         <button
                           className="action-btn-hover verify-btn"
-                          title="Force Verify Email"
+                          data-tooltip="Force Verify Email"
+                          aria-label="Force Verify Email"
                           onClick={() => handleForceVerifyEmail(u.id, u.email)}
                         >
                           <MailCheck size={13} />

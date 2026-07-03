@@ -5593,6 +5593,43 @@ input[type="password"]::-ms-clear {
   border-color: rgba(45, 212, 191, 0.3);
 }
 
+/* Custom hover tooltip for icon-only action buttons — replaces the native
+   `title` attribute so the label appears instantly and matches the theme. */
+.action-btn-hover[data-tooltip] {
+  position: relative;
+}
+
+.action-btn-hover[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2);
+  color: var(--white);
+  border: 1px solid var(--border);
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.action-btn-hover[data-tooltip]:hover::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--surface2);
+  z-index: 50;
+  pointer-events: none;
+}
+
 /* ─────────────────────────────────────────────────────────
    Generate QR page (facilitator)
    ───────────────────────────────────────────────────────── */
