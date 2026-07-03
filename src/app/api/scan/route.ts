@@ -98,9 +98,11 @@ export async function POST(req: NextRequest) {
 
   // Prevent scanning before the event has started
   if (now < checkInStart) {
+    const localTimeStr = checkInStart.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    const localDateStr = checkInStart.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
     console.warn(`[Scan API] Scan attempted before event start. Event check-in opens at ${checkInStart.toISOString()}`);
     return NextResponse.json(
-      { error: "Event has not started yet. Check-in opens at " + checkInStart.toISOString() },
+      { error: `Event has not started yet. Check-in opens at ${localTimeStr} on ${localDateStr}.` },
       { status: 400 },
     );
   }
