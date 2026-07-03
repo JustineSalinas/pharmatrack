@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { loginUser, getCurrentUser, getAuthUser, logoutUser } from "@/lib/auth-client";
+import { loginUser, getCurrentUser, getAuthUser, logoutUser, resendVerificationEmail } from "@/lib/auth-client";
 import { Suspense } from "react";
 import { Eye, EyeOff, Clock, CheckCircle2 } from "lucide-react";
 
@@ -15,6 +15,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [resending, setResending] = useState(false);
+  const [showResend, setShowResend] = useState(false);
 
   // Pending approval state for facilitators
   const [isPendingApproval, setIsPendingApproval] = useState(false);
@@ -58,6 +60,7 @@ function LoginForm() {
     setLoading(true);
     setError("");
     setSuccessMsg("");
+    setShowResend(false);
     setIsPendingApproval(false);
 
     try {
@@ -76,6 +79,7 @@ function LoginForm() {
         // Email not verified — sign them out and show message
         await logoutUser();
         setError("Please verify your email first. Check your inbox for the verification link.");
+        setShowResend(true);
         setLoading(false);
         return;
       }
@@ -145,8 +149,31 @@ function LoginForm() {
       }
 
     } catch (err: any) {
-      setError(err.message || "An unexpected error occurred. Please check your credentials.");
+      const message = err.message || "An unexpected error occurred. Please check your credentials.";
+      setError(message);
+      if (message.toLowerCase().includes("email not confirmed")) {
+        setShowResend(true);
+      }
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email) {
+      setError("Enter your email above first, then tap Resend.");
+      return;
+    }
+    setResending(true);
+    setError("");
+    setSuccessMsg("");
+    try {
+      await resendVerificationEmail(email);
+      setSuccessMsg("Verification email sent. Check your inbox (and spam folder).");
+      setShowResend(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to resend verification email. Please try again.");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -256,6 +283,30 @@ function LoginForm() {
                   }}>
                     {error}
                   </div>
+                )}
+
+                {/* Resend verification email — shown when login fails due to an unconfirmed account */}
+                {showResend && (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resending}
+                    style={{
+                      width: "100%",
+                      background: "rgba(232, 184, 75, 0.1)",
+                      border: "1px solid rgba(232, 184, 75, 0.4)",
+                      color: "#E8B84B",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      padding: "10px",
+                      borderRadius: "10px",
+                      marginBottom: "10px",
+                      cursor: resending ? "wait" : "pointer",
+                      opacity: resending ? 0.6 : 1,
+                    }}
+                  >
+                    {resending ? "Sending…" : "Resend verification email"}
+                  </button>
                 )}
 
 

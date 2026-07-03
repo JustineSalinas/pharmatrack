@@ -12,6 +12,13 @@ if (!token) {
   process.exit(1);
 }
 
+// Uses {{ .SiteURL }} rather than {{ .RedirectTo }}: RedirectTo only renders
+// if the exact emailRedirectTo URL is in Supabase's Redirect URLs allow list,
+// and a mismatch there silently breaks the confirmation link (users register
+// but can never confirm). Site URL is a single trusted dashboard setting with
+// no allow-list dependency — simpler and more reliable for a single-domain
+// production app like this one. Make sure Site URL is set to the real prod
+// domain in Supabase Dashboard → Authentication → URL Configuration.
 const confirmationTemplate = `<div style="background-color:#f4f4f7; padding:32px 16px; font-family:Arial, Helvetica, sans-serif;">
   <div style="max-width:560px; margin:0 auto; background-color:#ffffff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
 
@@ -29,7 +36,7 @@ const confirmationTemplate = `<div style="background-color:#f4f4f7; padding:32px
 
       <div style="background-color:#f7f7f9; border:1px solid #e5e7eb; border-radius:8px; padding:20px; margin:20px 0; text-align:center;">
         <p style="margin:0 0 16px 0; color:#6b7280; font-size:13px;">This link will expire in <strong style="color:#1e1432;">24 hours</strong>.</p>
-        <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup"
+        <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup"
            style="display:inline-block; padding:12px 32px; background-color:#E8B84B; color:#1e1432; text-decoration:none; border-radius:6px; font-weight:bold; font-size:15px; letter-spacing:0.02em;">
           Verify Email Address
         </a>
