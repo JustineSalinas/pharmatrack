@@ -17,7 +17,6 @@ type ConfigKey =
   | "academicPeriod"
   | "qrExpiry"
   | "minAttendance"
-  | "twoFactorAuth"
   | "registrationMode";
 
 type Settings = Record<ConfigKey, string>;
@@ -29,7 +28,6 @@ const DEFAULTS: Settings = {
   academicPeriod: "2025–2026 · 2nd Semester",
   qrExpiry: "10 min",
   minAttendance: "75%",
-  twoFactorAuth: "false",
   registrationMode: "approval",
 };
 
@@ -95,13 +93,6 @@ const RIGHT_GROUPS = [
   {
     title: "Security",
     items: [
-      {
-        id: "twoFactorAuth" as ConfigKey,
-        icon: Shield,
-        title: "Two-Factor Authentication",
-        desc: "Require 2FA for admin and facilitator logins",
-        type: "toggle",
-      },
       {
         id: "registrationMode" as ConfigKey,
         icon: UserCheck,

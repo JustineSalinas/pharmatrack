@@ -19,7 +19,6 @@ const DEFAULTS: Record<string, string> = {
   academicPeriod: "2025–2026 · 2nd Semester",
   qrExpiry: "10 min",
   minAttendance: "75%",
-  twoFactorAuth: "false",
   registrationMode: "approval",
 };
 
