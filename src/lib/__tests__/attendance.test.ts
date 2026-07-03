@@ -1,12 +1,54 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { runIfDue, notifyAbsences } from '../attendance'
+
+// ── Mock for the backfillEventStatuses suite (below) ──────────────────────────
+// attendance.ts imports the browser `supabase` client directly; each `.from(table)`
+// call gets its own chain instance so parallel selects/inserts/updates on the
+// same table (e.g. "attendance_records" is both read and written) don't collide.
+const selectResults: Record<string, { data: unknown; error: unknown }> = {}
+const writeResults: Record<string, { data: unknown; error: unknown }> = {}
+
+function setSelect(table: string, value: { data: unknown; error: unknown }) {
+  selectResults[table] = value
+}
+function setWrite(table: string, value: { data: unknown; error: unknown }) {
+  writeResults[table] = value
+}
+function clearMockTables() {
+  for (const k of Object.keys(selectResults)) delete selectResults[k]
+  for (const k of Object.keys(writeResults)) delete writeResults[k]
+}
 
 const mockGetSession = vi.fn()
 const mockFetch = vi.fn()
 
-vi.mock('../supabase', () => ({
-  supabase: { auth: { getSession: () => mockGetSession() } },
-}))
+vi.mock('../supabase', () => {
+  function buildChain(table: string) {
+    let mode: 'select' | 'write' = 'select'
+    const chain: Record<string, unknown> = {}
+    chain.select = () => { mode = 'select'; return chain }
+    chain.eq = () => chain
+    chain.lt = () => chain
+    chain.gte = () => chain
+    chain.in = () => chain
+    chain.insert = () => { mode = 'write'; return chain }
+    chain.update = () => { mode = 'write'; return chain }
+    chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {
+      const value = mode === 'select'
+        ? (selectResults[table] ?? { data: null, error: null })
+        : (writeResults[table] ?? { data: null, error: null })
+      return Promise.resolve(value).then(resolve, reject)
+    }
+    return chain
+  }
+  return {
+    supabase: {
+      from: (table: string) => buildChain(table),
+      auth: { getSession: () => mockGetSession() },
+    },
+  }
+})
+
+import { runIfDue, backfillEventStatuses, notifyAbsences } from '../attendance'
 
 describe('runIfDue', () => {
   let localStorageMock: Record<string, string> = {}
@@ -55,7 +97,7 @@ describe('runIfDue', () => {
 
     // First run
     await runIfDue('test-key', 5000, mockFn)
-    
+
     // Second run immediately
     const result2 = await runIfDue('test-key', 5000, mockFn)
     expect(mockFn).toHaveBeenCalledTimes(1) // still only called once
@@ -89,6 +131,65 @@ describe('runIfDue', () => {
     const result = await runIfDue('test-key', 5000, mockFn)
     expect(result).toBeNull()
     expect(mockFn).not.toHaveBeenCalled()
+  })
+})
+
+describe('backfillEventStatuses — incomplete marking', () => {
+  const EVENT_ID = 'event-1'
+  const STUDENT_ID = 'student-1'
+  const RECORD_ID = 'record-1'
+  const pastCheckInEnd = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2h ago
+
+  beforeEach(() => {
+    clearMockTables()
+    setSelect('users', { data: [{ id: STUDENT_ID }], error: null })
+    setWrite('attendance_records', { data: null, error: null })
+  })
+
+  it('marks incomplete when the event has an explicit check_out_end that has passed', async () => {
+    const pastCheckOutEnd = new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30 min ago
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: pastCheckOutEnd }],
+      error: null,
+    })
+    setSelect('attendance_records', {
+      data: [{ id: RECORD_ID, student_id: STUDENT_ID, event_id: EVENT_ID, time_in: pastCheckInEnd, time_out: null, status: 'present' }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.incompleteUpdated).toBe(1)
+    expect(result.absentInserted).toBe(0)
+  })
+
+  it('marks incomplete via the 4-hour fallback when the event has no check_out_end', async () => {
+    const timeIn5hAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: null }],
+      error: null,
+    })
+    setSelect('attendance_records', {
+      data: [{ id: RECORD_ID, student_id: STUDENT_ID, event_id: EVENT_ID, time_in: timeIn5hAgo, time_out: null, status: 'present' }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.incompleteUpdated).toBe(1)
+  })
+
+  it('does not mark incomplete yet when no check_out_end and under 4 hours have passed', async () => {
+    const timeIn1hAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: null }],
+      error: null,
+    })
+    setSelect('attendance_records', {
+      data: [{ id: RECORD_ID, student_id: STUDENT_ID, event_id: EVENT_ID, time_in: timeIn1hAgo, time_out: null, status: 'present' }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.incompleteUpdated).toBe(0)
   })
 })
 

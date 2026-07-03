@@ -3,8 +3,9 @@
  *
  *   • Absent     — event check-in window has closed and the student has no
  *                  attendance_record for it.
- *   • Incomplete — event has a check_out_end, that window has closed, and the
- *                  record has a time_in but no time_out.
+ *   • Incomplete — record has a time_in but no time_out, and the check-out
+ *                  deadline has passed (the event's check_out_end if set,
+ *                  otherwise 4 hours after that record's own time_in).
  *
  * Designed to be safe and idempotent:
  *   - Only touches events whose check_in_end is strictly in the past.
@@ -91,14 +92,21 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
       });
     }
 
-    // 2c. Collect "incomplete" record IDs: time_in present, time_out missing, check_out window closed.
-    if (ev.check_out_end && new Date(ev.check_out_end) < new Date(nowIso)) {
-      const incomplete = existing.filter(
-        (r: any) => r.time_in && !r.time_out && r.status !== "incomplete" && r.status !== "absent"
-      );
-      for (const r of incomplete) {
-        incompleteIdsToUpdate.push(r.id);
-      }
+    // 2c. Collect "incomplete" record IDs: time_in present, time_out missing, and the
+    // check-out deadline has passed. If the event defines an explicit check_out_end,
+    // use that; otherwise fall back to 4 hours after this record's own time_in —
+    // mirroring the hard check-out cap the scan API itself enforces ("more than 4
+    // hours since check-in") — so events with no explicit check-out window still
+    // eventually get marked incomplete instead of never.
+    const incomplete = existing.filter((r: any) => {
+      if (!r.time_in || r.time_out || r.status === "incomplete" || r.status === "absent") return false;
+      const deadline = ev.check_out_end
+        ? new Date(ev.check_out_end)
+        : new Date(new Date(r.time_in).getTime() + 4 * 60 * 60 * 1000);
+      return deadline < new Date(nowIso);
+    });
+    for (const r of incomplete) {
+      incompleteIdsToUpdate.push(r.id);
     }
   }
 

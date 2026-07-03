@@ -43,6 +43,8 @@ export default function EventsManagement() {
   const [startTime, setStartTime] = useState("");
   const [lateTime, setLateTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [checkOutStartTime, setCheckOutStartTime] = useState("");
+  const [checkOutEndTime, setCheckOutEndTime] = useState("");
   const [targetYearLevels, setTargetYearLevels] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -133,6 +135,29 @@ export default function EventsManagement() {
       return;
     }
 
+    // Check-out window is optional — both times must be provided together, or neither.
+    if ((checkOutStartTime && !checkOutEndTime) || (!checkOutStartTime && checkOutEndTime)) {
+      setFormError("Provide both check-out times, or leave both blank.");
+      return;
+    }
+
+    let checkOutStartTS: string | null = null;
+    let checkOutEndTS: string | null = null;
+    if (checkOutStartTime && checkOutEndTime) {
+      const checkOutStartDt = new Date(`${date}T${checkOutStartTime}:00`);
+      const checkOutEndDt = new Date(`${date}T${checkOutEndTime}:00`);
+      if (isNaN(checkOutStartDt.getTime()) || isNaN(checkOutEndDt.getTime())) {
+        setFormError("Please provide valid check-out times.");
+        return;
+      }
+      if (checkOutEndDt <= checkOutStartDt) {
+        setFormError("“Check-out Ends” must be later than “Check-out Starts”.");
+        return;
+      }
+      checkOutStartTS = checkOutStartDt.toISOString();
+      checkOutEndTS = checkOutEndDt.toISOString();
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -150,6 +175,8 @@ export default function EventsManagement() {
             check_in_start: startTS,
             check_in_late: lateTS,
             check_in_end: endTS,
+            check_out_start: checkOutStartTS,
+            check_out_end: checkOutEndTS,
             target_year_levels: targetYearLevels.length ? targetYearLevels : null,
             event_type: eventType,
           })
@@ -174,6 +201,8 @@ export default function EventsManagement() {
             check_in_start: startTS,
             check_in_late: lateTS,
             check_in_end: endTS,
+            check_out_start: checkOutStartTS,
+            check_out_end: checkOutEndTS,
             target_year_levels: targetYearLevels.length ? targetYearLevels : null,
             event_type: eventType,
           }),
@@ -244,6 +273,8 @@ export default function EventsManagement() {
     setStartTime("");
     setLateTime(defaultLateThreshold);
     setEndTime("");
+    setCheckOutStartTime("");
+    setCheckOutEndTime("");
     setTargetYearLevels([]);
     setEventType("Department");
     setFormError("");
@@ -265,6 +296,8 @@ export default function EventsManagement() {
     setStartTime(parseTime(event.check_in_start));
     setLateTime(parseTime(event.check_in_late));
     setEndTime(parseTime(event.check_in_end));
+    setCheckOutStartTime(event.check_out_start ? parseTime(event.check_out_start) : "");
+    setCheckOutEndTime(event.check_out_end ? parseTime(event.check_out_end) : "");
     setTargetYearLevels(event.target_year_levels ?? []);
     setEventType(event.event_type ?? "Department");
     setFormError("");
@@ -549,6 +582,30 @@ export default function EventsManagement() {
                     value={endTime} onChange={e => setEndTime(e.target.value)} required 
                     style={{ colorScheme: "light", borderColor: "rgba(220, 38, 38, 0.3)", background: "rgba(220, 38, 38, 0.04)" }}
                   />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Check-out Window <span style={{ textTransform: "none", fontWeight: 400, letterSpacing: 0 }}>(optional)</span>
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Check-out Starts</label>
+                    <input
+                      type="time" className="settings-input"
+                      value={checkOutStartTime} onChange={e => setCheckOutStartTime(e.target.value)}
+                      style={{ colorScheme: "light" }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Check-out Ends</label>
+                    <input
+                      type="time" className="settings-input"
+                      value={checkOutEndTime} onChange={e => setCheckOutEndTime(e.target.value)}
+                      style={{ colorScheme: "light" }}
+                    />
+                  </div>
                 </div>
               </div>
 
