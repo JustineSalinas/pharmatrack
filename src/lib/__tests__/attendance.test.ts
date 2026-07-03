@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { runIfDue } from '../attendance'
+import { runIfDue, notifyAbsences } from '../attendance'
+
+const mockGetSession = vi.fn()
+const mockFetch = vi.fn()
+
+vi.mock('../supabase', () => ({
+  supabase: { auth: { getSession: () => mockGetSession() } },
+}))
 
 describe('runIfDue', () => {
   let localStorageMock: Record<string, string> = {}
@@ -82,5 +89,41 @@ describe('runIfDue', () => {
     const result = await runIfDue('test-key', 5000, mockFn)
     expect(result).toBeNull()
     expect(mockFn).not.toHaveBeenCalled()
+  })
+})
+
+describe('notifyAbsences', () => {
+  beforeEach(() => {
+    mockGetSession.mockReset().mockResolvedValue({ data: { session: { access_token: 'tok-123' } } })
+    mockFetch.mockReset().mockResolvedValue({ ok: true, json: async () => ({ success: true }) })
+    vi.stubGlobal('fetch', mockFetch)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('does nothing when there are no entries', async () => {
+    await notifyAbsences([])
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('posts entries with a bearer token to the notify-absences route', async () => {
+    const entries = [{ studentId: 's1', eventId: 'e1' }]
+    await notifyAbsences(entries)
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/admin/notify-absences',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer tok-123' }),
+        body: JSON.stringify({ entries }),
+      })
+    )
+  })
+
+  it('swallows fetch failures instead of throwing', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('network down'))
+    await expect(notifyAbsences([{ studentId: 's1', eventId: 'e1' }])).resolves.toBeUndefined()
   })
 })

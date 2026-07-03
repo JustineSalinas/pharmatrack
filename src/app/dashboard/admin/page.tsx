@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
-import { backfillEventStatuses, runIfDue } from "@/lib/attendance";
+import { backfillEventStatuses, runIfDue, notifyAbsences } from "@/lib/attendance";
+import { triggerWeeklyReport } from "@/lib/weeklyReport";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
@@ -48,7 +49,10 @@ export default function AdminDashboard() {
       // Silently auto-mark Absent / Incomplete for past events (throttled
       // to once per hour per browser so it doesn't run on every page load).
       if (!silent) {
-        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatuses).catch(() => {});
+        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatuses)
+          .then((r) => r && notifyAbsences(r.absentEntries))
+          .catch(() => {});
+        runIfDue("weeklyReport", 7 * 24 * 60 * 60_000, triggerWeeklyReport).catch(() => {});
       }
 
       // Total Students

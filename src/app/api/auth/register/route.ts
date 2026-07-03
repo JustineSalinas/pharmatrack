@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getBackendUser } from "@/lib/auth";
+import { getSystemConfigServer } from "@/lib/systemConfig";
 
 // Service-role client — bypasses RLS for profile inserts
 const getServiceClient = () => {
@@ -108,12 +109,22 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Step 2: Insert into public.users ──────────────────────────────────────
+  // Facilitators are auto-approved when the admin has set registration mode
+  // to "open"; students always require manual admin approval regardless.
+  let initialStatus = "pending";
+  if (account_type === "facilitator") {
+    const config = await getSystemConfigServer(supabase).catch(() => null);
+    if (config?.registrationMode === "open") {
+      initialStatus = "approved";
+    }
+  }
+
   const { error: userErr } = await supabase.from("users").insert({
     id: userId,
     email,
     full_name,
     account_type,
-    status: "pending",
+    status: initialStatus,
   });
 
   if (userErr) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { getSystemConfig } from "@/lib/systemConfig";
 import * as XLSX from "xlsx";
 import {
   TrendingUp,
@@ -28,7 +29,7 @@ const SUB_TABS = [
 
 type SubTabKey = typeof SUB_TABS[number]["key"];
 
-function StudentModal({ onClose, allStudents }: { onClose: () => void, allStudents: any[] }) {
+function StudentModal({ onClose, allStudents, minAttendance }: { onClose: () => void, allStudents: any[], minAttendance: number }) {
   const [search, setSearch] = useState("");
   const [sectionFilter, setSectionFilter] = useState("All");
 
@@ -40,7 +41,7 @@ function StudentModal({ onClose, allStudents }: { onClose: () => void, allStuden
 
   const getRateColor = (rate: number) => {
     if (rate >= 85) return { color: "#16a34a", bg: "rgba(22, 163, 74, 0.08)", border: "rgba(22, 163, 74, 0.15)" };
-    if (rate >= 75) return { color: "#d97706", bg: "rgba(217, 119, 6, 0.08)", border: "rgba(217, 119, 6, 0.15)" };
+    if (rate >= minAttendance) return { color: "#d97706", bg: "rgba(217, 119, 6, 0.08)", border: "rgba(217, 119, 6, 0.15)" };
     return { color: "#dc2626", bg: "rgba(220, 38, 38, 0.08)", border: "rgba(220, 38, 38, 0.15)" };
   };
 
@@ -218,6 +219,8 @@ export default function FacultyReports() {
   const [activeSubTab, setActiveSubTab] = useState<SubTabKey>("students");
   const [searchQuery, setSearchQuery] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [minAttendance, setMinAttendance] = useState(75);
+  const [academicPeriod, setAcademicPeriod] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchReports() {
@@ -228,7 +231,8 @@ export default function FacultyReports() {
           { data: summaryData, error: sErr },
           { data: events, error: eErr },
           { data: records, error: rErr },
-          { data: sessions, error: sessErr }
+          { data: sessions, error: sessErr },
+          config
         ] = await Promise.all([
           supabase.from("student_attendance_summary").select("*"),
           supabase.from("events").select("id, name, location, date"),
@@ -239,13 +243,18 @@ export default function FacultyReports() {
             created_at,
             events ( name, location, date )
           `),
-          supabase.from("qr_sessions").select(`date, section, attendance_records(status)`)
+          supabase.from("qr_sessions").select(`date, section, attendance_records(status)`),
+          getSystemConfig().catch(() => null)
         ]);
 
         if (sErr) throw sErr;
         if (eErr) throw eErr;
         if (rErr) throw rErr;
         if (sessErr) throw sessErr;
+
+        const riskThreshold = config ? parseInt(config.minAttendance, 10) || 75 : 75;
+        setMinAttendance(riskThreshold);
+        if (config) setAcademicPeriod(config.academicPeriod);
 
         const parsedStudents = (summaryData || []).map((s: any) => ({
           id: s.student_id_number || s.student_id.substring(0, 8),
@@ -310,8 +319,8 @@ export default function FacultyReports() {
         })).sort((a, b) => b.rate - a.rate);
         setSectionBreakdown(calculatedSections);
 
-        // At-risk students (rate < 75% and has records)
-        const riskStudents = parsedStudents.filter((s: any) => s.rate < 75 && s.total_records > 0);
+        // At-risk students (rate below the configured threshold and has records)
+        const riskStudents = parsedStudents.filter((s: any) => s.rate < riskThreshold && s.total_records > 0);
         setAtRisk(riskStudents);
 
         // Perfect attendance (rate === 100% and has records)
@@ -503,7 +512,7 @@ export default function FacultyReports() {
           </thead>
           <tbody>
             ${allStudents.map(s => {
-              const cls = s.rate >= 85 ? "green" : s.rate >= 75 ? "amber" : "red";
+              const cls = s.rate >= 85 ? "green" : s.rate >= minAttendance ? "amber" : "red";
               return `
                 <tr>
                   <td style="font-weight: 600; color: #111827;">${s.name}</td>
@@ -527,11 +536,11 @@ export default function FacultyReports() {
 
   const getRateColor = (rate: number) => {
     if (rate >= 85) return { color: "#16a34a", bg: "rgba(22, 163, 74, 0.08)", border: "rgba(22, 163, 74, 0.15)" };
-    if (rate >= 75) return { color: "#d97706", bg: "rgba(217, 119, 6, 0.08)", border: "rgba(217, 119, 6, 0.15)" };
+    if (rate >= minAttendance) return { color: "#d97706", bg: "rgba(217, 119, 6, 0.08)", border: "rgba(217, 119, 6, 0.15)" };
     return { color: "#dc2626", bg: "rgba(220, 38, 38, 0.08)", border: "rgba(220, 38, 38, 0.15)" };
   };
 
-  const filteredStudentsForTab = allStudents.filter(s => 
+  const filteredStudentsForTab = allStudents.filter(s =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     s.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -550,7 +559,7 @@ export default function FacultyReports() {
 
   return (
     <div className="fade-in facilitator-reports-page">
-      {showStudentModal && <StudentModal onClose={() => setShowStudentModal(false)} allStudents={allStudents} />}
+      {showStudentModal && <StudentModal onClose={() => setShowStudentModal(false)} allStudents={allStudents} minAttendance={minAttendance} />}
 
       {/* TOAST MESSAGE NOTIFICATION */}
       {toastMessage && (
@@ -633,7 +642,7 @@ export default function FacultyReports() {
           <div className="reports-card" style={{ padding: "24px", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#111827", margin: 0 }}>Monthly Attendance Trend</h3>
-              <span style={{ fontSize: "11px", color: "#6b7280" }}>Academic Year 2026</span>
+              <span style={{ fontSize: "11px", color: "#6b7280" }}>{academicPeriod || "Academic Year 2026"}</span>
             </div>
             
             <div style={{ height: "220px", width: "100%" }}>
@@ -953,7 +962,7 @@ export default function FacultyReports() {
         <div className="reports-card">
           <div className="card-header">
             <h3 className="card-title" style={{ color: "#dc2626" }}>At-Risk Students</h3>
-            <span className="badge-subtitle" style={{ background: "rgba(220, 38, 38, 0.08)", color: "#dc2626" }}>Below 75% Attendance Rate</span>
+            <span className="badge-subtitle" style={{ background: "rgba(220, 38, 38, 0.08)", color: "#dc2626" }}>Below {minAttendance}% Attendance Rate</span>
           </div>
 
           <div className="table-wrap">
