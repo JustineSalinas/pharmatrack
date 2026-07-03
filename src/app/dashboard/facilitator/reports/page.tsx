@@ -525,11 +525,6 @@ export default function FacultyReports() {
     win.document.close();
   }
 
-  const handleNotifyStudent = (name: string) => {
-    setToastMessage(`Alert notification sent to ${name}`);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   const getRateColor = (rate: number) => {
     if (rate >= 85) return { color: "#16a34a", bg: "rgba(22, 163, 74, 0.08)", border: "rgba(22, 163, 74, 0.15)" };
     if (rate >= 75) return { color: "#d97706", bg: "rgba(217, 119, 6, 0.08)", border: "rgba(217, 119, 6, 0.15)" };
@@ -969,13 +964,12 @@ export default function FacultyReports() {
                   <th>Student ID</th>
                   <th>Section</th>
                   <th>Current Rate</th>
-                  <th style={{ textAlign: "right", paddingRight: "24px" }}>Action Alert</th>
                 </tr>
               </thead>
               <tbody>
                 {atRisk.length === 0 ? (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={4}>
                       {!hasRecords ? (
                         <div style={{ padding: "64px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", textAlign: "center" }}>
                           <div style={{ width: "48px", height: "48px", borderRadius: "10px", background: "rgba(220, 38, 38, 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1003,11 +997,6 @@ export default function FacultyReports() {
                         <span className="rate-capsule" style={{ background: "rgba(220, 38, 38, 0.08)", color: "#dc2626", border: "1px solid rgba(220, 38, 38, 0.15)" }}>
                           {s.rate}%
                         </span>
-                      </td>
-                      <td style={{ textAlign: "right", paddingRight: "24px" }}>
-                        <button onClick={() => handleNotifyStudent(s.name)} className="btn-notify">
-                          📧 Notify Alert
-                        </button>
                       </td>
                     </tr>
                   ))
