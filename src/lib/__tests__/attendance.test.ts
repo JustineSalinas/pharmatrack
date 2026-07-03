@@ -18,6 +18,9 @@ function clearMockTables() {
   for (const k of Object.keys(writeResults)) delete writeResults[k]
 }
 
+const mockGetSession = vi.fn()
+const mockFetch = vi.fn()
+
 vi.mock('../supabase', () => {
   function buildChain(table: string) {
     let mode: 'select' | 'write' = 'select'
@@ -37,10 +40,15 @@ vi.mock('../supabase', () => {
     }
     return chain
   }
-  return { supabase: { from: (table: string) => buildChain(table) } }
+  return {
+    supabase: {
+      from: (table: string) => buildChain(table),
+      auth: { getSession: () => mockGetSession() },
+    },
+  }
 })
 
-import { runIfDue, backfillEventStatuses } from '../attendance'
+import { runIfDue, backfillEventStatuses, notifyAbsences } from '../attendance'
 
 describe('runIfDue', () => {
   let localStorageMock: Record<string, string> = {}
@@ -89,7 +97,7 @@ describe('runIfDue', () => {
 
     // First run
     await runIfDue('test-key', 5000, mockFn)
-    
+
     // Second run immediately
     const result2 = await runIfDue('test-key', 5000, mockFn)
     expect(mockFn).toHaveBeenCalledTimes(1) // still only called once
@@ -182,5 +190,41 @@ describe('backfillEventStatuses — incomplete marking', () => {
 
     const result = await backfillEventStatuses()
     expect(result.incompleteUpdated).toBe(0)
+  })
+})
+
+describe('notifyAbsences', () => {
+  beforeEach(() => {
+    mockGetSession.mockReset().mockResolvedValue({ data: { session: { access_token: 'tok-123' } } })
+    mockFetch.mockReset().mockResolvedValue({ ok: true, json: async () => ({ success: true }) })
+    vi.stubGlobal('fetch', mockFetch)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('does nothing when there are no entries', async () => {
+    await notifyAbsences([])
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('posts entries with a bearer token to the notify-absences route', async () => {
+    const entries = [{ studentId: 's1', eventId: 'e1' }]
+    await notifyAbsences(entries)
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/admin/notify-absences',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer tok-123' }),
+        body: JSON.stringify({ entries }),
+      })
+    )
+  })
+
+  it('swallows fetch failures instead of throwing', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('network down'))
+    await expect(notifyAbsences([{ studentId: 's1', eventId: 'e1' }])).resolves.toBeUndefined()
   })
 })

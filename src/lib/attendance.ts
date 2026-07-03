@@ -22,13 +22,15 @@ export interface BackfillResult {
   absentInserted: number;
   incompleteUpdated: number;
   errors: string[];
+  /** student_id/event_id pairs newly marked absent this run — feeds notifyAbsences(). */
+  absentEntries: Array<{ studentId: string; eventId: string }>;
 }
 
 const LOOKBACK_DAYS = 60;
 
 export async function backfillEventStatuses(): Promise<BackfillResult> {
   const result: BackfillResult = {
-    eventsProcessed: 0, absentInserted: 0, incompleteUpdated: 0, errors: [],
+    eventsProcessed: 0, absentInserted: 0, incompleteUpdated: 0, errors: [], absentEntries: [],
   };
   const nowIso = new Date().toISOString();
   const lookbackIso = new Date(Date.now() - LOOKBACK_DAYS * 86400_000).toISOString();
@@ -117,6 +119,9 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
         result.errors.push("absent insert failed: " + insErr.message);
       } else {
         result.absentInserted += slice.length;
+        result.absentEntries.push(
+          ...slice.map((r) => ({ studentId: r.student_id as string, eventId: r.event_id as string }))
+        );
       }
     }
   }
@@ -141,16 +146,16 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
 }
 
 /**
- * Throttled wrapper — only runs the backfill if it hasn't been run for the
- * given key in the last `intervalMs`. Stored in localStorage so it's per
- * browser, which is good enough for opportunistic backfilling triggered by a
- * staff member opening their dashboard.
+ * Throttled wrapper — only runs `fn` if it hasn't been run for the given key
+ * in the last `intervalMs`. Stored in localStorage so it's per browser, which
+ * is good enough for opportunistic work triggered by a staff member opening
+ * their dashboard (the attendance backfill, and the weekly report send).
  */
-export async function runIfDue(
+export async function runIfDue<T>(
   key: string,
   intervalMs: number,
-  fn: () => Promise<BackfillResult>
-): Promise<BackfillResult | null> {
+  fn: () => Promise<T>
+): Promise<T | null> {
   try {
     if (typeof window === "undefined") return null;
     const storageKey = `pt:backfill:${key}`;
@@ -160,5 +165,32 @@ export async function runIfDue(
     return await fn();
   } catch {
     return null;
+  }
+}
+
+/**
+ * Fires the server-side absence-notification send for newly-absent
+ * student/event pairs from a backfill run. Deliberately just a `fetch()` to
+ * an API route rather than importing `src/lib/email.ts` directly — that
+ * module pulls in `nodemailer`, which can't be bundled into the client code
+ * that calls `backfillEventStatuses()` (dashboard pages, the Settings page's
+ * Recompute button). The route itself checks `system_config.absenceNotifications`
+ * and no-ops if it's off.
+ */
+export async function notifyAbsences(entries: Array<{ studentId: string; eventId: string }>): Promise<void> {
+  if (entries.length === 0) return;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    await fetch("/api/admin/notify-absences", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ entries }),
+    });
+  } catch {
+    // Best-effort — a failed notification send must never break the backfill flow.
   }
 }
