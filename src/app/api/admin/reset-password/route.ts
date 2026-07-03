@@ -46,9 +46,15 @@ export async function POST(req: NextRequest) {
 
     console.log(`[ResetPassword API] Admin ${caller.email} initiating password reset link generation for target ${email}`);
 
+    // Without redirectTo, Supabase falls back to the bare Site URL, landing
+    // the user on the homepage with the recovery tokens in the hash instead
+    // of on /reset-password — mirrors the redirectTo used by the self-service
+    // sendPasswordReset() flow in src/lib/auth-client.ts.
+    const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
     const { data, error } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
+      options: { redirectTo: `${origin}/reset-password` },
     });
 
     if (error) {
