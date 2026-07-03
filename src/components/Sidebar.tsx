@@ -30,6 +30,7 @@ interface SidebarProps {
   userName: string;
   userSub: string;
   avatarInitials: string;
+  academicPeriod?: string;
   onClose?: () => void;
 }
 
@@ -117,7 +118,7 @@ const SUPPORT_CATEGORIES = [
   "Other",
 ];
 
-export default function Sidebar({ role, userName, userSub, avatarInitials, onClose }: SidebarProps) {
+export default function Sidebar({ role, userName, userSub, avatarInitials, academicPeriod, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -209,14 +210,21 @@ export default function Sidebar({ role, userName, userSub, avatarInitials, onClo
                 style={{ width: "48px", height: "48px", objectFit: "contain" }}
               />
             </div>
-            <span
-              className="sidebar-brand-name"
-              onClick={() => window.location.reload()}
-              role="button"
-              style={{ cursor: "pointer" }}
-            >
-              PHARMATRACK
-            </span>
+            <div>
+              <span
+                className="sidebar-brand-name"
+                onClick={() => window.location.reload()}
+                role="button"
+                style={{ cursor: "pointer" }}
+              >
+                PHARMATRACK
+              </span>
+              {academicPeriod && (
+                <div style={{ fontSize: "10.5px", color: "rgba(255, 255, 255, 0.4)", marginTop: "2px" }}>
+                  {academicPeriod}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Nav Sections */}

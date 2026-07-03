@@ -6,6 +6,7 @@ import { logoutUser, getCurrentUser, getAuthUser } from "@/lib/auth-client";
 import { Menu, X } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import type { PharmaUser, StudentProfile, FacilitatorProfile } from "@/lib/schema";
+import { getSystemConfig } from "@/lib/systemConfig";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     | null
   >(null);
   const [loading, setLoading] = useState(true);
+  const [academicPeriod, setAcademicPeriod] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     async function loadUser() {
@@ -43,6 +45,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
     loadUser();
+
+    getSystemConfig()
+      .then((config) => setAcademicPeriod(config.academicPeriod))
+      .catch(() => {});
   }, [router]);
 
   const handleLogout = async () => {
@@ -141,6 +147,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           userName={userName}
           userSub={userSub}
           avatarInitials={avatarInitials}
+          academicPeriod={academicPeriod}
           onClose={() => setSidebarOpen(false)}
         />
       </div>

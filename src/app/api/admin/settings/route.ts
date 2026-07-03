@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getBackendUser } from "@/lib/auth";
+import { SYSTEM_CONFIG_DEFAULTS as DEFAULTS, type ConfigKey } from "@/lib/systemConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -9,17 +10,6 @@ const getAdminClient = () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL || "",
     process.env.SUPABASE_SERVICE_ROLE_KEY || ""
   );
-};
-
-// Default system configurations as a fallback
-const DEFAULTS: Record<string, string> = {
-  absenceNotifications: "true",
-  weeklyReports: "true",
-  lateThreshold: "07:35",
-  academicPeriod: "2025–2026 · 2nd Semester",
-  qrExpiry: "10 min",
-  minAttendance: "75%",
-  registrationMode: "approval",
 };
 
 export async function GET(req: NextRequest) {
@@ -69,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     Object.keys(DEFAULTS).forEach((key) => {
       const dbVal = dbMap.get(key);
-      settings[key] = dbVal !== undefined ? dbVal : DEFAULTS[key];
+      settings[key] = dbVal !== undefined ? dbVal : DEFAULTS[key as ConfigKey];
     });
 
     return NextResponse.json({
@@ -129,7 +119,7 @@ export async function POST(req: NextRequest) {
       const value = settings[key];
       return {
         key,
-        value: String(value !== undefined ? value : DEFAULTS[key]),
+        value: String(value !== undefined ? value : DEFAULTS[key as ConfigKey]),
         updated_at: new Date().toISOString(),
       };
     });

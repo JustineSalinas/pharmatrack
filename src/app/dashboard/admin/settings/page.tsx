@@ -7,29 +7,12 @@ import {
   UserCheck, Lock, Database, RefreshCw, Eye, EyeOff, Info,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { backfillEventStatuses } from "@/lib/attendance";
-
-// ─── Types ────────────────────────────────────────────────
-type ConfigKey =
-  | "absenceNotifications"
-  | "weeklyReports"
-  | "lateThreshold"
-  | "academicPeriod"
-  | "qrExpiry"
-  | "minAttendance"
-  | "registrationMode";
-
-type Settings = Record<ConfigKey, string>;
-
-const DEFAULTS: Settings = {
-  absenceNotifications: "true",
-  weeklyReports: "true",
-  lateThreshold: "07:35",
-  academicPeriod: "2025–2026 · 2nd Semester",
-  qrExpiry: "10 min",
-  minAttendance: "75%",
-  registrationMode: "approval",
-};
+import { backfillEventStatuses, notifyAbsences } from "@/lib/attendance";
+import {
+  SYSTEM_CONFIG_DEFAULTS as DEFAULTS,
+  type ConfigKey,
+  type SystemConfig as Settings,
+} from "@/lib/systemConfig";
 
 // ─── Column definitions ───────────────────────────────────
 const LEFT_GROUPS = [
@@ -253,6 +236,7 @@ export default function AdminSettings() {
     setRecomputing(true);
     try {
       const r = await backfillEventStatuses();
+      notifyAbsences(r.absentEntries);
       const lines = [
         `Events processed: ${r.eventsProcessed}`,
         `Absent records inserted: ${r.absentInserted}`,

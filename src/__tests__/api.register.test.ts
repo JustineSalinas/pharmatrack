@@ -5,14 +5,16 @@ import { resolve, dirname } from "path";
 
 // ── Hoisted refs (available inside vi.mock factory closures) ───────────────
 
-const { mockSignUp, mockDeleteUser, mockGetBackendUser, getTableResults } = vi.hoisted(() => {
+const { mockSignUp, mockDeleteUser, mockGetBackendUser, getTableResults, getInsertCalls } = vi.hoisted(() => {
   const tableResults: Record<string, { data: unknown; error: unknown }> = {};
+  const insertCalls: Array<{ table: string; payload: any }> = [];
 
   return {
     mockSignUp: vi.fn(),
     mockDeleteUser: vi.fn(),
     mockGetBackendUser: vi.fn(),
     getTableResults: () => tableResults,
+    getInsertCalls: () => insertCalls,
   };
 });
 
@@ -35,8 +37,15 @@ vi.mock("@supabase/supabase-js", () => {
       select: () => chain,
       eq: () => chain,
       single: () => Promise.resolve(result()),
-      insert: () => makeInsertReturn(result()),
+      insert: (payload: any) => {
+        getInsertCalls().push({ table, payload });
+        return makeInsertReturn(result());
+      },
       upsert: () => Promise.resolve(result()),
+      // Makes `await client.from(table).select(...)` (with no further
+      // chaining) resolve to the mocked {data, error} directly — needed for
+      // getSystemConfigServer's plain `.select("key, value")` read.
+      then: (resolve: any) => resolve(result()),
     };
     return chain;
   }
@@ -65,6 +74,7 @@ function setTable(table: string, value: { data: unknown; error: unknown }) {
 function clearTables() {
   const t = getTableResults();
   for (const k of Object.keys(t)) delete t[k];
+  getInsertCalls().length = 0;
 }
 
 function makeReq(body: unknown, extraHeaders?: Record<string, string>): NextRequest {
@@ -267,6 +277,47 @@ describe("POST /api/auth/register", () => {
     const res = await POST(makeReq(body));
     expect(res.status).toBe(200);
     expect((await res.json()).success).toBe(true);
+  });
+
+  // ── Facilitator Registration Mode (system_config.registrationMode) ────────
+
+  it("keeps facilitators pending when registrationMode is absent (defaults to approval-only)", async () => {
+    const body = {
+      email: "facilitator@usa.edu.ph",
+      password: "SecurePass1!",
+      full_name: "Test Facilitator",
+      account_type: "facilitator",
+    };
+    await POST(makeReq(body));
+    const usersInsert = getInsertCalls().find((c) => c.table === "users");
+    expect(usersInsert?.payload.status).toBe("pending");
+  });
+
+  it("auto-approves facilitators when registrationMode is 'open'", async () => {
+    setTable("system_config", {
+      data: [{ key: "registrationMode", value: "open" }],
+      error: null,
+    });
+    const body = {
+      email: "facilitator@usa.edu.ph",
+      password: "SecurePass1!",
+      full_name: "Test Facilitator",
+      account_type: "facilitator",
+    };
+    const res = await POST(makeReq(body));
+    expect(res.status).toBe(200);
+    const usersInsert = getInsertCalls().find((c) => c.table === "users");
+    expect(usersInsert?.payload.status).toBe("approved");
+  });
+
+  it("keeps students pending even when registrationMode is 'open'", async () => {
+    setTable("system_config", {
+      data: [{ key: "registrationMode", value: "open" }],
+      error: null,
+    });
+    await POST(makeReq(VALID_STUDENT_BODY));
+    const usersInsert = getInsertCalls().find((c) => c.table === "users");
+    expect(usersInsert?.payload.status).toBe("pending");
   });
 
   // ── Orphan cleanup ──────────────────────────────────────────────────────

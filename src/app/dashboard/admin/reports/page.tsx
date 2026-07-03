@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
+import { getSystemConfig } from "@/lib/systemConfig";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import { FileText, Download, Table, TrendingUp, AlertTriangle, Calendar, Loader2, Award } from "lucide-react";
@@ -80,6 +81,8 @@ export default function AdminReports() {
   const [monthlyData, setMonthlyData] = useState<{month: string, rate: number}[]>([]);
   const [sectionData, setSectionData] = useState<{name: string, rate: number, count: number}[]>([]);
   const [riskList, setRiskList] = useState<any[]>([]);
+  const [minAttendance, setMinAttendance] = useState(75);
+  const [academicPeriod, setAcademicPeriod] = useState<string | null>(null);
 
   const escCsv = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 
@@ -153,9 +156,10 @@ export default function AdminReports() {
           return;
         }
 
-        const [ { data: studentStats, error: sErr }, { data: sessions, error: rErr } ] = await Promise.all([
+        const [ { data: studentStats, error: sErr }, { data: sessions, error: rErr }, config ] = await Promise.all([
            supabase.from("student_attendance_summary").select("*"),
-           supabase.from("qr_sessions").select(`date, section, attendance_records(status)`)
+           supabase.from("qr_sessions").select(`date, section, attendance_records(status)`),
+           getSystemConfig().catch(() => null)
         ]);
 
         if (sErr) throw sErr;
@@ -163,6 +167,10 @@ export default function AdminReports() {
 
         const validStats = studentStats || [];
         const validSessions = sessions || [];
+
+        const riskThreshold = config ? parseInt(config.minAttendance, 10) || 75 : 75;
+        setMinAttendance(riskThreshold);
+        if (config) setAcademicPeriod(config.academicPeriod);
 
         // Overall Metrics
         let totalRecs = 0;
@@ -179,7 +187,7 @@ export default function AdminReports() {
             totalAttended += (s.present_count + s.late_count);
 
             if (s.attendance_rate === 100) perfect++;
-            if (s.attendance_rate < 75) {
+            if (s.attendance_rate < riskThreshold) {
               flagged++;
               risks.push({
                 id: s.student_id_number || s.student_id.substring(0,8),
@@ -256,7 +264,7 @@ export default function AdminReports() {
 
   const getBarColor = (rate: number) => {
     if (rate >= 85) return "var(--success)";
-    if (rate >= 75) return "var(--gold)";
+    if (rate >= minAttendance) return "var(--gold)";
     return "var(--danger)";
   };
 
@@ -308,7 +316,7 @@ export default function AdminReports() {
             <Calendar size={16} color="var(--dimmed)" />
           </div>
           <div style={{ fontSize: "28px", fontWeight: 700, color: "var(--white)", letterSpacing: "-0.02em" }}>{metrics.totalSessions}</div>
-          <div style={{ fontSize: "11px", color: "var(--dimmed)", marginTop: "6px" }}>Active this semester</div>
+          <div style={{ fontSize: "11px", color: "var(--dimmed)", marginTop: "6px" }}>{academicPeriod ? `Active ${academicPeriod}` : "Active this semester"}</div>
         </div>
 
         {/* Perfect Records */}
@@ -328,7 +336,7 @@ export default function AdminReports() {
             <AlertTriangle size={16} color="var(--danger)" />
           </div>
           <div style={{ fontSize: "28px", fontWeight: 700, color: "var(--danger)", letterSpacing: "-0.02em" }}>{metrics.flaggedStudents}</div>
-          <div style={{ fontSize: "11px", color: "var(--danger)", opacity: 0.8, marginTop: "6px" }}>Critical attendance &lt; 75%</div>
+          <div style={{ fontSize: "11px", color: "var(--danger)", opacity: 0.8, marginTop: "6px" }}>Critical attendance &lt; {minAttendance}%</div>
         </div>
       </div>
 
@@ -337,7 +345,7 @@ export default function AdminReports() {
         <div className="panel" style={{ padding: "24px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
           <div className="panel-header" style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--white)" }}>Monthly Attendance Trend</h3>
-            <span style={{ fontSize: "11px", color: "var(--dimmed)" }}>Academic Year 2026</span>
+            <span style={{ fontSize: "11px", color: "var(--dimmed)" }}>{academicPeriod || "Academic Year 2026"}</span>
           </div>
           
           <div style={{ height: "200px", width: "100%" }}>

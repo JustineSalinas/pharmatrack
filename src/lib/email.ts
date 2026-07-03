@@ -190,3 +190,142 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
 
   console.log(`[Email Service] Broadcast complete — sent: ${sent}, failed: ${failed}`);
 }
+
+export interface AbsenceNotificationInput {
+  studentName: string;
+  studentEmail: string;
+  eventName: string;
+  /** Already display-formatted (e.g. "June 3, 2026") — callers own date parsing. */
+  eventDateDisplay: string;
+}
+
+export async function sendAbsenceNotifications(notifications: AbsenceNotificationInput[]) {
+  const transporter = getTransporter();
+
+  if (!transporter) {
+    console.warn("[Email Service] SMTP not configured — skipping absence notifications.");
+    return;
+  }
+
+  if (notifications.length === 0) return;
+
+  const fromAddress = process.env.SMTP_FROM || "PharmaTrack <notifications@usa.edu.ph>";
+
+  const buildHtml = (n: AbsenceNotificationInput) => {
+    const bodyHtml = `
+      <p>Dear <strong>${n.studentName}</strong>,</p>
+      <p>Our records show you did not check in for the following event:</p>
+      ${renderDetailsPanel([
+        { label: "Event Name", value: n.eventName },
+        { label: "Date", value: n.eventDateDisplay },
+      ])}
+      <p>If you believe this is a mistake, please contact your facilitator or the Pharmacy Department as soon as possible.</p>
+    `;
+    return renderEmailShell({ eyebrow: "Absence Notice", bodyHtml });
+  };
+
+  console.log(`[Email Service] Sending ${notifications.length} absence notification(s).`);
+
+  const BATCH_SIZE = 100;
+  let sent = 0;
+  let failed = 0;
+
+  for (let i = 0; i < notifications.length; i += BATCH_SIZE) {
+    const batch = notifications.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.allSettled(
+      batch.map((n) =>
+        transporter.sendMail({
+          from: fromAddress,
+          to: n.studentEmail,
+          subject: `Attendance Alert: You were marked absent for "${n.eventName}"`,
+          html: buildHtml(n),
+        })
+      )
+    );
+
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled") {
+        sent += 1;
+      } else {
+        failed += 1;
+        console.error(`[Email Service] Failed to send absence notice to ${batch[idx].studentEmail}:`, result.reason);
+      }
+    });
+  }
+
+  console.log(`[Email Service] Absence notifications complete — sent: ${sent}, failed: ${failed}`);
+}
+
+export interface WeeklyDigestInput {
+  facilitatorName: string;
+  facilitatorEmail: string;
+  eventsCount: number;
+  attendanceRate: number;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  incompleteCount: number;
+}
+
+export async function sendWeeklyDigest(digests: WeeklyDigestInput[]) {
+  const transporter = getTransporter();
+
+  if (!transporter) {
+    console.warn("[Email Service] SMTP not configured — skipping weekly digest.");
+    return;
+  }
+
+  if (digests.length === 0) return;
+
+  const fromAddress = process.env.SMTP_FROM || "PharmaTrack <notifications@usa.edu.ph>";
+
+  const buildHtml = (d: WeeklyDigestInput) => {
+    const bodyHtml = `
+      <p>Dear <strong>${d.facilitatorName}</strong>,</p>
+      <p>Here's your PharmaTrack attendance summary for the past 7 days:</p>
+      ${renderDetailsPanel([
+        { label: "Events Held", value: String(d.eventsCount) },
+        { label: "Attendance Rate", value: `${d.attendanceRate}%` },
+        { label: "Present", value: String(d.presentCount) },
+        { label: "Late", value: String(d.lateCount) },
+        { label: "Absent", value: String(d.absentCount) },
+        { label: "Incomplete", value: String(d.incompleteCount) },
+      ])}
+      <p>Log in to PharmaTrack for the full breakdown by event and student.</p>
+    `;
+    return renderEmailShell({ eyebrow: "Weekly Attendance Digest", bodyHtml });
+  };
+
+  console.log(`[Email Service] Sending ${digests.length} weekly digest(s).`);
+
+  const BATCH_SIZE = 100;
+  let sent = 0;
+  let failed = 0;
+
+  for (let i = 0; i < digests.length; i += BATCH_SIZE) {
+    const batch = digests.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.allSettled(
+      batch.map((d) =>
+        transporter.sendMail({
+          from: fromAddress,
+          to: d.facilitatorEmail,
+          subject: "Your Weekly PharmaTrack Attendance Digest",
+          html: buildHtml(d),
+        })
+      )
+    );
+
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled") {
+        sent += 1;
+      } else {
+        failed += 1;
+        console.error(`[Email Service] Failed to send weekly digest to ${batch[idx].facilitatorEmail}:`, result.reason);
+      }
+    });
+  }
+
+  console.log(`[Email Service] Weekly digest complete — sent: ${sent}, failed: ${failed}`);
+}
