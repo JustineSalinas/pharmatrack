@@ -29,7 +29,7 @@ export default function RegisterPage() {
   const sectionsByYear: Record<string, string[]> = {
     "1st Year": ["PH 1A", "PH 1B", "PH 1C", "PH 1D", "PH 1E"],
     "2nd Year": ["PH 2A", "PH 2B", "PH 2C", "PH 2D", "PH 2E"],
-    "3rd Year": ["PH 3A", "PH 3B", "PH 3C", "PH 3D"],
+    "3rd Year": ["PH 3A", "PH 3B", "PH 3C", "PH 3D", "PH 3E"],
     "4th Year": ["PH 4A", "PH 4B", "PH 4C", "PH 4D"]
   };
 
