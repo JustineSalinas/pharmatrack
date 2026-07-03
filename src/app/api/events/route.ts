@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const { name, location, date, check_in_start, check_in_late, check_in_end, target_year_levels, event_type } = body;
+  const { name, location, date, check_in_start, check_in_late, check_in_end, check_out_start, check_out_end, target_year_levels, event_type } = body;
   if (!name || !location || !date || !check_in_start || !check_in_late || !check_in_end) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
         check_in_start,
         check_in_late,
         check_in_end,
+        check_out_start: check_out_start ?? null,
+        check_out_end: check_out_end ?? null,
         created_by: user.id,
         target_year_levels: target_year_levels?.length ? target_year_levels : null,
         event_type: event_type ?? null,
