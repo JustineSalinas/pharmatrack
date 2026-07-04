@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { getSystemConfig } from "@/lib/systemConfig";
+import { triggerSummaryRefresh } from "@/lib/attendance";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import { FileText, Download, Table, TrendingUp, AlertTriangle, Calendar, Loader2, Award } from "lucide-react";
@@ -156,6 +157,7 @@ export default function AdminReports() {
           return;
         }
 
+        void triggerSummaryRefresh();
         const [ { data: studentStats, error: sErr }, { data: sessions, error: rErr }, config ] = await Promise.all([
            supabase.from("student_attendance_summary").select("*"),
            supabase.from("qr_sessions").select(`date, section, attendance_records(status)`),

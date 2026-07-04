@@ -173,6 +173,25 @@ export async function claimSharedRun(key: string, intervalMs: number): Promise<b
   }
 }
 
+/**
+ * Fire-and-forget trigger for the throttled materialized-view refresh. Staff
+ * pages that read student_attendance_summary call this on mount; the server
+ * route dedupes to at most once per few minutes across all clients. Best-effort:
+ * a failure just means the summary is a little more stale until the next call.
+ */
+export async function triggerSummaryRefresh(): Promise<void> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    await fetch("/api/attendance/refresh-summary", {
+      method: "POST",
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+  } catch {
+    // best-effort
+  }
+}
+
 const EMPTY_BACKFILL: BackfillResult = {
   eventsProcessed: 0, absentInserted: 0, incompleteUpdated: 0, errors: [], absentEntries: [],
 };
@@ -189,7 +208,12 @@ export async function backfillEventStatusesShared(
 ): Promise<BackfillResult> {
   const due = await claimSharedRun("absentBackfill", intervalMs);
   if (!due) return EMPTY_BACKFILL;
-  return backfillEventStatuses();
+  const result = await backfillEventStatuses();
+  // Backfill mutated attendance_records → nudge the summary matview to refresh.
+  if (result.absentInserted > 0 || result.incompleteUpdated > 0) {
+    void triggerSummaryRefresh();
+  }
+  return result;
 }
 
 /**
