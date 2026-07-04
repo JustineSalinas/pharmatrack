@@ -2,7 +2,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import type { PharmaUser, StudentProfile, FacilitatorProfile, QRSession, AttendanceRecord } from "./schema";
 
 const supabaseUrl = typeof window !== "undefined"
-  ? "/supabase-api"
+  ? `${window.location.origin}/supabase-api`
   : (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co");
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder";
 
