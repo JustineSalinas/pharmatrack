@@ -12,10 +12,10 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 async function run() {
-  console.log('Testing student_attendance_summary view...');
-  const { data: vData, error: vErr } = await supabase.from('student_attendance_summary').select('*').limit(2);
+  console.log('Testing get_student_attendance_summary RPC...');
+  const { data: vData, error: vErr } = await supabase.rpc('get_student_attendance_summary').limit(2);
   if (vErr) {
-    console.error('View Error:', vErr);
+    console.error('RPC Error:', vErr);
   } else {
     console.log('View Success, count:', vData.length);
   }

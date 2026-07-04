@@ -62,11 +62,10 @@ function StudentDashboardContent() {
   // Fetch only the attendance stats (used on initial load and realtime refresh)
   const fetchStats = useCallback(async (studentId: string) => {
     const { data } = await supabase
-      .from("student_attendance_summary")
-      .select("*")
+      .rpc("get_student_attendance_summary")
       .eq("student_id", studentId)
       .single();
-    setStats(data);
+    setStats(data as AttendanceSummary | null);
   }, []);
 
   useEffect(() => {

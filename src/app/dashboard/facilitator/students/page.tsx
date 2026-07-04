@@ -74,8 +74,7 @@ export default function StudentsPage() {
 
       // 1. Fetch full student summary (attendance rates, counts, etc.)
       const { data: summary, error: sErr } = await supabase
-        .from("student_attendance_summary")
-        .select("*");
+        .rpc("get_student_attendance_summary");
       if (sErr) throw sErr;
 
       // Calculate today's range
@@ -112,7 +111,7 @@ export default function StudentsPage() {
 
       setStudents(parsed);
 
-      const uniqueSections = Array.from(new Set(parsed.map(s => s.section))).filter(Boolean).sort() as string[];
+      const uniqueSections = Array.from(new Set(parsed.map((s: any) => s.section))).filter(Boolean).sort() as string[];
       setSections(uniqueSections);
 
     } catch (err) {

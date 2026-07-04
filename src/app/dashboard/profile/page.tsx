@@ -40,7 +40,7 @@ export default function ProfilePage() {
           if (u.avatar_url) setAvatarUrl(u.avatar_url);
           if (u.account_type === "student") {
             const { data } = await supabase
-              .from("student_attendance_summary").select("*").eq("student_id", u.id).single();
+              .rpc("get_student_attendance_summary").eq("student_id", u.id).single();
             setStats(data);
           }
         }

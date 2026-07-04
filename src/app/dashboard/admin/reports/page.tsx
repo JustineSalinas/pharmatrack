@@ -159,7 +159,7 @@ export default function AdminReports() {
 
         void triggerSummaryRefresh();
         const [ { data: studentStats, error: sErr }, { data: sessions, error: rErr }, config ] = await Promise.all([
-           supabase.from("student_attendance_summary").select("*"),
+           supabase.rpc("get_student_attendance_summary"),
            supabase.from("qr_sessions").select(`date, section, attendance_records(status)`),
            getSystemConfig().catch(() => null)
         ]);
@@ -182,7 +182,7 @@ export default function AdminReports() {
         const risks: any[] = [];
         const sectionsMap: Record<string, { total: number, attended: number, count: number }> = {};
 
-        validStats.forEach(s => {
+        validStats.forEach((s: any) => {
           const hasRealRecords = (s.present_count + s.late_count + s.absent_count + s.incomplete_count) > 0;
           if (hasRealRecords) {
             totalRecs += s.total_records;

@@ -236,7 +236,7 @@ export default function FacultyReports() {
           { data: sessions, error: sessErr },
           config
         ] = await Promise.all([
-          supabase.from("student_attendance_summary").select("*"),
+          supabase.rpc("get_student_attendance_summary"),
           supabase.from("events").select("id, name, location, date"),
           supabase.from("attendance_records").select(`
             id,
@@ -305,7 +305,7 @@ export default function FacultyReports() {
 
         // Group students to calculate Section Breakdown dynamically
         const sectionsMap: Record<string, { total: number, attended: number, count: number }> = {};
-        parsedStudents.forEach(s => {
+        parsedStudents.forEach((s: any) => {
           if (!sectionsMap[s.section]) {
             sectionsMap[s.section] = { total: 0, attended: 0, count: 0 };
           }
@@ -330,8 +330,8 @@ export default function FacultyReports() {
         setPerfectCount(perfectStudents.length);
 
         // Average Attendance Rate
-        const totalOverallRecords = parsedStudents.reduce((sum, s) => sum + s.total_records, 0);
-        const totalOverallAttended = parsedStudents.reduce((sum, s) => sum + (s.present_count + s.late_count), 0);
+        const totalOverallRecords = parsedStudents.reduce((sum: number, s: any) => sum + s.total_records, 0);
+        const totalOverallAttended = parsedStudents.reduce((sum: number, s: any) => sum + (s.present_count + s.late_count), 0);
         const overallAvgRate = totalOverallRecords > 0 ? Math.round((totalOverallAttended / totalOverallRecords) * 100) : 0;
         setAvgAttendanceRate(overallAvgRate);
 

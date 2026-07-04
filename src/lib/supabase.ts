@@ -35,9 +35,6 @@ export type Database = {
         Update: { status?: string; time_in?: string | null; time_out?: string | null; remarks?: string | null };
       };
     };
-    Views: {
-      student_attendance_summary: { Row: any };
-    };
   };
 };
 
