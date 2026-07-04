@@ -102,7 +102,8 @@ export default function EventsManagement() {
     const { data } = await supabase
       .from("events")
       .select("*")
-      .order("date", { ascending: false });
+      .order("date", { ascending: false })
+      .limit(500);
     setEvents(data || []);
     setLoading(false);
   }

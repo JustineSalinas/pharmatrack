@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
-import { backfillEventStatuses, runIfDue, notifyAbsences } from "@/lib/attendance";
+import { backfillEventStatusesShared, runIfDue, notifyAbsences } from "@/lib/attendance";
 import { triggerWeeklyReport } from "@/lib/weeklyReport";
 import {
   Loader2,
@@ -41,7 +41,7 @@ export default function FacilitatorOverview() {
 
         // Silently auto-mark Absent / Incomplete for past events (throttled
         // to once per hour per browser so it doesn't run on every page load).
-        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatuses)
+        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatusesShared)
           .then((r) => r && notifyAbsences(r.absentEntries))
           .catch(() => {});
         runIfDue("weeklyReport", 7 * 24 * 60 * 60_000, triggerWeeklyReport).catch(() => {});

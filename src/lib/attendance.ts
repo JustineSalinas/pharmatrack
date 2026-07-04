@@ -146,6 +146,53 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
 }
 
 /**
+ * Cross-device claim for the shared backfill slot. Asks the server (which uses
+ * the service-role client) whether this caller should run the job now, recording
+ * the run in system_config so other staff devices skip it for the interval.
+ *
+ * Fails OPEN (returns true) on any error, so a route/network hiccup degrades to
+ * the old per-browser behavior rather than silently skipping the backfill.
+ */
+export async function claimSharedRun(key: string, intervalMs: number): Promise<boolean> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const res = await fetch("/api/backfill/claim", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ key, intervalMs }),
+    });
+    if (!res.ok) return true;
+    const json = await res.json();
+    return json?.due !== false;
+  } catch {
+    return true;
+  }
+}
+
+const EMPTY_BACKFILL: BackfillResult = {
+  eventsProcessed: 0, absentInserted: 0, incompleteUpdated: 0, errors: [], absentEntries: [],
+};
+
+/**
+ * Backfill wrapped in the shared cross-device claim. The per-browser `runIfDue`
+ * gate still fronts this (cheap, no network), then this dedupes across the fleet
+ * of staff devices so the heavy 60-day scan runs at most once per interval
+ * globally. Returns an empty result (safe for notifyAbsences) when another
+ * device already claimed the slot.
+ */
+export async function backfillEventStatusesShared(
+  intervalMs: number = 60 * 60_000
+): Promise<BackfillResult> {
+  const due = await claimSharedRun("absentBackfill", intervalMs);
+  if (!due) return EMPTY_BACKFILL;
+  return backfillEventStatuses();
+}
+
+/**
  * Throttled wrapper — only runs `fn` if it hasn't been run for the given key
  * in the last `intervalMs`. Stored in localStorage so it's per browser, which
  * is good enough for opportunistic work triggered by a staff member opening

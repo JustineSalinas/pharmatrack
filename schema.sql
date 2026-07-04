@@ -10,6 +10,10 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- SECURITY HELPERS
 -- ============================================================
 
+-- Marked STABLE so the planner evaluates them ONCE per query instead of
+-- re-running the users lookup per row inside every RLS USING() clause. Without
+-- STABLE, plpgsql functions are treated as VOLATILE, which on large tables like
+-- attendance_records multiplies reads (and disk IO) by the row count.
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -20,7 +24,7 @@ BEGIN
     AND status = 'approved'
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
 
 CREATE OR REPLACE FUNCTION public.is_council()
 RETURNS BOOLEAN AS $$
@@ -32,7 +36,7 @@ BEGIN
     AND status = 'approved'
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
 
 -- SECURITY DEFINER functions still require the *caller* role to hold EXECUTE.
 -- Without these grants, every RLS policy that calls is_admin()/is_council()
@@ -514,3 +518,61 @@ SELECT * FROM (VALUES
 WHERE NOT EXISTS (
   SELECT 1 FROM public.products p WHERE p.name = seed.name
 );
+
+-- ============================================================
+-- INDEXES
+-- ============================================================
+-- Postgres does NOT auto-index foreign keys or filter columns; only PRIMARY KEY
+-- and UNIQUE constraints get implicit indexes. Without these, every filter/join
+-- on the hot tables does a sequential scan (reads the whole table from disk),
+-- which is the primary driver of Disk IO budget depletion under load.
+--
+-- When applying to a LIVE database, run these with CONCURRENTLY so they don't
+-- lock the tables during an event, e.g.:
+--   CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_attendance_student ON public.attendance_records (student_id);
+-- (CONCURRENTLY cannot run inside a transaction block / the SQL editor's implicit
+-- txn — run each statement on its own. The IF NOT EXISTS forms below are safe to
+-- re-run and are what belongs in this schema file of record.)
+
+-- attendance_records — the highest-traffic table (insert on check-in, update on
+-- check-out, scanned+aggregated constantly).
+CREATE INDEX IF NOT EXISTS idx_attendance_student
+  ON public.attendance_records (student_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_event
+  ON public.attendance_records (event_id) WHERE event_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_attendance_session
+  ON public.attendance_records (session_id) WHERE session_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_attendance_status
+  ON public.attendance_records (status);
+CREATE INDEX IF NOT EXISTS idx_attendance_scanned_by
+  ON public.attendance_records (scanned_by);
+-- Backs the `ORDER BY created_at DESC LIMIT n` used by the attendance log pages
+-- and the dashboard "recent scans" feeds — without it, an ordered LIMIT still
+-- scans + sorts the whole table.
+CREATE INDEX IF NOT EXISTS idx_attendance_created
+  ON public.attendance_records (created_at DESC);
+
+-- users — read on every is_admin()/is_council() call and the summary view's
+-- WHERE account_type='student'.
+CREATE INDEX IF NOT EXISTS idx_users_account_status
+  ON public.users (account_type, status);
+
+-- events — backfill filters .lt('check_in_end').gte(...); calendar/lists by date.
+CREATE INDEX IF NOT EXISTS idx_events_check_in_end
+  ON public.events (check_in_end);
+CREATE INDEX IF NOT EXISTS idx_events_date
+  ON public.events (date);
+
+-- qr_sessions — section policy + schedule view, facilitator ownership, date lists.
+CREATE INDEX IF NOT EXISTS idx_qr_sessions_section_expires
+  ON public.qr_sessions (section, expires_at);
+CREATE INDEX IF NOT EXISTS idx_qr_sessions_facilitator
+  ON public.qr_sessions (facilitator_id);
+CREATE INDEX IF NOT EXISTS idx_qr_sessions_date
+  ON public.qr_sessions (date);
+
+-- student_profiles — section is filtered by the qr_sessions student policy and
+-- the student_schedule view (user_id / student_id_number / qr_code_id are already
+-- UNIQUE-indexed).
+CREATE INDEX IF NOT EXISTS idx_student_profiles_section
+  ON public.student_profiles (section);
