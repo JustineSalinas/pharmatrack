@@ -73,8 +73,11 @@ const res = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/con
     smtp_sender_name: senderName,
     // Minimum seconds between two emails to the same address (1 = effectively off)
     smtp_max_frequency: 1,
-    // Allow up to 100 auth emails/hour now that we're not on the built-in sender
-    rate_limit_email_sent: 100,
+    // Allow up to 300 auth emails/hour now that we're not on the built-in sender.
+    // NOTE: the Supabase dashboard (Authentication → Rate Limits) is the live
+    // source of truth for this value; keep this constant in sync with it so a
+    // re-run of this script doesn't silently reset the configured limit.
+    rate_limit_email_sent: 300,
   }),
 });
 
