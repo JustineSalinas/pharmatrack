@@ -52,7 +52,12 @@ export default function AdminAttendance() {
           qr_sessions ( subject, date, section ),
           users!student_id ( full_name, email )
         `)
-        .order("created_at", { ascending: false });
+        // Bound the log to the most recent records so this doesn't seq-scan an
+        // ever-growing table on every load / realtime refresh. Backed by
+        // idx_attendance_created. (Server-side date paging for older records is
+        // the Phase 2 follow-up.)
+        .order("created_at", { ascending: false })
+        .limit(2000);
 
       if (error) throw error;
 

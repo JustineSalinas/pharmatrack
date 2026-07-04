@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   // ── Fetch event & validate time window ──────────────────
   const { data: event, error: evErr } = await supabase
     .from("events")
-    .select("*")
+    .select("check_in_start, check_in_late, check_in_end, check_out_start, check_out_end")
     .eq("id", event_id)
     .single();
 
