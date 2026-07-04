@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck } from "lucide-react";
@@ -16,11 +16,28 @@ export default function AdminUsers() {
   const [filterSection, setFilterSection] = useState("All");
   const [filterYear, setFilterYear] = useState("All");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [busyActions, setBusyActions] = useState<Set<string>>(new Set());
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
+  // Clearing any previous timeout before scheduling a new one prevents an
+  // earlier, slower action's stale timer from wiping out a toast that a
+  // later action just set — without this, two actions resolving close
+  // together (easy to trigger with no click-guard on the buttons) could
+  // make a notification disappear right after it appears, or never
+  // visibly render at all.
   function showToast(message: string, type: "success" | "error" = "success") {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 4000);
+  }
+
+  function setActionBusy(key: string, busy: boolean) {
+    setBusyActions(prev => {
+      const next = new Set(prev);
+      if (busy) next.add(key); else next.delete(key);
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -78,6 +95,9 @@ export default function AdminUsers() {
   }
 
   async function handleUpdateStatus(userId: string, newStatus: string, name: string, actionLabel: string) {
+    const key = `status:${userId}:${newStatus}`;
+    if (busyActions.has(key)) return;
+    setActionBusy(key, true);
     try {
       const { error } = await (supabase.from("users") as any)
         .update({ status: newStatus })
@@ -89,10 +109,15 @@ export default function AdminUsers() {
       showToast(`${actionLabel} for ${name}.`, "success");
     } catch (err: any) {
       showToast("Error updating status: " + err.message, "error");
+    } finally {
+      setActionBusy(key, false);
     }
   }
 
   async function handleResetPassword(email: string, name: string) {
+    const key = `reset:${email}`;
+    if (busyActions.has(key)) return;
+    setActionBusy(key, true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -110,10 +135,15 @@ export default function AdminUsers() {
       showToast(`Password reset email sent to ${email}.`, "success");
     } catch (err: any) {
       showToast("Error: " + err.message, "error");
+    } finally {
+      setActionBusy(key, false);
     }
   }
 
   async function handleForceVerifyEmail(userId: string, email: string) {
+    const key = `verify:${userId}`;
+    if (busyActions.has(key)) return;
+    setActionBusy(key, true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -131,6 +161,8 @@ export default function AdminUsers() {
       showToast(`Email verified for ${email}.`, "success");
     } catch (err: any) {
       showToast("Error: " + err.message, "error");
+    } finally {
+      setActionBusy(key, false);
     }
   }
 
@@ -303,17 +335,19 @@ export default function AdminUsers() {
                               className="action-btn-hover approve-btn"
                               data-tooltip="Approve User"
                               aria-label="Approve User"
+                              disabled={busyActions.has(`status:${u.id}:approved`)}
                               onClick={() => handleUpdateStatus(u.id, "approved", u.full_name, "User approved")}
                             >
-                              <CheckCircle size={14} />
+                              {busyActions.has(`status:${u.id}:approved`) ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
                             </button>
                             <button
                               className="action-btn-hover reject-btn"
                               data-tooltip="Reject User"
                               aria-label="Reject User"
+                              disabled={busyActions.has(`status:${u.id}:rejected`)}
                               onClick={() => handleUpdateStatus(u.id, "rejected", u.full_name, "User rejected")}
                             >
-                              <XCircle size={14} />
+                              {busyActions.has(`status:${u.id}:rejected`) ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
                             </button>
                           </>
                         )}
@@ -322,9 +356,10 @@ export default function AdminUsers() {
                             className="action-btn-hover suspend-btn"
                             data-tooltip="Suspend Access"
                             aria-label="Suspend Access"
+                            disabled={busyActions.has(`status:${u.id}:rejected`)}
                             onClick={() => handleUpdateStatus(u.id, "rejected", u.full_name, "Access suspended")}
                           >
-                            <ShieldAlert size={14} />
+                            {busyActions.has(`status:${u.id}:rejected`) ? <Loader2 size={14} className="animate-spin" /> : <ShieldAlert size={14} />}
                           </button>
                         )}
                         {u.status === "rejected" && (
@@ -332,26 +367,29 @@ export default function AdminUsers() {
                             className="action-btn-hover restore-btn"
                             data-tooltip="Restore Access"
                             aria-label="Restore Access"
+                            disabled={busyActions.has(`status:${u.id}:approved`)}
                             onClick={() => handleUpdateStatus(u.id, "approved", u.full_name, "Access restored")}
                           >
-                            Restore
+                            {busyActions.has(`status:${u.id}:approved`) ? <Loader2 size={13} className="animate-spin" /> : "Restore"}
                           </button>
                         )}
                         <button
                           className="action-btn-hover reset-btn"
                           data-tooltip="Reset Password"
                           aria-label="Reset Password"
+                          disabled={busyActions.has(`reset:${u.email}`)}
                           onClick={() => handleResetPassword(u.email, u.full_name)}
                         >
-                          <KeyRound size={13} />
+                          {busyActions.has(`reset:${u.email}`) ? <Loader2 size={13} className="animate-spin" /> : <KeyRound size={13} />}
                         </button>
                         <button
                           className="action-btn-hover verify-btn"
                           data-tooltip="Force Verify Email"
                           aria-label="Force Verify Email"
+                          disabled={busyActions.has(`verify:${u.id}`)}
                           onClick={() => handleForceVerifyEmail(u.id, u.email)}
                         >
-                          <MailCheck size={13} />
+                          {busyActions.has(`verify:${u.id}`) ? <Loader2 size={13} className="animate-spin" /> : <MailCheck size={13} />}
                         </button>
                       </div>
                     </td>
@@ -387,6 +425,12 @@ export default function AdminUsers() {
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .action-btn-hover:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
         
         .search-input:focus {
           border-color: rgba(0, 0, 0, 0.15) !important;
