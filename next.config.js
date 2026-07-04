@@ -13,6 +13,15 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+    return [
+      {
+        source: "/supabase-api/:path*",
+        destination: `${supabaseUrl}/:path*`,
+      },
+    ];
+  },
 };
 
 // Sentry's webpack instrumentation adds real overhead to every dev compile
