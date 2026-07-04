@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getSystemConfig } from "@/lib/systemConfig";
+import { triggerSummaryRefresh } from "@/lib/attendance";
 import * as XLSX from "xlsx";
 import {
   TrendingUp,
@@ -227,6 +228,7 @@ export default function FacultyReports() {
       try {
         setLoading(true);
         // 1. Fetch Students, Events, Attendance Records, and Sessions
+        void triggerSummaryRefresh();
         const [
           { data: summaryData, error: sErr },
           { data: events, error: eErr },

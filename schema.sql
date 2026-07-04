@@ -346,9 +346,18 @@ CREATE POLICY "Council manages attendance" ON public.attendance_records FOR ALL 
 -- ============================================================
 -- VIEWS
 -- ============================================================
+-- student_attendance_summary is served from a MATERIALIZED view so the heavy
+-- aggregation over attendance_records is computed on a schedule (refreshed via
+-- refresh_attendance_summary() below) instead of on every reports/roster page
+-- load — the repeated full-table aggregation was a major disk-IO source.
+--
+-- Materialized views do NOT enforce RLS, so the matview itself is hidden from
+-- clients (REVOKE below) and access goes through the security-DEFINER wrapper
+-- view further down, which re-applies the original access rule (a student may
+-- read only their own row; council reads all).
 DROP VIEW IF EXISTS public.student_attendance_summary;
-CREATE OR REPLACE VIEW public.student_attendance_summary 
-WITH (security_invoker = true) AS
+DROP MATERIALIZED VIEW IF EXISTS public.student_attendance_summary_mat CASCADE;
+CREATE MATERIALIZED VIEW public.student_attendance_summary_mat AS
 SELECT
   u.id AS student_id,
   u.full_name,
@@ -368,6 +377,37 @@ JOIN public.student_profiles sp ON sp.user_id = u.id
 LEFT JOIN public.attendance_records ar ON ar.student_id = u.id
 WHERE u.account_type = 'student'
 GROUP BY u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year;
+
+-- Unique index on student_id: lets the wrapper filter cheaply and is required
+-- if you ever switch the refresh to CONCURRENTLY.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_summary_mat_student
+  ON public.student_attendance_summary_mat (student_id);
+
+-- Hide the raw matview from clients — access is only via the wrapper view.
+REVOKE ALL ON public.student_attendance_summary_mat FROM authenticated, anon;
+
+-- Wrapper view re-applies the per-caller access rule the old security_invoker
+-- view got for free from underlying-table RLS. SECURITY DEFINER so it can read
+-- the (client-hidden) matview; the WHERE clause does the authorization.
+CREATE VIEW public.student_attendance_summary
+WITH (security_invoker = false) AS
+SELECT m.*
+FROM public.student_attendance_summary_mat m
+WHERE public.is_council() OR m.student_id = auth.uid();
+GRANT SELECT ON public.student_attendance_summary TO authenticated;
+
+-- Refreshes the matview. SECURITY DEFINER so a throttled server route (service
+-- role) can trigger it. Plain (non-CONCURRENT) REFRESH because CONCURRENTLY
+-- can't run inside the transaction PostgREST/RPC wraps around it; the matview
+-- is tiny (one row per student) so the brief lock is negligible.
+CREATE OR REPLACE FUNCTION public.refresh_attendance_summary()
+RETURNS void AS $$
+BEGIN
+  REFRESH MATERIALIZED VIEW public.student_attendance_summary_mat;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+REVOKE ALL ON FUNCTION public.refresh_attendance_summary() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.refresh_attendance_summary() TO service_role;
 
 -- Secure schedule view for students (excludes the secret code column)
 -- security_invoker=true ensures auth.uid() resolves to the CALLING student,

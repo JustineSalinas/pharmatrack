@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { triggerSummaryRefresh } from "@/lib/attendance";
 import {
   Search, Users, CheckCircle, XCircle, Clock, ChevronRight, X,
   TrendingUp, AlertTriangle, FileText, Loader2, Calendar, MapPin,
@@ -66,6 +67,10 @@ export default function StudentsPage() {
   const fetchStudents = useCallback(async (isInitial = false) => {
     try {
       if (isInitial) setLoading(true);
+
+      // Nudge the summary matview to refresh (throttled server-side); this load
+      // reads whatever is current, next load picks up the fresh data.
+      void triggerSummaryRefresh();
 
       // 1. Fetch full student summary (attendance rates, counts, etc.)
       const { data: summary, error: sErr } = await supabase
