@@ -38,6 +38,12 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
+    if (role === "student" && !email.toLowerCase().endsWith("@usa.edu.ph")) {
+      setError("Student email must end with @usa.edu.ph");
+      setLoading(false);
+      return;
+    }
+
     if (password.length < 8) {
       setError("Password must be at least 8 characters");
       setLoading(false);

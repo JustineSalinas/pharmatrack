@@ -67,8 +67,23 @@ describe('Validation Schemas', () => {
       const result = studentRegisterSchema.safeParse(data)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Must be a university email')
+        expect(result.error.errors[0].message).toBe('Student email must end with @usa.edu.ph')
       }
+    })
+
+    it('should fail if email is a valid .edu.ph domain but not usa.edu.ph', () => {
+      const data = { ...validStudentData, email: 'student@other.edu.ph' }
+      const result = studentRegisterSchema.safeParse(data)
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.errors[0].message).toBe('Student email must end with @usa.edu.ph')
+      }
+    })
+
+    it('should validate a usa.edu.ph email regardless of casing', () => {
+      const data = { ...validStudentData, email: 'Student@USA.EDU.PH' }
+      const result = studentRegisterSchema.safeParse(data)
+      expect(result.success).toBe(true)
     })
 
     it('should fail if password is too short', () => {

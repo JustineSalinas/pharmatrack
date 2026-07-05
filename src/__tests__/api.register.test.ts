@@ -156,6 +156,39 @@ describe("POST /api/auth/register", () => {
     expect((await res.json()).error).toMatch(/missing student profile/i);
   });
 
+  // ── Email domain enforcement ────────────────────────────────────────────
+
+  it("returns 400 when student email is not a usa.edu.ph address", async () => {
+    const body = { ...VALID_STUDENT_BODY, email: "student@gmail.com" };
+    const res = await POST(makeReq(body));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/usa\.edu\.ph/i);
+  });
+
+  it("returns 400 when student email is a valid .edu.ph domain but not usa.edu.ph", async () => {
+    const body = { ...VALID_STUDENT_BODY, email: "student@other.edu.ph" };
+    const res = await POST(makeReq(body));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/usa\.edu\.ph/i);
+  });
+
+  it("returns 200 for a usa.edu.ph student email regardless of casing", async () => {
+    const body = { ...VALID_STUDENT_BODY, email: "Student@USA.EDU.PH" };
+    const res = await POST(makeReq(body));
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 200 for facilitator registration with a non-usa .edu.ph email", async () => {
+    const body = {
+      email: "facilitator@other.edu.ph",
+      password: "SecurePass1!",
+      full_name: "Test Facilitator",
+      account_type: "facilitator",
+    };
+    const res = await POST(makeReq(body));
+    expect(res.status).toBe(200);
+  });
+
   it("returns 400 for invalid JSON body", async () => {
     const req = new Request("http://localhost/api/auth/register", {
       method: "POST",
@@ -325,6 +358,24 @@ describe("POST /api/auth/register", () => {
   it("calls deleteUser to clean up auth user when DB insert fails", async () => {
     setTable("users", { data: null, error: { code: "DB_DOWN", message: "db error" } });
     await POST(makeReq(VALID_STUDENT_BODY));
+    expect(mockDeleteUser).toHaveBeenCalledWith("user-uuid-123");
+  });
+
+  // ── Duplicate student ID ────────────────────────────────────────────────
+
+  it("returns a friendly 409 (not the raw Postgres error) when student_id_number is already taken", async () => {
+    setTable("student_profiles", {
+      data: null,
+      error: {
+        code: "23505",
+        message: 'duplicate key value violates unique constraint "student_profiles_student_id_number_key"',
+      },
+    });
+    const res = await POST(makeReq(VALID_STUDENT_BODY));
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toMatch(/student id number is already registered/i);
+    expect(json.error).not.toMatch(/constraint|duplicate key/i);
     expect(mockDeleteUser).toHaveBeenCalledWith("user-uuid-123");
   });
 });

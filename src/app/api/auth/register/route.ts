@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getBackendUser } from "@/lib/auth";
 import { getSystemConfigServer } from "@/lib/systemConfig";
+import { studentEmailSchema, universityEmailSchema } from "@/lib/validations";
 
 // Service-role client — bypasses RLS for profile inserts
 const getServiceClient = () => {
@@ -39,6 +40,12 @@ export async function POST(req: NextRequest) {
   }
   if (!["student", "facilitator"].includes(account_type)) {
     return NextResponse.json({ error: "Invalid account type" }, { status: 400 });
+  }
+
+  const emailSchema = account_type === "student" ? studentEmailSchema : universityEmailSchema;
+  const emailCheck = emailSchema.safeParse(email);
+  if (!emailCheck.success) {
+    return NextResponse.json({ error: emailCheck.error.issues[0].message }, { status: 400 });
   }
 
   try {
@@ -156,6 +163,12 @@ export async function POST(req: NextRequest) {
     );
     if (profileErr) {
       if (password) await supabase.auth.admin.deleteUser(userId).catch(() => {});
+      if (profileErr.code === "23505") {
+        return NextResponse.json(
+          { error: "This Student ID Number is already registered to another account." },
+          { status: 409 }
+        );
+      }
       return NextResponse.json({ error: profileErr.message }, { status: 500 });
     }
   } else {

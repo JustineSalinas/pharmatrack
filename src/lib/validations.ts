@@ -5,8 +5,14 @@ export const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+export const studentEmailSchema = z.string().trim().email("Please use your USA email")
+  .refine((val) => val.toLowerCase().endsWith("@usa.edu.ph"), "Student email must end with @usa.edu.ph");
+
+export const universityEmailSchema = z.string().trim().email("Please use your USA email")
+  .refine((val) => val.toLowerCase().endsWith(".edu.ph"), "Must be a university email");
+
 export const registerBaseSchema = z.object({
-  email: z.string().email("Please use your USA email").endsWith(".edu.ph", "Must be a university email"),
+  email: universityEmailSchema,
   full_name: z.string().min(3, "Full name is required"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirm_password: z.string(),
@@ -14,6 +20,7 @@ export const registerBaseSchema = z.object({
 });
 
 export const studentRegisterSchema = registerBaseSchema.extend({
+  email: studentEmailSchema,
   account_type: z.literal("student"),
   student_id_number: z.string().min(5, "ID is required"), // e.g., USA-2026-0001
   section: z.string().min(1, "Section is required"),
