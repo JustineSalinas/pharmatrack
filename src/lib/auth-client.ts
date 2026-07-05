@@ -120,9 +120,15 @@ export async function completeOnboarding(
     };
   }
 
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
   const res = await fetch("/api/auth/register", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    },
     body: JSON.stringify(body),
   });
 
@@ -159,9 +165,8 @@ export async function updatePassword(newPassword: string) {
 }
 
 export async function getCurrentUser() {
-  // getUser() validates the JWT with Supabase Auth server — more reliable than getSession()
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
+  const user = await getAuthUser();
+  if (!user) {
     console.log("No authenticated user session found.");
     return null;
   }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getAuthUser, completeOnboarding, logoutUser } from "@/lib/auth-client";
+import { getAuthUser, completeOnboarding, logoutUser, getCurrentUser } from "@/lib/auth-client";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -29,6 +29,22 @@ export default function OnboardingPage() {
         return;
       }
       setAuthUser(u);
+
+      // If user profile already exists, auto-redirect to dashboard
+      try {
+        const profile = await getCurrentUser();
+        if (profile) {
+          if (profile.account_type === "admin") {
+            router.push("/dashboard/admin");
+          } else if (profile.account_type === "facilitator") {
+            router.push("/dashboard/facilitator");
+          } else {
+            router.push("/dashboard");
+          }
+        }
+      } catch (err) {
+        console.error("Error checking existing profile on onboarding:", err);
+      }
     }
     checkUser();
   }, [router]);
