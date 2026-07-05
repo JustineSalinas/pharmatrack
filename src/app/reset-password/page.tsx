@@ -31,8 +31,12 @@ function ResetPasswordForm() {
           if (error) throw error;
         }
         // Hash-based recovery tokens are auto-detected by the client on load.
-        const { data } = await supabase.auth.getSession();
-        if (active && data.session) {
+        // getUser() (not getSession()) — it validates against Supabase's
+        // server instead of trusting a possibly-stale local/cached session,
+        // which matters here: a leftover unrelated session must never be
+        // mistaken for a freshly-verified password-recovery session.
+        const { data, error: userErr } = await supabase.auth.getUser();
+        if (active && data.user && !userErr) {
           setPhase("ready");
           return;
         }

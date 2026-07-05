@@ -54,6 +54,14 @@ const confirmationTemplate = `<div style="background-color:#f4f4f7; padding:32px
   </div>
 </div>`;
 
+// Uses the same {{ .TokenHash }} + /auth/callback pattern as the confirmation
+// template above, instead of {{ .ConfirmationURL }} (Supabase's hosted verify
+// link, which relies on a PKCE code-verifier stored in the requesting
+// browser). That PKCE link breaks whenever an email scanner/link-tracker
+// prefetches it first, or the student opens the email on a different device
+// than the one that requested the reset — both common. /auth/callback's
+// token_hash handling is server-side and stateless, and already has friendly
+// handling for a scanner-consumed link (see route.ts).
 const recoveryTemplate = `<div style="background-color:#f4f4f7; padding:32px 16px; font-family:Arial, Helvetica, sans-serif;">
   <div style="max-width:560px; margin:0 auto; background-color:#ffffff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
 
@@ -71,7 +79,7 @@ const recoveryTemplate = `<div style="background-color:#f4f4f7; padding:32px 16p
 
       <div style="background-color:#f7f7f9; border:1px solid #e5e7eb; border-radius:8px; padding:20px; margin:20px 0; text-align:center;">
         <p style="margin:0 0 16px 0; color:#6b7280; font-size:13px;">This link will expire in <strong style="color:#1e1432;">24 hours</strong>.</p>
-        <a href="{{ .ConfirmationURL }}"
+        <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery"
            style="display:inline-block; padding:12px 32px; background-color:#E8B84B; color:#1e1432; text-decoration:none; border-radius:6px; font-weight:bold; font-size:15px; letter-spacing:0.02em;">
           Reset Password
         </a>

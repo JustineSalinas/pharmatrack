@@ -62,8 +62,15 @@ export async function POST(req: NextRequest) {
       throw error;
     }
 
-    const actionLink = data?.properties?.action_link;
-    if (!actionLink) throw new Error("Failed to generate reset link");
+    // Build our own link through /auth/callback's token_hash handling instead
+    // of using data.properties.action_link — that raw link is Supabase's
+    // hosted PKCE-flow verify URL, which requires a code-verifier from the
+    // browser that *requested* the reset and breaks if an email scanner
+    // prefetches it or the admin's target user opens it on a different
+    // device. token_hash verification is server-side and stateless.
+    const tokenHash = data?.properties?.hashed_token;
+    if (!tokenHash) throw new Error("Failed to generate reset link");
+    const actionLink = `${origin}/auth/callback?token_hash=${tokenHash}&type=recovery`;
 
     const transporter = getTransporter();
     if (!transporter) {

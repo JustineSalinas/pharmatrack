@@ -76,17 +76,29 @@ export async function GET(request: NextRequest) {
       return response;
     }
     // Email scanners (Gmail, Outlook) auto-follow links and consume the one-time
-    // token before the user clicks it. The email IS confirmed; guide them to log in
-    // instead of showing a scary failure for what's actually a success.
+    // token before the user clicks it. For signup this is actually a success
+    // (the email IS confirmed) — guide them to log in. For a password reset,
+    // being consumed just means the link is dead; send them to request a new
+    // one instead of the signup-flavored "you're already verified" message.
     const code = (error as { code?: string }).code;
     const msg = error.message.toLowerCase();
     if (code === "otp_expired" || msg.includes("expired") || msg.includes("invalid")) {
+      if (type === "recovery") {
+        const expiredUrl = new URL("/forgot-password", origin);
+        expiredUrl.searchParams.set("expired", "true");
+        return NextResponse.redirect(expiredUrl);
+      }
       const linkUsedUrl = new URL("/login", origin);
       linkUsedUrl.searchParams.set("error", "link_already_used");
       return NextResponse.redirect(linkUsedUrl);
     }
 
     console.error("Email verification failed:", error.message);
+    if (type === "recovery") {
+      const expiredUrl = new URL("/forgot-password", origin);
+      expiredUrl.searchParams.set("expired", "true");
+      return NextResponse.redirect(expiredUrl);
+    }
     const errUrl = new URL("/login", origin);
     errUrl.searchParams.set("error", `verification_failed:${error.message}`);
     return NextResponse.redirect(errUrl);
