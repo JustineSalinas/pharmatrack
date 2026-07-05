@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
-import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck, ChevronUp, ChevronDown, Trash2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type FilterRole = "All" | "student" | "facilitator" | "admin";
@@ -20,6 +20,8 @@ export default function AdminUsers() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [busyActions, setBusyActions] = useState<Set<string>>(new Set());
+  const [userToDelete, setUserToDelete] = useState<{ id: string; full_name: string } | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -175,6 +177,34 @@ export default function AdminUsers() {
       showToast("Error: " + err.message, "error");
     } finally {
       setActionBusy(key, false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!userToDelete) return;
+    setIsDeletingUser(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const res = await fetch("/api/admin/delete-account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ userId: userToDelete.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+
+      setUsers(users.filter(u => u.id !== userToDelete.id));
+      showToast(`${userToDelete.full_name}'s account was deleted.`, "success");
+      setUserToDelete(null);
+    } catch (err: any) {
+      showToast("Error: " + err.message, "error");
+    } finally {
+      setIsDeletingUser(false);
     }
   }
 
@@ -433,6 +463,16 @@ export default function AdminUsers() {
                         >
                           {busyActions.has(`verify:${u.id}`) ? <Loader2 size={13} className="animate-spin" /> : <MailCheck size={13} />}
                         </button>
+                        {u.account_type !== "admin" && (
+                          <button
+                            className="action-btn-hover delete-btn"
+                            data-tooltip="Delete Account"
+                            aria-label="Delete Account"
+                            onClick={() => setUserToDelete({ id: u.id, full_name: u.full_name })}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -450,6 +490,56 @@ export default function AdminUsers() {
           )}
         </div>
       </div>
+      {userToDelete && (
+        <div className="modal-overlay" style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000,
+          padding: "20px", paddingTop: "15vh"
+        }}>
+          <div className="modal-card" style={{
+            width: "100%", maxWidth: "480px",
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: "12px", padding: "28px", position: "relative",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
+          }}>
+            <div style={{ display: "flex", gap: "16px" }}>
+              <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(239, 68, 68, 0.2)", color: "var(--danger)", flexShrink: 0 }}>
+                <AlertTriangle size={20} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--white)", marginBottom: "8px" }}>Delete Account</h3>
+                <p style={{ color: "var(--dimmed)", fontSize: "13px", lineHeight: "1.5", margin: 0 }}>
+                  Are you sure you want to delete <strong>{userToDelete.full_name}</strong>&apos;s account? This action is permanent and cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "24px", display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                className="btn-ghost"
+                style={{ padding: "0 16px", height: "36px", fontSize: "13px", fontWeight: 500, borderRadius: "var(--radius-sm)", color: "var(--white-shade)", border: "1px solid var(--border)", background: "var(--surface2)", cursor: "pointer", transition: "all 0.15s ease" }}
+                disabled={isDeletingUser}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                className="btn-danger"
+                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#fff", background: "var(--danger)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: isDeletingUser ? 0.7 : 1, transition: "all 0.15s ease" }}
+                disabled={isDeletingUser}
+              >
+                {isDeletingUser ? (
+                  <><Loader2 size={14} className="animate-spin" /> Deleting...</>
+                ) : "Delete Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {toast && (
         <div style={{
           position: "fixed", bottom: "24px", right: "24px", zIndex: 9999,
