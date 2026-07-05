@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
-import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck } from "lucide-react";
+import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck, ChevronUp, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type FilterRole = "All" | "student" | "facilitator" | "admin";
+type SortField = "full_name" | "email" | "section" | "current_year";
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<any[]>([]);
@@ -15,6 +16,8 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [filterSection, setFilterSection] = useState("All");
   const [filterYear, setFilterYear] = useState("All");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [busyActions, setBusyActions] = useState<Set<string>>(new Set());
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,6 +41,15 @@ export default function AdminUsers() {
       if (busy) next.add(key); else next.delete(key);
       return next;
     });
+  }
+
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDirection(d => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
   }
 
   useEffect(() => {
@@ -177,6 +189,20 @@ export default function AdminUsers() {
     return roleMatch && sectionMatch && yearMatch && searchMatch;
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (!sortField) return 0;
+    const av = a[sortField];
+    const bv = b[sortField];
+    // nulls (e.g. section/current_year on facilitator/admin rows) always sort last
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    const cmp = typeof av === "number" && typeof bv === "number"
+      ? av - bv
+      : String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
+    return sortDirection === "asc" ? cmp : -cmp;
+  });
+
   const studentsCount = users.filter(u => u.account_type === "student").length;
   const facilitatorCount = users.filter(u => u.account_type === "facilitator").length;
   const adminsCount = users.filter(u => u.account_type === "admin").length;
@@ -279,21 +305,37 @@ export default function AdminUsers() {
       {/* Users Table */}
       <div className="panel indigo-table-panel" style={{ padding: 0, overflow: "hidden" }}>
         <div className="table-wrap">
-          <table className="attendance-table" style={{ width: "100%" }}>
+          <table className="attendance-table" style={{ width: "100%", minWidth: "1100px" }}>
             <thead>
               <tr>
-                <th>Profile</th>
-                <th>Institutional Email</th>
+                <th className="sortable-th" style={{ cursor: "pointer" }} onClick={() => handleSort("full_name")}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    Profile {sortField === "full_name" && (sortDirection === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
+                  </span>
+                </th>
+                <th className="sortable-th" style={{ cursor: "pointer" }} onClick={() => handleSort("email")}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    Institutional Email {sortField === "email" && (sortDirection === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
+                  </span>
+                </th>
                 <th>Access Level</th>
-                <th>Section</th>
-                <th>Year Level</th>
+                <th className="sortable-th" style={{ cursor: "pointer" }} onClick={() => handleSort("section")}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    Section {sortField === "section" && (sortDirection === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
+                  </span>
+                </th>
+                <th className="sortable-th" style={{ cursor: "pointer" }} onClick={() => handleSort("current_year")}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    Year Level {sortField === "current_year" && (sortDirection === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
+                  </span>
+                </th>
                 <th>Account Status</th>
                 <th>Registration Date</th>
                 <th style={{ textAlign: "right", paddingRight: "24px" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((u) => {
+              {sorted.map((u) => {
                 const initials = u.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "U";
                 const dateJoined = new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
@@ -434,6 +476,15 @@ export default function AdminUsers() {
         
         .search-input:focus {
           border-color: rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .sortable-th:hover {
+          color: var(--gold) !important;
+          cursor: pointer;
+        }
+
+        .table-wrap {
+          overflow-x: auto;
         }
 
         .btn-ghost-amber:hover {
