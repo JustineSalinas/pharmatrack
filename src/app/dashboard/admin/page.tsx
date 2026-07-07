@@ -16,12 +16,14 @@ import {
   UserCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
+import { getAuthHeader } from "@/lib/auth-client";
+import { useCurrentUser } from "@/lib/current-user-context";
 import { backfillEventStatusesShared, runIfDue, notifyAbsences } from "@/lib/attendance";
 import { triggerWeeklyReport } from "@/lib/weeklyReport";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
+  const currentUser = useCurrentUser();
   const [stats, setStats] = useState<any>({
     totalStudents: 0,
     totalFacilitators: 0,
@@ -32,6 +34,7 @@ export default function AdminDashboard() {
   const [emailUsage, setEmailUsage] = useState<{
     count: number; cap: number; percent: number;
     source: "mailersend" | "internal"; internalCount: number;
+    mailersendUnavailableReason?: string | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -39,7 +42,7 @@ export default function AdminDashboard() {
 
   const fetchDashboard = useCallback(async (silent = false) => {
     try {
-      const u = await getCurrentUser();
+      const u = currentUser;
       if (!u) return;
       if (u.account_type !== "admin") {
         if (u.account_type === "facilitator") {
@@ -59,27 +62,20 @@ export default function AdminDashboard() {
         runIfDue("weeklyReport", 7 * 24 * 60 * 60_000, triggerWeeklyReport).catch(() => {});
       }
 
-      // Total Students
-      const { count: studentCount } = await supabase
-        .from("users")
-        .select("*", { count: "exact", head: true })
-        .eq("account_type", "student");
-
-      // Total Facilitators (all, approved or not)
-      const { count: facilitatorCount } = await supabase
-        .from("users")
-        .select("*", { count: "exact", head: true })
-        .eq("account_type", "facilitator");
-
-      // Pending Approvals — students always require manual approval (see
-      // src/app/api/auth/register/route.ts), and facilitators do too unless
-      // registrationMode is "open", so this must count both account types,
-      // not just facilitators.
-      const { count: pendingCount } = await supabase
-        .from("users")
-        .select("*", { count: "exact", head: true })
-        .neq("account_type", "admin")
-        .eq("status", "pending");
+      // Total Students / Facilitators / Pending Approvals — independent
+      // counts, batched instead of run sequentially. Pending Approvals counts
+      // both students and facilitators: students always require manual
+      // approval (see src/app/api/auth/register/route.ts), and facilitators
+      // do too unless registrationMode is "open".
+      const [
+        { count: studentCount },
+        { count: facilitatorCount },
+        { count: pendingCount },
+      ] = await Promise.all([
+        supabase.from("users").select("*", { count: "exact", head: true }).eq("account_type", "student"),
+        supabase.from("users").select("*", { count: "exact", head: true }).eq("account_type", "facilitator"),
+        supabase.from("users").select("*", { count: "exact", head: true }).neq("account_type", "admin").eq("status", "pending"),
+      ]);
 
       // Attendance Rate — use server-side counts instead of fetching all rows
       const [{ count: totalLogs }, { count: presentLateCount }] = await Promise.all([
@@ -116,6 +112,7 @@ export default function AdminDashboard() {
           setEmailUsage({
             count: json.count, cap: json.cap, percent: json.percent,
             source: json.source, internalCount: json.internalCount,
+            mailersendUnavailableReason: json.mailersendUnavailableReason,
           });
         }
       } catch {
@@ -126,12 +123,12 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, currentUser]);
 
-  // Initial load
+  // Initial load — waits for DashboardLayout to resolve currentUser via context
   useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+    if (currentUser) fetchDashboard();
+  }, [fetchDashboard, currentUser]);
 
   // ── Real-time: refresh feed + stats whenever any attendance record changes ──
   useEffect(() => {

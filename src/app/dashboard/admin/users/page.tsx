@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
+import { getAuthHeader } from "@/lib/auth-client";
+import { useCurrentUser } from "@/lib/current-user-context";
 import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck, ChevronUp, ChevronDown, Trash2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -10,6 +11,7 @@ type FilterRole = "All" | "student" | "facilitator" | "admin";
 type SortField = "full_name" | "email" | "section" | "current_year";
 
 export default function AdminUsers() {
+  const currentUser = useCurrentUser();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterRole>("All");
@@ -55,13 +57,13 @@ export default function AdminUsers() {
   }
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (currentUser) fetchUsers();
+  }, [currentUser]);
 
   async function fetchUsers() {
     try {
       setLoading(true);
-      const u = await getCurrentUser() as any;
+      const u = currentUser as any;
 
       if (!u) {
         // Let root DashboardLayout handle redirect to login to avoid hydration race conditions
@@ -78,17 +80,16 @@ export default function AdminUsers() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(2000);
+      const [{ data, error }, { data: profiles }] = await Promise.all([
+        supabase
+          .from("users")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(2000),
+        supabase.from("student_profiles").select("user_id, section, current_year"),
+      ]);
 
       if (error) throw error;
-
-      const { data: profiles } = await supabase
-        .from("student_profiles")
-        .select("user_id, section, current_year");
 
       const profileMap = new Map(
         (profiles || []).map((p: any) => [p.user_id, p])

@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import type { PharmaUser, StudentProfile, FacilitatorProfile } from "@/lib/schema";
 import { getSystemConfig } from "@/lib/systemConfig";
+import { CurrentUserProvider } from "@/lib/current-user-context";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -168,7 +169,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       <main className="main-content page-enter">
-        {children}
+        <CurrentUserProvider value={user}>{children}</CurrentUserProvider>
       </main>
     </div>
   );

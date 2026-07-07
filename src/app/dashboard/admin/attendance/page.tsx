@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
+import { getAuthHeader } from "@/lib/auth-client";
+import { useCurrentUser } from "@/lib/current-user-context";
 import { useRouter } from "next/navigation";
 import { Loader2, Download, Search, Calendar, RefreshCw, Plus } from "lucide-react";
 
@@ -37,6 +38,7 @@ interface EventOption {
 const MANUAL_STATUS_OPTIONS = ["present", "late", "absent", "incomplete"] as const;
 
 export default function AdminAttendance() {
+  const currentUser = useCurrentUser();
   const [records, setRecords] = useState<AttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -212,19 +214,16 @@ export default function AdminAttendance() {
     }
   }, []);
 
-  // Initial load + auth guard
+  // Initial load + auth guard — waits for DashboardLayout to resolve
+  // currentUser via context instead of re-fetching it here.
   useEffect(() => {
-    async function init() {
-      const u = await getCurrentUser();
-      if (!u) return;
-      if (u.account_type !== "admin") {
-        router.push(u.account_type === "facilitator" ? "/dashboard/facilitator" : "/dashboard");
-        return;
-      }
-      fetchAttendance();
+    if (!currentUser) return;
+    if (currentUser.account_type !== "admin") {
+      router.push(currentUser.account_type === "facilitator" ? "/dashboard/facilitator" : "/dashboard");
+      return;
     }
-    init();
-  }, [router, fetchAttendance]);
+    fetchAttendance();
+  }, [router, fetchAttendance, currentUser]);
 
   // ── Real-time subscription: refresh log whenever attendance_records changes ──
   useEffect(() => {
