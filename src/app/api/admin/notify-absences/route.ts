@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getBackendUser } from "@/lib/auth";
 import { getSystemConfigServer } from "@/lib/systemConfig";
 import { sendAbsenceNotifications } from "@/lib/email";
+import { recordEmailsSent } from "@/lib/emailUsage";
 
 export const dynamic = "force-dynamic";
 
@@ -86,7 +87,8 @@ export async function POST(req: NextRequest) {
       })
       .filter((n: any): n is NonNullable<typeof n> => n !== null);
 
-    await sendAbsenceNotifications(notifications);
+    const { sent } = await sendAbsenceNotifications(notifications);
+    await recordEmailsSent(adminClient, sent);
 
     return NextResponse.json({ success: true, sent: notifications.length });
   } catch (err: any) {

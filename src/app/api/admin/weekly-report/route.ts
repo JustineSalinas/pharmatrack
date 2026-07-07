@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getBackendUser } from "@/lib/auth";
 import { getSystemConfigServer } from "@/lib/systemConfig";
 import { sendWeeklyDigest } from "@/lib/email";
+import { recordEmailsSent } from "@/lib/emailUsage";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,8 @@ export async function POST(req: NextRequest) {
       })
       .filter((d): d is NonNullable<typeof d> => d !== null);
 
-    await sendWeeklyDigest(digests);
+    const { sent } = await sendWeeklyDigest(digests);
+    await recordEmailsSent(adminClient, sent);
 
     return NextResponse.json({ success: true, sent: digests.length });
   } catch (err: any) {

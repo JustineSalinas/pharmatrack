@@ -29,6 +29,10 @@ export default function AdminDashboard() {
     attendanceRate: 0,
   });
   const [recentScans, setRecentScans] = useState<any[]>([]);
+  const [emailUsage, setEmailUsage] = useState<{
+    count: number; cap: number; percent: number;
+    source: "mailersend" | "internal"; internalCount: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showNotifs, setShowNotifs] = useState(false);
   const router = useRouter();
@@ -98,6 +102,24 @@ export default function AdminDashboard() {
         .limit(8);
 
       setRecentScans(recentAtt || []);
+
+      // Email quota usage — best-effort, doesn't block the rest of the dashboard.
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const res = await fetch("/api/admin/email-usage", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setEmailUsage({
+            count: json.count, cap: json.cap, percent: json.percent,
+            source: json.source, internalCount: json.internalCount,
+          });
+        }
+      } catch {
+        // best-effort — leave emailUsage null, card just won't render
+      }
     } catch (err) {
       console.error("Dashboard error", err);
     } finally {
@@ -235,6 +257,51 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* HERO: Email Usage This Month */}
+        {emailUsage && (
+          <div
+            className="admin-stat-card"
+            style={{ gridColumn: "1 / -1", borderBottom: "1px solid var(--border)" }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                  Email Usage This Month
+                </div>
+                <div style={{ fontSize: 48, fontWeight: 700, color: "var(--white)", lineHeight: 1, letterSpacing: "-0.03em" }}>
+                  {emailUsage.count}
+                  <span style={{ fontSize: 24, color: "var(--muted)", marginLeft: 2 }}>/ {emailUsage.cap}</span>
+                  <span style={{ fontSize: 16, color: "var(--muted)", marginLeft: 8 }}>({emailUsage.percent}%)</span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+                  {emailUsage.source === "mailersend" ? (
+                    <>Live from MailerSend&apos;s account API — PharmaTrack&apos;s own tracked total is {emailUsage.internalCount}</>
+                  ) : (
+                    <>Tracked internally only (event broadcasts, absence notices &amp; weekly digests) — add MAILERSEND_API_KEY for the real account-wide number</>
+                  )}
+                </div>
+              </div>
+              <div style={{ flex: 1, maxWidth: 280 }}>
+                <div style={{ height: 2, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${Math.min(emailUsage.percent, 100)}%`,
+                      background: emailUsage.percent >= 90 ? "var(--danger)" : emailUsage.percent >= 70 ? "#d97706" : "var(--gold)",
+                      borderRadius: 2,
+                      transition: "width 0.8s ease",
+                    }}
+                  />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                  <span style={{ fontSize: 11, color: "var(--dimmed)" }}>0%</span>
+                  <span style={{ fontSize: 11, color: "var(--dimmed)" }}>100%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Total Students */}
         <div className="admin-stat-card">

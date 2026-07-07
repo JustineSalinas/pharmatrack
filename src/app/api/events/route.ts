@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getBackendUser } from "@/lib/auth";
 import { sendEventBroadcast } from "@/lib/email";
+import { recordEmailsSent } from "@/lib/emailUsage";
 
 const getSupabase = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
       // Awaited — on serverless, the function is torn down once the response
       // is sent, which would kill an unawaited broadcast mid-flight.
       try {
-        await sendEventBroadcast({
+        const { sent } = await sendEventBroadcast({
           name,
           location,
           date,
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
           targetYearLevels: targetYears,
           recipients: students,
         });
+        await recordEmailsSent(supabase, sent);
       } catch (broadcastErr: any) {
         console.error("[Events API] Email broadcast failed:", broadcastErr.message);
       }

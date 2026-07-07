@@ -95,12 +95,12 @@ export interface EventBroadcastInput {
   recipients: Array<{ email: string; full_name: string }>;
 }
 
-export async function sendEventBroadcast(event: EventBroadcastInput) {
+export async function sendEventBroadcast(event: EventBroadcastInput): Promise<{ sent: number; failed: number }> {
   const transporter = getTransporter();
 
   if (!transporter) {
     console.warn("[Email Service] SMTP not configured — skipping broadcast.");
-    return;
+    return { sent: 0, failed: 0 };
   }
 
   const localDate = new Date(event.date);
@@ -189,6 +189,7 @@ export async function sendEventBroadcast(event: EventBroadcastInput) {
   }
 
   console.log(`[Email Service] Broadcast complete — sent: ${sent}, failed: ${failed}`);
+  return { sent, failed };
 }
 
 export interface AbsenceNotificationInput {
@@ -199,15 +200,15 @@ export interface AbsenceNotificationInput {
   eventDateDisplay: string;
 }
 
-export async function sendAbsenceNotifications(notifications: AbsenceNotificationInput[]) {
+export async function sendAbsenceNotifications(notifications: AbsenceNotificationInput[]): Promise<{ sent: number; failed: number }> {
   const transporter = getTransporter();
 
   if (!transporter) {
     console.warn("[Email Service] SMTP not configured — skipping absence notifications.");
-    return;
+    return { sent: 0, failed: 0 };
   }
 
-  if (notifications.length === 0) return;
+  if (notifications.length === 0) return { sent: 0, failed: 0 };
 
   const fromAddress = process.env.SMTP_FROM || "PharmaTrack <notifications@usa.edu.ph>";
 
@@ -255,6 +256,7 @@ export async function sendAbsenceNotifications(notifications: AbsenceNotificatio
   }
 
   console.log(`[Email Service] Absence notifications complete — sent: ${sent}, failed: ${failed}`);
+  return { sent, failed };
 }
 
 export interface WeeklyDigestInput {
@@ -268,15 +270,15 @@ export interface WeeklyDigestInput {
   incompleteCount: number;
 }
 
-export async function sendWeeklyDigest(digests: WeeklyDigestInput[]) {
+export async function sendWeeklyDigest(digests: WeeklyDigestInput[]): Promise<{ sent: number; failed: number }> {
   const transporter = getTransporter();
 
   if (!transporter) {
     console.warn("[Email Service] SMTP not configured — skipping weekly digest.");
-    return;
+    return { sent: 0, failed: 0 };
   }
 
-  if (digests.length === 0) return;
+  if (digests.length === 0) return { sent: 0, failed: 0 };
 
   const fromAddress = process.env.SMTP_FROM || "PharmaTrack <notifications@usa.edu.ph>";
 
@@ -328,4 +330,5 @@ export async function sendWeeklyDigest(digests: WeeklyDigestInput[]) {
   }
 
   console.log(`[Email Service] Weekly digest complete — sent: ${sent}, failed: ${failed}`);
+  return { sent, failed };
 }

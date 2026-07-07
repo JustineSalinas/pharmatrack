@@ -101,6 +101,10 @@ export default function AdminSettings() {
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isSMTPManagedByEnv, setIsSMTPManagedByEnv] = useState(false);
+  const [emailUsage, setEmailUsage] = useState<{
+    count: number; cap: number; percent: number;
+    source: "mailersend" | "internal"; internalCount: number;
+  } | null>(null);
 
   const handleTestSmtp = async () => {
     setTestingSmtp(true);
@@ -178,6 +182,26 @@ export default function AdminSettings() {
       }
     }
     load();
+
+    async function loadEmailUsage() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const res = await fetch("/api/admin/email-usage", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setEmailUsage({
+            count: json.count, cap: json.cap, percent: json.percent,
+            source: json.source, internalCount: json.internalCount,
+          });
+        }
+      } catch {
+        // best-effort — leave emailUsage null, line just won't render
+      }
+    }
+    loadEmailUsage();
   }, []);
 
   const update = (id: ConfigKey, val: string) => {
@@ -660,6 +684,35 @@ export default function AdminSettings() {
                     <span style={{ fontSize: "11px", color: "#ef4444", lineHeight: 1.45, fontWeight: 500 }}>
                       Inactive: No server SMTP environment variables detected.
                     </span>
+                  </div>
+                )}
+                {emailUsage && (
+                  <div style={{ marginTop: "4px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--dimmed)", marginBottom: "6px" }}>
+                      <span>This month: {emailUsage.count} / {emailUsage.cap} sent ({emailUsage.percent}%)</span>
+                      <span style={{ color: emailUsage.source === "mailersend" ? "#22c55e" : "var(--muted)" }}>
+                        {emailUsage.source === "mailersend" ? "Live from MailerSend" : "Internal estimate"}
+                      </span>
+                    </div>
+                    <div style={{ height: 4, background: "var(--surface2)", borderRadius: 2, overflow: "hidden" }}>
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${Math.min(emailUsage.percent, 100)}%`,
+                          background: emailUsage.percent >= 90 ? "#ef4444" : emailUsage.percent >= 70 ? "#d97706" : "#22c55e",
+                          borderRadius: 2,
+                        }}
+                      />
+                    </div>
+                    {emailUsage.source === "mailersend" ? (
+                      <p style={{ fontSize: "10px", color: "var(--muted)", margin: "6px 0 0", lineHeight: 1.4 }}>
+                        Real account-wide total from MailerSend&apos;s API. PharmaTrack&apos;s own tracked total (broadcasts, absence notices &amp; weekly digests only) is {emailUsage.internalCount}.
+                      </p>
+                    ) : (
+                      <p style={{ fontSize: "10px", color: "var(--muted)", margin: "6px 0 0", lineHeight: 1.4 }}>
+                        Covers event broadcasts, absence notices &amp; weekly digests only — add a MAILERSEND_API_KEY environment variable to show MailerSend&apos;s real account-wide number instead.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
