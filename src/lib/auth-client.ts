@@ -120,14 +120,11 @@ export async function completeOnboarding(
     };
   }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-
   const res = await fetch("/api/auth/register", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      ...(await getAuthHeader()),
     },
     body: JSON.stringify(body),
   });
@@ -136,6 +133,27 @@ export async function completeOnboarding(
     const json = await res.json().catch(() => ({}));
     throw new Error(json.error ?? "Failed to complete profile setup");
   }
+}
+
+/**
+ * Returns a fresh Authorization header for an authenticated fetch() call.
+ * Proactively refreshes the session if the cached token is missing or within
+ * REFRESH_BUFFER_MS of expiring, instead of blindly sending whatever token
+ * happens to be cached — closes the gap where fetch()-based actions could
+ * send an expired JWT while the browser supabase-js client (used by direct
+ * .from() calls elsewhere) would have silently refreshed it first.
+ */
+export async function getAuthHeader(): Promise<{ Authorization: string } | Record<string, never>> {
+  const REFRESH_BUFFER_MS = 60_000;
+  let { data: { session } } = await supabase.auth.getSession();
+
+  const expiresAtMs = (session?.expires_at ?? 0) * 1000;
+  if (!session || expiresAtMs - Date.now() < REFRESH_BUFFER_MS) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    session = refreshed.session ?? session;
+  }
+
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
 }
 
 export async function logoutUser() {

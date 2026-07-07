@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth-client";
+import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { 
   ScanLine, 
   CheckCircle2, 
@@ -264,14 +264,11 @@ export default function FacilitatorScannerPage() {
     setConfirmLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
       const res = await fetch("/api/scan", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(await getAuthHeader()),
         },
         body: JSON.stringify({ qr_code_id: verifiedStudent.qrCodeId, event_id: selectedEventId }),
       });

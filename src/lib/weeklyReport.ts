@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { getAuthHeader } from "./auth-client";
 
 /**
  * Opportunistically fires the server-side weekly attendance digest send.
@@ -9,13 +9,11 @@ import { supabase } from "./supabase";
  */
 export async function triggerWeeklyReport(): Promise<{ success: boolean; sent?: number } | null> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
     const res = await fetch("/api/admin/weekly-report", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(await getAuthHeader()),
       },
     });
     return await res.json();

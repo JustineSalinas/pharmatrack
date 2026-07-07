@@ -16,6 +16,7 @@
  * Returns counts so admin tooling can show "X absent, Y incomplete" feedback.
  */
 import { supabase } from "./supabase";
+import { getAuthHeader } from "./auth-client";
 
 export interface BackfillResult {
   eventsProcessed: number;
@@ -162,13 +163,11 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
  */
 export async function claimSharedRun(key: string, intervalMs: number): Promise<boolean> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
     const res = await fetch("/api/backfill/claim", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(await getAuthHeader()),
       },
       body: JSON.stringify({ key, intervalMs }),
     });
@@ -188,11 +187,9 @@ export async function claimSharedRun(key: string, intervalMs: number): Promise<b
  */
 export async function triggerSummaryRefresh(): Promise<void> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
     await fetch("/api/attendance/refresh-summary", {
       method: "POST",
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: await getAuthHeader(),
     });
   } catch {
     // best-effort
@@ -258,13 +255,11 @@ export async function runIfDue<T>(
 export async function notifyAbsences(entries: Array<{ studentId: string; eventId: string }>): Promise<void> {
   if (entries.length === 0) return;
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
     await fetch("/api/admin/notify-absences", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(await getAuthHeader()),
       },
       body: JSON.stringify({ entries }),
     });

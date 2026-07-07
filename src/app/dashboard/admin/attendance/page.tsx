@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth-client";
+import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Loader2, Download, Search, Calendar, RefreshCw, Plus } from "lucide-react";
 
@@ -108,13 +108,11 @@ export default function AdminAttendance() {
     setManualSubmitting(true);
     setManualError("");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
       const res = await fetch("/api/admin/attendance/manual", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          ...(await getAuthHeader()),
         },
         body: JSON.stringify({
           student_id: manualStudentId,

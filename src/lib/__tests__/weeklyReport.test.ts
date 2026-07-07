@@ -10,7 +10,9 @@ vi.mock('../supabase', () => ({
 
 describe('triggerWeeklyReport', () => {
   beforeEach(() => {
-    mockGetSession.mockReset().mockResolvedValue({ data: { session: { access_token: 'tok-123' } } })
+    mockGetSession.mockReset().mockResolvedValue({
+      data: { session: { access_token: 'tok-123', expires_at: Math.floor(Date.now() / 1000) + 3600 } },
+    })
     mockFetch.mockReset().mockResolvedValue({ ok: true, json: async () => ({ success: true, sent: 2 }) })
     vi.stubGlobal('fetch', mockFetch)
   })

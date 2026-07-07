@@ -16,7 +16,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth-client";
+import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { backfillEventStatusesShared, runIfDue, notifyAbsences } from "@/lib/attendance";
 import { triggerWeeklyReport } from "@/lib/weeklyReport";
 import { useRouter } from "next/navigation";
@@ -108,10 +108,8 @@ export default function AdminDashboard() {
 
       // Email quota usage — best-effort, doesn't block the rest of the dashboard.
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
         const res = await fetch("/api/admin/email-usage", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: await getAuthHeader(),
         });
         if (res.ok) {
           const json = await res.json();

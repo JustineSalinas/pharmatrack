@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { backfillEventStatuses, notifyAbsences } from "@/lib/attendance";
+import { getAuthHeader } from "@/lib/auth-client";
 import {
   SYSTEM_CONFIG_DEFAULTS as DEFAULTS,
   type ConfigKey,
@@ -110,14 +111,11 @@ export default function AdminSettings() {
     setTestingSmtp(true);
     setSmtpTestResult(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
       const res = await fetch("/api/admin/test-smtp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          ...(await getAuthHeader()),
         },
       });
 
@@ -149,11 +147,8 @@ export default function AdminSettings() {
   useEffect(() => {
     async function load() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
         const res = await fetch("/api/admin/settings", {
-          headers: token ? { "Authorization": `Bearer ${token}` } : {},
+          headers: await getAuthHeader(),
         });
 
         if (!res.ok) {
@@ -185,10 +180,8 @@ export default function AdminSettings() {
 
     async function loadEmailUsage() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
         const res = await fetch("/api/admin/email-usage", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: await getAuthHeader(),
         });
         if (res.ok) {
           const json = await res.json();
@@ -212,14 +205,11 @@ export default function AdminSettings() {
     setSaving(true);
     setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
       const res = await fetch("/api/admin/settings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          ...(await getAuthHeader()),
         },
         body: JSON.stringify({ settings }),
       });

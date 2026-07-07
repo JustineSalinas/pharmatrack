@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth-client";
+import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck, ChevronUp, ChevronDown, Trash2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -133,14 +133,11 @@ export default function AdminUsers() {
     if (busyActions.has(key)) return;
     setActionBusy(key, true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
       const res = await fetch("/api/admin/reset-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+          ...(await getAuthHeader()),
         },
         body: JSON.stringify({ email }),
       });
@@ -159,14 +156,11 @@ export default function AdminUsers() {
     if (busyActions.has(key)) return;
     setActionBusy(key, true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
       const res = await fetch("/api/admin/verify-email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+          ...(await getAuthHeader()),
         },
         body: JSON.stringify({ userId }),
       });
@@ -184,14 +178,11 @@ export default function AdminUsers() {
     if (!userToDelete) return;
     setIsDeletingUser(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
       const res = await fetch("/api/admin/delete-account", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+          ...(await getAuthHeader()),
         },
         body: JSON.stringify({ userId: userToDelete.id }),
       });

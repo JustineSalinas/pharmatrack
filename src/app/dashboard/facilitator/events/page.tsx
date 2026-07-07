@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase, parseDateLocal } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth-client";
+import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { getSystemConfig } from "@/lib/systemConfig";
 import { EVENT_TYPES, getEventTypeStyle } from "@/lib/event-type";
 import { 
@@ -185,15 +185,11 @@ export default function EventsManagement() {
 
         if (error) throw error;
       } else {
-        // Fetch current session token to authenticate request
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
         const res = await fetch("/api/events", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+            ...(await getAuthHeader()),
           },
           body: JSON.stringify({
             name,
