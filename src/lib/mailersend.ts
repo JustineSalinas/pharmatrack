@@ -27,7 +27,10 @@ export async function getMailerSendUsage(): Promise<MailerSendUsageResult> {
   try {
     const now = new Date();
     const dateFrom = Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) / 1000);
-    const dateTo = Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1) / 1000) - 1;
+    // The current moment, not end-of-month — MailerSend's analytics API
+    // rejects a date_to in the future (422), which end-of-month always is
+    // except on the last second of the month.
+    const dateTo = Math.floor(now.getTime() / 1000);
 
     const url = new URL("https://api.mailersend.com/v1/analytics/date");
     url.searchParams.set("date_from", String(dateFrom));
