@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
+import { debounce } from "@/lib/debounce";
 import { backfillEventStatusesShared, runIfDue, notifyAbsences } from "@/lib/attendance";
 import { triggerWeeklyReport } from "@/lib/weeklyReport";
 import {
@@ -148,9 +149,7 @@ export default function FacilitatorOverview() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "attendance_records" },
-        () => {
-          fetchFacilitatorData();
-        }
+        debounce(() => fetchFacilitatorData(), 1500)
       )
       .subscribe();
 

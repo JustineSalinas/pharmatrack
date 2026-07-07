@@ -18,6 +18,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
+import { debounce } from "@/lib/debounce";
 import { backfillEventStatusesShared, runIfDue, notifyAbsences } from "@/lib/attendance";
 import { triggerWeeklyReport } from "@/lib/weeklyReport";
 import { useRouter } from "next/navigation";
@@ -131,15 +132,16 @@ export default function AdminDashboard() {
   }, [fetchDashboard, currentUser]);
 
   // ── Real-time: refresh feed + stats whenever any attendance record changes ──
+  // Debounced so a burst of scans collapses into one refetch instead of one
+  // per row change.
   useEffect(() => {
+    const debouncedRefetch = debounce(() => fetchDashboard(true), 1500);
     const channel = supabase
       .channel("admin-dashboard-rt")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "attendance_records" },
-        () => {
-          fetchDashboard(true); // silent — don't reset loading state
-        }
+        debouncedRefetch
       )
       .subscribe();
 

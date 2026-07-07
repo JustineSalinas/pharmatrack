@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
+import { debounce } from "@/lib/debounce";
 import { useRouter } from "next/navigation";
 import { Loader2, Download, Search, Calendar, RefreshCw, Plus } from "lucide-react";
 
@@ -232,9 +233,7 @@ export default function AdminAttendance() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "attendance_records" },
-        () => {
-          fetchAttendance(true); // silent refresh — no full-page loader
-        }
+        debounce(() => fetchAttendance(true), 1500) // silent refresh — no full-page loader
       )
       .subscribe();
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { triggerSummaryRefresh } from "@/lib/attendance";
+import { debounce } from "@/lib/debounce";
 import {
   Search, Users, CheckCircle, XCircle, Clock, ChevronRight, X,
   TrendingUp, AlertTriangle, FileText, Loader2, Calendar, MapPin,
@@ -128,28 +129,23 @@ export default function StudentsPage() {
 
   // Real-time updates: refresh list when students register or update profiles/attendance
   useEffect(() => {
+    const debouncedFetchStudents = debounce(() => fetchStudents(), 1500);
     const channel = supabase
       .channel("student-management-rt")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "users" },
-        () => {
-          fetchStudents();
-        }
+        debouncedFetchStudents
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "student_profiles" },
-        () => {
-          fetchStudents();
-        }
+        debouncedFetchStudents
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "attendance_records" },
-        () => {
-          fetchStudents();
-        }
+        debouncedFetchStudents
       )
       .subscribe();
 

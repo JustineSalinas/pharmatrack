@@ -32,6 +32,7 @@ const SECTIONS_BY_YEAR: Record<string, string[]> = {
 import Link from "next/link";
 import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
 import { supabase, parseDateLocal } from "@/lib/supabase";
+import { debounce } from "@/lib/debounce";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import type { AttendanceSummary, PharmaUser, StudentProfile, Event } from "@/lib/schema";
@@ -130,9 +131,7 @@ function StudentDashboardContent() {
           table: "attendance_records",
           filter: `student_id=eq.${user.id}`,
         },
-        () => {
-          fetchStats(user.id);
-        }
+        debounce(() => fetchStats(user.id), 1500)
       )
       .subscribe();
 

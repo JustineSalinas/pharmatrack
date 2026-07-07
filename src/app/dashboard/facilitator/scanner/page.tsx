@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
+import { debounce } from "@/lib/debounce";
 import { 
   ScanLine, 
   CheckCircle2, 
@@ -103,9 +104,7 @@ export default function FacilitatorScannerPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "attendance_records" },
-        () => {
-          fetchRecentScans(selectedEventId);
-        }
+        debounce(() => fetchRecentScans(selectedEventId), 1500)
       )
       .subscribe();
 

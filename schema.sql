@@ -635,6 +635,23 @@ CREATE INDEX IF NOT EXISTS idx_attendance_scanned_by
 CREATE INDEX IF NOT EXISTS idx_attendance_created
   ON public.attendance_records (created_at DESC);
 
+-- Required for every dashboard's "live update on scan" behavior — the app
+-- has multiple supabase.channel(...).on("postgres_changes", ...) subscriptions
+-- on this table (admin/facilitator dashboards, attendance logs, scanner
+-- pages, student records) that silently never fire without this. Not
+-- implicit from RLS or table creation — must be added explicitly per table.
+-- ALTER PUBLICATION ... ADD TABLE has no IF NOT EXISTS form, so this is
+-- wrapped to stay safe to re-run like the rest of this file.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'attendance_records'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance_records;
+  END IF;
+END $$;
+
 -- Prevents duplicate check-in rows for the same student+event when two scans
 -- race each other (e.g. two facilitator devices scanning the same student
 -- within milliseconds). Without this, the read-then-insert in the /api/scan

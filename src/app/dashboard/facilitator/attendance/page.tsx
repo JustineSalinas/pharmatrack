@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
+import { debounce } from "@/lib/debounce";
 import { useRouter } from "next/navigation";
 import {
   Loader2, Download, Search, Calendar, FileSpreadsheet,
@@ -204,9 +205,7 @@ export default function FacilitatorAttendance() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "attendance_records" },
-        () => {
-          fetchAttendance(true); // silent refresh — no full-page loader
-        }
+        debounce(() => fetchAttendance(true), 1500) // silent refresh — no full-page loader
       )
       .subscribe();
 

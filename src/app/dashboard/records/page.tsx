@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
+import { debounce } from "@/lib/debounce";
 import { useRouter } from "next/navigation";
 import {
   Loader2, Download, Search, Calendar,
@@ -183,9 +184,7 @@ export default function StudentRecords() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "attendance_records" },
-        () => {
-          fetchRecords(true);
-        }
+        debounce(() => fetchRecords(true), 1500)
       )
       .subscribe();
 
