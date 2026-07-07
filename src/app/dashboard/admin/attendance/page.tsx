@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { Loader2, Download, Search, Calendar, RefreshCw } from "lucide-react";
+import { Loader2, Download, Search, Calendar, RefreshCw, Plus } from "lucide-react";
 
 interface AttendanceRow {
   id: string;
@@ -18,7 +18,23 @@ interface AttendanceRow {
   timeOut: string;
   status: string;
   rawDate: string;
+  remarks: string;
 }
+
+interface StudentOption {
+  id: string;
+  full_name: string;
+  email: string;
+  student_id_number: string;
+}
+
+interface EventOption {
+  id: string;
+  name: string;
+  date: string;
+}
+
+const MANUAL_STATUS_OPTIONS = ["present", "late", "absent", "incomplete"] as const;
 
 export default function AdminAttendance() {
   const [records, setRecords] = useState<AttendanceRow[]>([]);
@@ -31,6 +47,95 @@ export default function AdminAttendance() {
   const [availableSections, setAvailableSections] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // ── Manual reconciliation modal ──────────────────────────────────────
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [students, setStudents] = useState<StudentOption[]>([]);
+  const [events, setEvents] = useState<EventOption[]>([]);
+  const [manualStudentQuery, setManualStudentQuery] = useState("");
+  const [manualStudentId, setManualStudentId] = useState("");
+  const [manualEventId, setManualEventId] = useState("");
+  const [manualStatus, setManualStatus] = useState<(typeof MANUAL_STATUS_OPTIONS)[number]>("present");
+  const [manualRemarks, setManualRemarks] = useState("");
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [manualError, setManualError] = useState("");
+
+  const openManualModal = useCallback(async () => {
+    setManualError("");
+    setManualStudentQuery("");
+    setManualStudentId("");
+    setManualEventId("");
+    setManualStatus("present");
+    setManualRemarks("");
+    setShowManualModal(true);
+
+    const [{ data: studentData }, { data: eventData }] = await Promise.all([
+      supabase
+        .from("student_profiles")
+        .select("student_id_number, users:user_id ( id, full_name, email )")
+        .order("student_id_number"),
+      supabase.from("events").select("id, name, date").order("date", { ascending: false }),
+    ]);
+
+    setStudents(
+      (studentData || [])
+        .map((s: any) => ({
+          id: s.users?.id,
+          full_name: s.users?.full_name || "Unknown Student",
+          email: s.users?.email || "",
+          student_id_number: s.student_id_number || "",
+        }))
+        .filter((s: StudentOption) => !!s.id)
+    );
+    setEvents((eventData || []) as EventOption[]);
+  }, []);
+
+  const filteredManualStudents = students.filter((s) => {
+    const q = manualStudentQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      s.full_name.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q) ||
+      s.student_id_number.toLowerCase().includes(q)
+    );
+  });
+
+  const handleManualSubmit = async () => {
+    if (!manualStudentId || !manualEventId) {
+      setManualError("Select a student and an event.");
+      return;
+    }
+    setManualSubmitting(true);
+    setManualError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch("/api/admin/attendance/manual", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          student_id: manualStudentId,
+          event_id: manualEventId,
+          status: manualStatus,
+          remarks: manualRemarks.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setManualError(json.error || "Failed to add record");
+        return;
+      }
+      setShowManualModal(false);
+      fetchAttendance(true);
+    } catch {
+      setManualError("Failed to add record");
+    } finally {
+      setManualSubmitting(false);
+    }
+  };
 
   const fetchAttendance = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -46,6 +151,7 @@ export default function AdminAttendance() {
           time_in,
           time_out,
           status,
+          remarks,
           event_id,
           session_id,
           events ( name, date, location ),
@@ -90,6 +196,7 @@ export default function AdminAttendance() {
             : "—",
           status: r.status,
           rawDate,
+          remarks: r.remarks || "",
         };
       });
 
@@ -207,6 +314,13 @@ export default function AdminAttendance() {
           >
             <Download size={14} /> Export
           </button>
+          <button
+            className="btn-ghost"
+            onClick={openManualModal}
+            style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
+          >
+            <Plus size={14} /> Add Manual Record
+          </button>
         </div>
       </div>
 
@@ -289,6 +403,7 @@ export default function AdminAttendance() {
                 <th>Clock In</th>
                 <th>Clock Out</th>
                 <th>Status</th>
+                <th>Notes</th>
                 <th style={{ textAlign: "right", paddingRight: "24px" }}>Actions</th>
               </tr>
             </thead>
@@ -320,6 +435,9 @@ export default function AdminAttendance() {
                         {r.status.toUpperCase()}
                       </span>
                     </td>
+                    <td style={{ color: "var(--dimmed)", fontSize: "12px", maxWidth: "220px" }} title={r.remarks}>
+                      {r.remarks ? (r.remarks.length > 40 ? `${r.remarks.slice(0, 40)}…` : r.remarks) : "—"}
+                    </td>
                     <td style={{ textAlign: "right", paddingRight: "24px" }}>
                       <button className="action-btn-hover" style={{ width: "auto", padding: "6px 12px", marginLeft: "auto" }}>Review</button>
                     </td>
@@ -338,6 +456,118 @@ export default function AdminAttendance() {
           )}
         </div>
       </div>
+
+      {showManualModal && (
+        <div className="modal-overlay" style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000,
+          padding: "20px", paddingTop: "10vh"
+        }}>
+          <div className="modal-card" style={{
+            width: "100%", maxWidth: "480px",
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: "12px", padding: "28px", position: "relative",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
+          }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--white)", marginBottom: "4px" }}>Add Manual Record</h3>
+            <p style={{ color: "var(--dimmed)", fontSize: "13px", lineHeight: "1.5", margin: "0 0 20px" }}>
+              For students who attended a past event but didn&apos;t have a PharmaTrack account yet (e.g. no USA email at the time).
+            </p>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ fontSize: "12px", color: "var(--dimmed)", display: "block", marginBottom: "6px" }}>Student</label>
+              <input
+                className="search-input"
+                placeholder="Search by name, email, or student ID..."
+                value={manualStudentQuery}
+                onChange={(e) => { setManualStudentQuery(e.target.value); setManualStudentId(""); }}
+                style={{ width: "100%", height: "36px", padding: "0 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none", marginBottom: "8px" }}
+              />
+              {manualStudentQuery && !manualStudentId && (
+                <div style={{ maxHeight: "160px", overflowY: "auto", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                  {filteredManualStudents.slice(0, 20).map((s) => (
+                    <div
+                      key={s.id}
+                      onClick={() => { setManualStudentId(s.id); setManualStudentQuery(`${s.full_name} (${s.student_id_number})`); }}
+                      style={{ padding: "8px 12px", fontSize: "13px", cursor: "pointer", color: "var(--white-shade)", borderBottom: "1px solid var(--border)" }}
+                      className="user-row"
+                    >
+                      <div>{s.full_name}</div>
+                      <div style={{ fontSize: "11px", color: "var(--dimmed)" }}>{s.email} · {s.student_id_number}</div>
+                    </div>
+                  ))}
+                  {filteredManualStudents.length === 0 && (
+                    <div style={{ padding: "8px 12px", fontSize: "13px", color: "var(--dimmed)" }}>No matching students found.</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ fontSize: "12px", color: "var(--dimmed)", display: "block", marginBottom: "6px" }}>Event</label>
+              <select
+                className="search-input select-input"
+                value={manualEventId}
+                onChange={(e) => setManualEventId(e.target.value)}
+                style={{ width: "100%", height: "36px", padding: "0 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+              >
+                <option value="">Select an event...</option>
+                {events.map((e) => (
+                  <option key={e.id} value={e.id}>{e.name} — {new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ fontSize: "12px", color: "var(--dimmed)", display: "block", marginBottom: "6px" }}>Status</label>
+              <select
+                className="search-input select-input"
+                value={manualStatus}
+                onChange={(e) => setManualStatus(e.target.value as typeof manualStatus)}
+                style={{ width: "100%", height: "36px", padding: "0 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+              >
+                {MANUAL_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ fontSize: "12px", color: "var(--dimmed)", display: "block", marginBottom: "6px" }}>Remarks (optional)</label>
+              <textarea
+                value={manualRemarks}
+                onChange={(e) => setManualRemarks(e.target.value)}
+                placeholder="Defaults to a note that this was manually reconciled"
+                rows={2}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none", resize: "vertical", fontFamily: "inherit" }}
+              />
+            </div>
+
+            {manualError && (
+              <p style={{ color: "var(--danger)", fontSize: "13px", margin: "0 0 14px" }}>{manualError}</p>
+            )}
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setShowManualModal(false)}
+                className="btn-ghost"
+                style={{ padding: "0 16px", height: "36px", fontSize: "13px", fontWeight: 500, borderRadius: "var(--radius-sm)", color: "var(--white-shade)", border: "1px solid var(--border)", background: "var(--surface2)", cursor: "pointer", transition: "all 0.15s ease" }}
+                disabled={manualSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleManualSubmit}
+                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#0a0a0a", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: manualSubmitting || !manualStudentId || !manualEventId ? 0.6 : 1, transition: "all 0.15s ease" }}
+                disabled={manualSubmitting || !manualStudentId || !manualEventId}
+              >
+                {manualSubmitting ? (<><Loader2 size={14} className="animate-spin" /> Saving...</>) : "Add Record"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .animate-spin { animation: spin 1s linear infinite; }
