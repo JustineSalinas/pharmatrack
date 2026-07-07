@@ -477,8 +477,41 @@ INSERT INTO public.system_config (key, value) VALUES
   ('qrExpiry',             '10 min'),
   ('minAttendance',        '75%'),
   ('twoFactorAuth',        'false'),
-  ('registrationMode',     'approval')
+  ('registrationMode',     'approval'),
+  ('emailMonthlyQuota',    '5000')
 ON CONFLICT (key) DO NOTHING;
+
+-- ============================================================
+-- EMAIL USAGE TRACKING
+-- ============================================================
+-- Tracks emails actually sent per calendar month (event broadcasts, absence
+-- notices, weekly digests) against the MailerSend SMTP plan's monthly cap
+-- (see 'emailMonthlyQuota' above). Registration confirmation emails are sent
+-- directly by Supabase Auth's signUp() and are NOT tracked here — that's a
+-- separate, untrackable-from-app-code send path.
+CREATE TABLE IF NOT EXISTS public.email_usage (
+  month       TEXT PRIMARY KEY,  -- 'YYYY-MM', UTC
+  sent_count  INTEGER NOT NULL DEFAULT 0,
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.email_usage ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admins read email usage" ON public.email_usage;
+CREATE POLICY "Admins read email usage" ON public.email_usage FOR SELECT USING (public.is_admin());
+-- No client INSERT/UPDATE policy: writes only happen via the service-role
+-- client from server routes, through the atomic increment function below.
+
+-- Atomic upsert-increment — required because batches within a single
+-- broadcast send concurrently (Promise.allSettled), so a naive
+-- read-then-write in application code would lose updates under concurrency.
+CREATE OR REPLACE FUNCTION public.increment_email_usage(p_month TEXT, p_count INTEGER)
+RETURNS void AS $$
+  INSERT INTO public.email_usage (month, sent_count, updated_at)
+  VALUES (p_month, p_count, NOW())
+  ON CONFLICT (month) DO UPDATE
+    SET sent_count = public.email_usage.sent_count + EXCLUDED.sent_count,
+        updated_at = NOW();
+$$ LANGUAGE sql;
 
 -- ============================================================
 -- PRODUCTS (Merch Catalogue)
@@ -601,6 +634,14 @@ CREATE INDEX IF NOT EXISTS idx_attendance_scanned_by
 -- scans + sorts the whole table.
 CREATE INDEX IF NOT EXISTS idx_attendance_created
   ON public.attendance_records (created_at DESC);
+
+-- Prevents duplicate check-in rows for the same student+event when two scans
+-- race each other (e.g. two facilitator devices scanning the same student
+-- within milliseconds). Without this, the read-then-insert in the /api/scan
+-- route can produce two rows for one attendance. Partial (event_id IS NOT
+-- NULL) because attendance can also be keyed by session_id alone.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_attendance_student_event
+  ON public.attendance_records (student_id, event_id) WHERE event_id IS NOT NULL;
 
 -- users — read on every is_admin()/is_council() call and the summary view's
 -- WHERE account_type='student'.
