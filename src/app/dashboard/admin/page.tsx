@@ -71,11 +71,14 @@ export default function AdminDashboard() {
         .select("*", { count: "exact", head: true })
         .eq("account_type", "facilitator");
 
-      // Pending Approvals (facilitators not yet approved)
+      // Pending Approvals — students always require manual approval (see
+      // src/app/api/auth/register/route.ts), and facilitators do too unless
+      // registrationMode is "open", so this must count both account types,
+      // not just facilitators.
       const { count: pendingCount } = await supabase
         .from("users")
         .select("*", { count: "exact", head: true })
-        .eq("account_type", "facilitator")
+        .neq("account_type", "admin")
         .eq("status", "pending");
 
       // Attendance Rate — use server-side counts instead of fetching all rows
@@ -197,7 +200,7 @@ export default function AdminDashboard() {
                   {stats.pendingApprovals > 0 && (
                     <Link href="/dashboard/admin/users" style={{ display: "block", padding: "16px", borderBottom: "1px solid var(--border)", textDecoration: "none", transition: "background 0.2s" }} className="notif-item">
                       <div style={{ fontSize: "13px", color: "var(--gold)", fontWeight: 500, marginBottom: "4px" }}>Pending Approvals</div>
-                      <div style={{ fontSize: "12px", color: "var(--dimmed)" }}>You have {stats.pendingApprovals} facilitator{stats.pendingApprovals > 1 ? 's' : ''} waiting for approval.</div>
+                      <div style={{ fontSize: "12px", color: "var(--dimmed)" }}>You have {stats.pendingApprovals} account{stats.pendingApprovals > 1 ? 's' : ''} waiting for approval.</div>
                     </Link>
                   )}
                   {stats.attendanceRate < 75 && stats.attendanceRate > 0 && (
