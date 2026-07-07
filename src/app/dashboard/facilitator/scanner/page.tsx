@@ -17,7 +17,8 @@ import {
   History,
   Users,
   Sparkles,
-  QrCode
+  QrCode,
+  RefreshCw
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -285,22 +286,26 @@ export default function FacilitatorScannerPage() {
           message: `${(json.status || "present").toUpperCase()}!`,
           submessage: `${verifiedStudent.fullName} checked in successfully.`,
         });
+        setVerifiedStudent(null);
       } else if (json.action === "time_out") {
         setScanResult({
           success: true,
           message: "Check-out Recorded!",
           submessage: `${verifiedStudent.fullName} has checked out successfully.`,
         });
+        setVerifiedStudent(null);
       } else {
+        // Keep verifiedStudent set so the Retry button can re-submit without
+        // requiring a fresh QR scan.
         setScanResult({ success: false, message: "Scan Failed", submessage: json.message || json.error || "Unexpected response." });
       }
 
       fetchRecentScans(selectedEventId);
     } catch (err: any) {
       console.error(err);
+      // Keep verifiedStudent set — a network blip shouldn't force a rescan.
       setScanResult({ success: false, message: "Confirmation Failed", submessage: err.message });
     } finally {
-      setVerifiedStudent(null);
       setConfirmLoading(false);
     }
   }
@@ -549,13 +554,25 @@ export default function FacilitatorScannerPage() {
                   </h2>
                   <p className="result-explanation">{scanResult.submessage}</p>
                 </div>
-                <button
-                  onClick={() => { setScanResult(null); startCamera(); }}
-                  className="btn-next-scan"
-                >
-                  <Sparkles size={16} />
-                  <span>Resume Scanning</span>
-                </button>
+                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                  {!scanResult.success && verifiedStudent && (
+                    <button
+                      onClick={confirmCheckIn}
+                      className="btn-next-scan"
+                      disabled={confirmLoading}
+                    >
+                      <RefreshCw size={16} />
+                      <span>Retry</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setScanResult(null); setVerifiedStudent(null); startCamera(); }}
+                    className="btn-next-scan"
+                  >
+                    <Sparkles size={16} />
+                    <span>Resume Scanning</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

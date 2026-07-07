@@ -17,7 +17,8 @@ import {
   History,
   Users,
   Sparkles,
-  QrCode
+  QrCode,
+  RefreshCw
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -31,6 +32,7 @@ export default function ScannerPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState<any[]>([]);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const lastScannedCodeRef = useRef<string | null>(null);
   const router = useRouter();
 
   // Load events and admin profile with robust error handling
@@ -205,11 +207,10 @@ export default function ScannerPage() {
     }
   };
 
-  async function onScanSuccess(decodedText: string) {
+  async function submitScan(qrCodeId: string) {
     if (!selectedEventId || !admin) return;
 
-    await stopCamera();
-    setScanResult({ success: true, message: "Verifying...", submessage: `Code: ${decodedText}` });
+    setScanResult({ success: true, message: "Verifying...", submessage: `Code: ${qrCodeId}` });
 
     try {
       const res = await fetch("/api/scan", {
@@ -218,7 +219,7 @@ export default function ScannerPage() {
           "Content-Type": "application/json",
           ...(await getAuthHeader()),
         },
-        body: JSON.stringify({ qr_code_id: decodedText, event_id: selectedEventId }),
+        body: JSON.stringify({ qr_code_id: qrCodeId, event_id: selectedEventId }),
       });
 
       const json = await res.json();
@@ -247,8 +248,17 @@ export default function ScannerPage() {
       fetchRecentScans(selectedEventId);
     } catch (err: any) {
       console.error(err);
+      // lastScannedCodeRef is kept set so the Retry button can resubmit
+      // without requiring a fresh camera scan.
       setScanResult({ success: false, message: "Scan Failed", submessage: err.message });
     }
+  }
+
+  async function onScanSuccess(decodedText: string) {
+    if (!selectedEventId || !admin) return;
+    await stopCamera();
+    lastScannedCodeRef.current = decodedText;
+    await submitScan(decodedText);
   }
 
   function onScanFailure(error: any) {
@@ -404,13 +414,24 @@ export default function ScannerPage() {
                   <p className="result-explanation">{scanResult.submessage}</p>
                 </div>
                 
-                <button 
-                  onClick={() => { setScanResult(null); startCamera(); }} 
-                  className="btn-next-scan"
-                >
-                  <Sparkles size={16} />
-                  <span>Resume Scanning</span>
-                </button>
+                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                  {!scanResult.success && lastScannedCodeRef.current && (
+                    <button
+                      onClick={() => submitScan(lastScannedCodeRef.current!)}
+                      className="btn-next-scan"
+                    >
+                      <RefreshCw size={16} />
+                      <span>Retry</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setScanResult(null); startCamera(); }}
+                    className="btn-next-scan"
+                  >
+                    <Sparkles size={16} />
+                    <span>Resume Scanning</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
