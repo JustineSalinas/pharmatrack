@@ -1,4 +1,7 @@
 export const dynamic = "force-dynamic";
+// Safety margin under concurrent load during busy events — default Vercel
+// timeout leaves zero configured headroom if Supabase latency spikes.
+export const maxDuration = 15;
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -72,10 +75,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  // Check if student account is approved (runs after student_profiles resolves
-  // the studentId, but happens while the event's time-window math below has no
-  // network dependency, so it isn't blocking anything further).
-  const { data: studentUser } = await supabase.from("users").select("status").eq("id", studentId).single();
+  // Student approval check + existing attendance-record lookup, parallelized:
+  // both depend only on studentId/event_id (already resolved above) and
+  // don't depend on each other.
+  const [{ data: studentUser }, { data: existing }] = await Promise.all([
+    supabase.from("users").select("status").eq("id", studentId).single(),
+    supabase.from("attendance_records").select("*").eq("student_id", studentId).eq("event_id", event_id).single(),
+  ]);
 
   if (!studentUser || studentUser.status !== "approved") {
     console.warn(`[Scan API] Scan rejected: student account ${studentId} is not approved (status: ${studentUser?.status || 'none'})`);
@@ -99,14 +105,6 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-
-  // ── Check existing attendance record ────────────────────
-  const { data: existing } = await supabase
-    .from("attendance_records")
-    .select("*")
-    .eq("student_id", studentId)
-    .eq("event_id", event_id)
-    .single();
 
   // ────────────────────────────────────────────────────────
   // CASE 1: No record yet → Time In (first scan)
