@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, parseDateLocal } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { debounce } from "@/lib/debounce";
 import { useRouter } from "next/navigation";
@@ -152,7 +152,7 @@ export default function FacilitatorAttendance() {
         const section = sess?.section || "N/A";
         const rawDate = ev?.date || sess?.date || "";
         const displayDate = rawDate
-          ? new Date(rawDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          ? parseDateLocal(rawDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
           : "—";
 
         return {
