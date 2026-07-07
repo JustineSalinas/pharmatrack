@@ -105,6 +105,7 @@ export default function AdminSettings() {
   const [emailUsage, setEmailUsage] = useState<{
     count: number; cap: number; percent: number;
     source: "mailersend" | "internal"; internalCount: number;
+    mailersendUnavailableReason?: string | null;
   } | null>(null);
 
   const handleTestSmtp = async () => {
@@ -188,6 +189,7 @@ export default function AdminSettings() {
           setEmailUsage({
             count: json.count, cap: json.cap, percent: json.percent,
             source: json.source, internalCount: json.internalCount,
+            mailersendUnavailableReason: json.mailersendUnavailableReason,
           });
         }
       } catch {
@@ -700,7 +702,8 @@ export default function AdminSettings() {
                       </p>
                     ) : (
                       <p style={{ fontSize: "10px", color: "var(--muted)", margin: "6px 0 0", lineHeight: 1.4 }}>
-                        Covers event broadcasts, absence notices &amp; weekly digests only — add a MAILERSEND_API_KEY environment variable to show MailerSend&apos;s real account-wide number instead.
+                        Not connected to MailerSend: {emailUsage.mailersendUnavailableReason || "add a MAILERSEND_API_KEY environment variable to show MailerSend's real account-wide number instead"}.
+                        {" "}Showing PharmaTrack&apos;s own tracked total (broadcasts, absence notices &amp; weekly digests only) instead.
                       </p>
                     )}
                   </div>
