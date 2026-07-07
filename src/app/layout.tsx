@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Montserrat } from "next/font/google";
+import ChunkErrorReload from "@/components/ChunkErrorReload";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -20,7 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="msapplication-navbutton-color" content="#0F0F13" />
       </head>
-      <body className={`${inter.variable} ${montserrat.variable}`}>{children}</body>
+      <body className={`${inter.variable} ${montserrat.variable}`}>
+        <ChunkErrorReload />
+        {children}
+      </body>
     </html>
   );
 }
