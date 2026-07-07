@@ -49,6 +49,28 @@ function checkMemory(key: string, limit: number, windowMs: number): boolean {
   return true;
 }
 
+// Best-effort extraction of the Supabase JWT "sub" (user id) claim, without
+// verifying the signature — this is only used to key rate limits per-user
+// so authenticated routes (e.g. /api/scan) don't lump every facilitator
+// sharing a venue NAT/WiFi IP into one shared quota. Actual auth/authorization
+// is enforced by getBackendUser()/requireAuth() in the route handlers.
+function extractUserId(req: NextRequest): string | null {
+  const authHeader = req.headers.get("Authorization");
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.substring(7)
+    : req.cookies.get("pharmatrack_token")?.value;
+  if (!token) return null;
+
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof decoded.sub === "string" ? decoded.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Middleware ─────────────────────────────────────────────────────────────
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
@@ -60,7 +82,11 @@ export async function middleware(req: NextRequest) {
     req.headers.get("x-real-ip") ??
     "unknown";
 
-  const key = `${ip}:${rule.path}`;
+  // Authenticated routes key on user id (falling back to IP) so devices
+  // sharing a NAT/venue WiFi IP don't share one quota; unauthenticated
+  // routes (auth/register, etc.) have no user id yet and stay IP-keyed.
+  const userId = rule.path === "/api/scan" ? extractUserId(req) : null;
+  const key = `${userId ?? ip}:${rule.path}`;
 
   if (USE_UPSTASH) {
     try {

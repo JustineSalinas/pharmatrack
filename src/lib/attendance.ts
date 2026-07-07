@@ -36,13 +36,20 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   const lookbackIso = new Date(Date.now() - LOOKBACK_DAYS * 86400_000).toISOString();
 
   // 1. Completed events within the lookback window.
-  const { data: events, error: evErr } = await supabase
+  const { data: rawEvents, error: evErr } = await supabase
     .from("events")
     .select("id, check_in_end, check_out_end")
     .lt("check_in_end", nowIso)
     .gte("check_in_end", lookbackIso);
   if (evErr) { result.errors.push("events: " + evErr.message); return result; }
-  if (!events || events.length === 0) return result;
+  if (!rawEvents || rawEvents.length === 0) return result;
+
+  // Skip events whose check-out window is still open — they aren't done yet,
+  // and attendance_records is the highest-traffic table (see schema.sql), so
+  // reading/writing across it for an event that's still actively being
+  // scanned for check-outs would contend with those live scans.
+  const events = rawEvents.filter((ev: any) => !ev.check_out_end || new Date(ev.check_out_end) < new Date(nowIso));
+  if (events.length === 0) return result;
 
   // 2. All approved students (target set for "absent" calculation).
   const { data: students, error: stuErr } = await supabase

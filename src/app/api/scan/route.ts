@@ -22,19 +22,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: scanner } = await supabase
-    .from("users")
-    .select("account_type, status, email")
-    .eq("id", user.id)
-    .single();
-
-  if (!scanner || !["admin", "facilitator"].includes(scanner.account_type) || scanner.status !== "approved") {
-    console.warn(`[Scan API] Forbidden scan attempt by user ${user.id} (${scanner?.email || "unknown email"}), Account Type: ${scanner?.account_type || "none"}, Status: ${scanner?.status || "none"}`);
-    return NextResponse.json({ error: "Only approved admins/facilitators can scan" }, { status: 403 });
-  }
-
-  console.log(`[Scan API] Authorized scan request by ${scanner.email} (${scanner.account_type})`);
-
   // ── Parse body ───────────────────────────────────────────
   let body: { qr_code_id?: string; event_id?: string };
   try {
@@ -50,14 +37,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "qr_code_id and event_id are required" }, { status: 400 });
   }
 
-  // ── Resolve student from QR code ────────────────────────
-  const { data: studentProfile, error: spErr } = await supabase
-    .from("student_profiles")
-    .select("user_id")
-    .eq("qr_code_id", qr_code_id)
-    .single();
+  // ── Scanner authorization + student/event resolution (parallelized: none
+  // of these three lookups depend on each other) ──────────────────────────
+  const [scannerRes, studentProfileRes, eventRes] = await Promise.all([
+    supabase.from("users").select("account_type, status, email").eq("id", user.id).single(),
+    supabase.from("student_profiles").select("user_id").eq("qr_code_id", qr_code_id).single(),
+    supabase
+      .from("events")
+      .select("check_in_start, check_in_late, check_in_end, check_out_start, check_out_end")
+      .eq("id", event_id)
+      .single(),
+  ]);
 
-  if (spErr || !studentProfile) {
+  const scanner = scannerRes.data;
+  if (!scanner || !["admin", "facilitator"].includes(scanner.account_type) || scanner.status !== "approved") {
+    console.warn(`[Scan API] Forbidden scan attempt by user ${user.id} (${scanner?.email || "unknown email"}), Account Type: ${scanner?.account_type || "none"}, Status: ${scanner?.status || "none"}`);
+    return NextResponse.json({ error: "Only approved admins/facilitators can scan" }, { status: 403 });
+  }
+
+  console.log(`[Scan API] Authorized scan request by ${scanner.email} (${scanner.account_type})`);
+
+  const studentProfile = studentProfileRes.data;
+  if (studentProfileRes.error || !studentProfile) {
     console.warn(`[Scan API] Student profile not found for QR code ${qr_code_id}`);
     return NextResponse.json({ error: "Student not found for this QR code" }, { status: 404 });
   }
@@ -65,28 +66,20 @@ export async function POST(req: NextRequest) {
   const studentId = studentProfile.user_id;
   console.log(`[Scan API] Resolved QR code ${qr_code_id} to student ${studentId}`);
 
-  // Check if student account is approved
-  const { data: studentUser } = await supabase
-    .from("users")
-    .select("status")
-    .eq("id", studentId)
-    .single();
+  const event = eventRes.data;
+  if (eventRes.error || !event) {
+    console.error(`[Scan API] Event ${event_id} not found or query error:`, eventRes.error);
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  // Check if student account is approved (runs after student_profiles resolves
+  // the studentId, but happens while the event's time-window math below has no
+  // network dependency, so it isn't blocking anything further).
+  const { data: studentUser } = await supabase.from("users").select("status").eq("id", studentId).single();
 
   if (!studentUser || studentUser.status !== "approved") {
     console.warn(`[Scan API] Scan rejected: student account ${studentId} is not approved (status: ${studentUser?.status || 'none'})`);
     return NextResponse.json({ error: "Student account is pending approval or inactive" }, { status: 400 });
-  }
-
-  // ── Fetch event & validate time window ──────────────────
-  const { data: event, error: evErr } = await supabase
-    .from("events")
-    .select("check_in_start, check_in_late, check_in_end, check_out_start, check_out_end")
-    .eq("id", event_id)
-    .single();
-
-  if (evErr || !event) {
-    console.error(`[Scan API] Event ${event_id} not found or query error:`, evErr);
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
   const now = new Date();
@@ -140,6 +133,24 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (insertErr) {
+      // 23505 = unique_violation: a concurrent scan for the same student+event
+      // won the race between our SELECT and this INSERT. Treat it as "already
+      // checked in" instead of surfacing a duplicate-record error.
+      if (insertErr.code === "23505") {
+        const { data: raceRecord } = await supabase
+          .from("attendance_records")
+          .select("*")
+          .eq("student_id", studentId)
+          .eq("event_id", event_id)
+          .single();
+        console.warn(`[Scan API] Concurrent check-in race for student ${studentId}, event ${event_id} — returning existing record`);
+        return NextResponse.json({
+          action: "time_in",
+          status: raceRecord?.status ?? status,
+          record: raceRecord,
+          message: `Already checked in as ${raceRecord?.status ?? status}`,
+        });
+      }
       console.error(`[Scan API] Error inserting check-in record for student ${studentId}:`, insertErr);
       return NextResponse.json({ error: insertErr.message }, { status: 500 });
     }
