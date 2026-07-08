@@ -35,6 +35,44 @@ const AvatarUpload = forwardRef<AvatarUploadRef, AvatarUploadProps>(function Ava
     fileRef.current?.click();
   };
 
+  // Uploaded photos come straight off a phone camera at full resolution and
+  // whatever compression the phone applied — quality varies wildly and the
+  // files are unnecessarily large. Downscaling to a fixed, sharp thumbnail
+  // here keeps every avatar consistent and fast to load everywhere it's
+  // displayed (32px admin table row, larger profile/scanner circles).
+  const resizeImage = (file: File): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const maxDim = 512;
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const width = Math.round(img.width * scale);
+        const height = Math.round(img.height * scale);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("Image processing failed"))),
+          "image/jpeg",
+          0.9
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Could not read image file"));
+      };
+      img.src = objectUrl;
+    });
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -43,12 +81,12 @@ const AvatarUpload = forwardRef<AvatarUploadRef, AvatarUploadProps>(function Ava
     setUploading(true);
 
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${userId}/avatar.${ext}`;
+      const resized = await resizeImage(file);
+      const path = `${userId}/avatar.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(path, file, { upsert: true, contentType: file.type });
+        .upload(path, resized, { upsert: true, contentType: "image/jpeg" });
 
       if (uploadError) throw uploadError;
 

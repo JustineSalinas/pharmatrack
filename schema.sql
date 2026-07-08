@@ -652,6 +652,20 @@ BEGIN
   END IF;
 END $$;
 
+-- Same reasoning as attendance_records above, for the admin User Management
+-- table's live-avatar-sync subscription: without this, a student uploading
+-- a new profile photo never reaches the admin's open tab until they
+-- manually reload.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'users'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.users;
+  END IF;
+END $$;
+
 -- Prevents duplicate check-in rows for the same student+event when two scans
 -- race each other (e.g. two facilitator devices scanning the same student
 -- within milliseconds). Without this, the read-then-insert in the /api/scan

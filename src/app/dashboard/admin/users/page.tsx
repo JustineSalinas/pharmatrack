@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
+import { debounce } from "@/lib/debounce";
 import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck, ChevronUp, ChevronDown, Trash2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -60,9 +61,28 @@ export default function AdminUsers() {
     if (currentUser) fetchUsers();
   }, [currentUser]);
 
-  async function fetchUsers() {
+  // Live sync: a student uploading a new avatar (or any other profile/status
+  // change) shows up here without the admin needing to reload the page.
+  // Debounced so a burst of changes (e.g. many students uploading right
+  // before an event) collapses into one refetch instead of one per row —
+  // without this, a wave of uploads would hammer the users/student_profiles
+  // queries and repeatedly blank the table with the full-page spinner.
+  useEffect(() => {
+    if (!currentUser) return;
+    const debouncedRefetch = debounce(() => fetchUsers(true), 1500);
+    const channel = supabase
+      .channel("admin-users-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "users" }, debouncedRefetch)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser]);
+
+  async function fetchUsers(silent = false) {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const u = currentUser as any;
 
       if (!u) {
