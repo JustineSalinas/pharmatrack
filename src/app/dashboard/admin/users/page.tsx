@@ -104,6 +104,7 @@ export default function AdminUsers() {
       setUsers(merged);
     } catch (err) {
       console.error("Error fetching users", err);
+      showToast("Failed to load users. Check your connection and try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -368,6 +369,14 @@ export default function AdminUsers() {
                         <div className="avatar" style={{ width: "32px", height: "32px", fontSize: "12px", fontWeight: 600, flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--dimmed)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           {u.account_type === "admin" || u.account_type === "facilitator" ? (
                             <img src="/usa.png" alt="USA Logo" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "2px" }} />
+                          ) : u.avatar_url ? (
+                            <img
+                              src={u.avatar_url}
+                              alt={u.full_name}
+                              loading="lazy"
+                              decoding="async"
+                              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                            />
                           ) : (
                             initials
                           )}

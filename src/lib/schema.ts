@@ -10,6 +10,7 @@ export interface PharmaUser {
   account_type: AccountType;
   status: string;
   created_at: string;
+  avatar_url?: string | null;
 }
 
 export interface StudentProfile {
