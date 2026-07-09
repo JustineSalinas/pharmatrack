@@ -47,6 +47,7 @@ export default function AdminAttendance() {
 
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterSection, setFilterSection] = useState("All");
+  const [filterEvent, setFilterEvent] = useState("All");
   const [availableSections, setAvailableSections] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -247,14 +248,17 @@ export default function AdminAttendance() {
       ? availableSections
       : Array.from(new Set(records.map((r) => r.section).filter((s) => s !== "N/A"))).sort();
 
+  const eventNames = Array.from(new Set(records.map((r) => r.subject).filter(Boolean))).sort();
+
   const filtered = records.filter((r) => {
     const sMatch = filterStatus === "All" || r.status.toLowerCase() === filterStatus.toLowerCase();
     const secMatch = filterSection === "All" || r.section === filterSection;
+    const eventMatch = filterEvent === "All" || r.subject === filterEvent;
     const dateMatch = !selectedDate || r.rawDate === selectedDate;
     const searchMatch =
       r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.email.toLowerCase().includes(searchQuery.toLowerCase());
-    return sMatch && secMatch && dateMatch && searchMatch;
+    return sMatch && secMatch && eventMatch && dateMatch && searchMatch;
   });
 
   const present = filtered.filter((r) => r.status === "present").length;
@@ -383,6 +387,16 @@ export default function AdminAttendance() {
         >
           <option value="All">All Sections</option>
           {sections.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        <select
+          className="search-input select-input"
+          style={{ width: "auto", minWidth: "160px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", fontSize: "13px", padding: "0 12px", outline: "none", cursor: "pointer" }}
+          value={filterEvent}
+          onChange={(e) => setFilterEvent(e.target.value)}
+        >
+          <option value="All">All Events</option>
+          {eventNames.map((e) => <option key={e} value={e}>{e}</option>)}
         </select>
       </div>
 
