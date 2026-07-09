@@ -401,13 +401,42 @@ export default function FacilitatorScannerPage() {
                 </div>
                 <div className="info-row">
                   <Clock size={16} className="info-icon" />
-                  <div>
+                  <div style={{ width: "100%" }}>
                     <span className="info-label">Check-in Windows</span>
-                    <span className="info-val">
-                      Late at: <strong>{new Date(selectedEvent.check_in_late).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
-                      <br />
-                      Closes: <strong>{new Date(selectedEvent.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
-                    </span>
+                    <div className="info-time-rows">
+                      <div className="info-time-row">
+                        <span>Opens at:</span>
+                        <strong>{new Date(selectedEvent.check_in_start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                      </div>
+                      <div className="info-time-row">
+                        <span>Late at:</span>
+                        <strong>{new Date(selectedEvent.check_in_late).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                      </div>
+                      <div className="info-time-row">
+                        <span>Closes:</span>
+                        <strong>{new Date(selectedEvent.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <Clock size={16} className="info-icon" />
+                  <div style={{ width: "100%" }}>
+                    <span className="info-label">Check-out Window</span>
+                    {selectedEvent.check_out_start && selectedEvent.check_out_end ? (
+                      <div className="info-time-rows">
+                        <div className="info-time-row">
+                          <span>Opens at:</span>
+                          <strong>{new Date(selectedEvent.check_out_start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                        </div>
+                        <div className="info-time-row">
+                          <span>Closes:</span>
+                          <strong>{new Date(selectedEvent.check_out_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="info-val"><strong>Not required for this event</strong></span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -545,16 +574,18 @@ export default function FacilitatorScannerPage() {
           {scanResult && (
             <div className="viewport-result">
               <div className="result-card">
-                <div className={`status-icon-wrap ${scanResult.success ? "success" : "error"}`}>
-                  {scanResult.success ? <CheckCircle2 size={44} /> : <XCircle size={44} />}
+                <div className="result-top-group">
+                  <div className={`status-icon-wrap ${scanResult.success ? "success" : "error"}`}>
+                    {scanResult.success ? <CheckCircle2 size={44} /> : <XCircle size={44} />}
+                  </div>
+                  <div className="result-text-block">
+                    <h2 className={`result-headline ${scanResult.success ? "success" : "error"}`}>
+                      {scanResult.message}
+                    </h2>
+                    <p className="result-explanation">{scanResult.submessage}</p>
+                  </div>
                 </div>
-                <div className="result-text-block">
-                  <h2 className={`result-headline ${scanResult.success ? "success" : "error"}`}>
-                    {scanResult.message}
-                  </h2>
-                  <p className="result-explanation">{scanResult.submessage}</p>
-                </div>
-                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                <div style={{ display: "flex", gap: "10px", width: "100%", justifyContent: "center" }}>
                   {!scanResult.success && verifiedStudent && (
                     <button
                       onClick={confirmCheckIn}
@@ -718,6 +749,11 @@ export default function FacilitatorScannerPage() {
           gap: 20px;
         }
 
+        .qr-scanner-terminal-page .viewport-column {
+          display: flex;
+          flex-direction: column;
+        }
+
         .qr-scanner-terminal-page .setup-card {
           background: #ffffff !important;
           border: 1px solid rgba(79, 70, 229, 0.12) !important;
@@ -813,6 +849,32 @@ export default function FacilitatorScannerPage() {
           font-size: 13.5px !important;
           color: #111827 !important;
           line-height: 1.4 !important;
+        }
+
+        .qr-scanner-terminal-page .info-time-rows {
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 3px !important;
+          width: 100% !important;
+        }
+
+        .qr-scanner-terminal-page .info-time-row {
+          display: flex !important;
+          align-items: baseline !important;
+          justify-content: flex-start !important;
+          gap: 5px !important;
+          font-size: 13.5px !important;
+          line-height: 1.4 !important;
+        }
+
+        .qr-scanner-terminal-page .info-time-row span {
+          color: #6b7280 !important;
+        }
+
+        .qr-scanner-terminal-page .info-time-row strong {
+          color: #111827 !important;
+          font-weight: 600 !important;
+          white-space: nowrap !important;
         }
 
         .qr-scanner-terminal-page .metrics-card {
@@ -959,6 +1021,8 @@ export default function FacilitatorScannerPage() {
           flex-direction: column !important;
           align-items: center !important;
           justify-content: flex-start !important;
+          flex: 1 !important;
+          min-height: 360px !important;
         }
 
         .qr-scanner-terminal-page .viewfinder-frame {
@@ -1053,9 +1117,21 @@ export default function FacilitatorScannerPage() {
           display: flex !important;
           flex-direction: column !important;
           align-items: center !important;
+          justify-content: space-between !important;
           gap: 20px !important;
           text-align: center !important;
+          height: 100% !important;
+          width: 100% !important;
           animation: resultSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        .qr-scanner-terminal-page .result-top-group {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 20px !important;
+          flex: 1 !important;
         }
 
         .qr-scanner-terminal-page .status-icon-wrap {

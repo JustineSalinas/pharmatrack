@@ -131,7 +131,7 @@ export default function FacilitatorAttendance() {
           session_id,
           events ( name, date, location ),
           qr_sessions ( subject, date, section ),
-          users!student_id ( full_name, email )
+          users!student_id ( full_name, email, student_profiles ( section ) )
         `)
         // Bound the log to the most recent records so this doesn't seq-scan an
         // ever-growing table on every load / realtime refresh. Backed by
@@ -149,7 +149,9 @@ export default function FacilitatorAttendance() {
 
         // Prefer event data when event_id is set; fall back to session data
         const subject = ev?.name || sess?.subject || "General Event";
-        const section = sess?.section || "N/A";
+        const studentProfiles = uData?.student_profiles;
+        const studentSection = Array.isArray(studentProfiles) ? studentProfiles[0]?.section : studentProfiles?.section;
+        const section = studentSection || sess?.section || "N/A";
         const rawDate = ev?.date || sess?.date || "";
         const displayDate = rawDate
           ? parseDateLocal(rawDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })

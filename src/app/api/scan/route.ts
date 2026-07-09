@@ -112,7 +112,10 @@ export async function POST(req: NextRequest) {
   if (!existing) {
     if (now > checkInEnd) {
       console.warn(`[Scan API] Check-in window closed for event ${event_id}. Closed at ${checkInEnd.toISOString()}`);
-      return NextResponse.json({ error: "Check-in window has closed" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Check-in window has closed. You were not checked in for this event and will be marked absent." },
+        { status: 400 },
+      );
     }
 
     const status = now <= checkInLate ? "present" : "late";

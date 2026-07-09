@@ -692,7 +692,7 @@ export default function FacultyReports() {
                   return (
                     <div key={sec.name} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 600 }}>
-                        <span style={{ color: "#111827" }}>{sec.name} <span style={{ fontWeight: 400, color: "#6b7280", fontSize: "11px" }}>({sec.count} studs)</span></span>
+                        <span style={{ color: "#111827" }}>{sec.name} <span style={{ fontWeight: 400, color: "#6b7280", fontSize: "11px" }}>({sec.count} {sec.count === 1 ? "student" : "students"})</span></span>
                         <span style={{ color: "#4f46e5" }}>{sec.rate}%</span>
                       </div>
                       <div style={{ width: "100%", height: "12px", background: "#f3f4f6", borderRadius: "99px", overflow: "hidden" }}>
