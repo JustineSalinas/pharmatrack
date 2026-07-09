@@ -17,7 +17,7 @@ const getAdminClient = () =>
     process.env.SUPABASE_SERVICE_ROLE_KEY || ""
   );
 
-const REFRESH_INTERVAL_MS = 3 * 60_000; // 3 minutes
+const REFRESH_INTERVAL_MS = 15 * 60_000; // 15 minutes — reduced from 3 to cut matview scan frequency
 const CONFIG_KEY = "summaryRefreshLastRun";
 
 export async function POST(req: NextRequest) {

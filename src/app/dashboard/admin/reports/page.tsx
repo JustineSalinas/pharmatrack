@@ -160,7 +160,7 @@ export default function AdminReports() {
         void triggerSummaryRefresh();
         const [ { data: studentStats, error: sErr }, { data: sessions, error: rErr }, config ] = await Promise.all([
            supabase.rpc("get_student_attendance_summary"),
-           supabase.from("qr_sessions").select(`date, section, attendance_records(status)`),
+           supabase.from("qr_sessions").select(`date, section, attendance_records(status)`).gte("date", (() => { const d = new Date(); d.setMonth(d.getMonth() - 6); return d.toISOString().slice(0, 10); })()),
            getSystemConfig().catch(() => null)
         ]);
 
