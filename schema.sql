@@ -364,13 +364,13 @@ SELECT
   sp.student_id_number,
   sp.section,
   sp.current_year,
-  COUNT(*) AS total_records,
+  COUNT(ar.id) AS total_records,
   COUNT(*) FILTER (WHERE ar.status = 'present') AS present_count,
   COUNT(*) FILTER (WHERE ar.status = 'late') AS late_count,
   COUNT(*) FILTER (WHERE ar.status = 'absent') AS absent_count,
   COUNT(*) FILTER (WHERE ar.status = 'incomplete') AS incomplete_count,
   ROUND(
-    COUNT(*) FILTER (WHERE ar.status IN ('present', 'late'))::NUMERIC / NULLIF(COUNT(*), 0) * 100, 1
+    COUNT(*) FILTER (WHERE ar.status IN ('present', 'late'))::NUMERIC / NULLIF(COUNT(ar.id), 0) * 100, 1
   ) AS attendance_rate
 FROM public.users u
 JOIN public.student_profiles sp ON sp.user_id = u.id

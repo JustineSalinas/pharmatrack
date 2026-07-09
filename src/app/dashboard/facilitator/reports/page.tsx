@@ -40,7 +40,8 @@ function StudentModal({ onClose, allStudents, minAttendance }: { onClose: () => 
     return matchSearch && matchSection;
   });
 
-  const getRateColor = (rate: number) => {
+  const getRateColor = (rate: number, totalRecords: number = 1) => {
+    if (totalRecords === 0) return { color: "#6b7280", bg: "rgba(107, 114, 128, 0.08)", border: "rgba(107, 114, 128, 0.15)" };
     if (rate >= 85) return { color: "#16a34a", bg: "rgba(22, 163, 74, 0.08)", border: "rgba(22, 163, 74, 0.15)" };
     if (rate >= minAttendance) return { color: "#d97706", bg: "rgba(217, 119, 6, 0.08)", border: "rgba(217, 119, 6, 0.15)" };
     return { color: "#dc2626", bg: "rgba(220, 38, 38, 0.08)", border: "rgba(220, 38, 38, 0.15)" };
@@ -96,7 +97,8 @@ function StudentModal({ onClose, allStudents, minAttendance }: { onClose: () => 
             </thead>
             <tbody>
               {filtered.map(s => {
-                const rc = getRateColor(s.rate);
+                const rc = getRateColor(s.rate, s.total_records);
+                const hasSessions = s.total_records > 0;
                 return (
                   <tr key={s.id} style={{ borderBottom: "1px solid rgba(0, 0, 0, 0.04)" }}>
                     <td className="reports-td" style={{ fontWeight: 600, color: "#111827" }}>{s.name}</td>
@@ -107,14 +109,14 @@ function StudentModal({ onClose, allStudents, minAttendance }: { onClose: () => 
                     <td className="reports-td">
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ flex: 1, background: "#f3f4f6", borderRadius: 99, height: 6, overflow: "hidden", minWidth: 80 }}>
-                          <div style={{ width: `${s.rate}%`, height: "100%", background: rc.color, borderRadius: 99 }} />
+                          <div style={{ width: `${hasSessions ? s.rate : 0}%`, height: "100%", background: rc.color, borderRadius: 99 }} />
                         </div>
                         <span style={{
                           padding: "2px 8px", borderRadius: 6,
                           fontSize: 11, fontWeight: 700, fontFamily: "monospace",
                           background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`,
                           minWidth: 46, textAlign: "center",
-                        }}>{s.rate}%</span>
+                        }}>{hasSessions ? `${s.rate}%` : "—"}</span>
                       </div>
                     </td>
                   </tr>
@@ -317,6 +319,7 @@ export default function FacultyReports() {
         const calculatedSections = Object.entries(sectionsMap).map(([name, data]) => ({
           name,
           count: data.count,
+          total: data.total,
           rate: data.total > 0 ? Math.round((data.attended / data.total) * 100) : 0
         })).sort((a, b) => b.rate - a.rate);
         setSectionBreakdown(calculatedSections);
@@ -536,7 +539,8 @@ export default function FacultyReports() {
     win.document.close();
   }
 
-  const getRateColor = (rate: number) => {
+  const getRateColor = (rate: number, totalRecords: number = 1) => {
+    if (totalRecords === 0) return { color: "#6b7280", bg: "rgba(107, 114, 128, 0.08)", border: "rgba(107, 114, 128, 0.15)" };
     if (rate >= 85) return { color: "#16a34a", bg: "rgba(22, 163, 74, 0.08)", border: "rgba(22, 163, 74, 0.15)" };
     if (rate >= minAttendance) return { color: "#d97706", bg: "rgba(217, 119, 6, 0.08)", border: "rgba(217, 119, 6, 0.15)" };
     return { color: "#dc2626", bg: "rgba(220, 38, 38, 0.08)", border: "rgba(220, 38, 38, 0.15)" };
@@ -777,7 +781,8 @@ export default function FacultyReports() {
               </thead>
               <tbody>
                 {filteredStudentsForTab.slice(0, 8).map(s => {
-                  const rc = getRateColor(s.rate);
+                  const rc = getRateColor(s.rate, s.total_records);
+                  const hasSessions = s.total_records > 0;
                   return (
                     <tr key={s.id}>
                       <td style={{ paddingLeft: "24px", fontWeight: 600, color: "#111827" }}>
@@ -790,7 +795,7 @@ export default function FacultyReports() {
                       <td>
                         <div className="progress-wrap">
                           <div className="progress-bar-bg">
-                            <div className="progress-bar-fill" style={{ width: `${s.rate}%`, background: rc.color }} />
+                            <div className="progress-bar-fill" style={{ width: `${hasSessions ? s.rate : 0}%`, background: rc.color }} />
                           </div>
                           <span style={{ fontSize: "11px", color: "#6b7280", whiteSpace: "nowrap" }}>
                             {s.present_count + s.late_count} present / {s.total_records} sessions
@@ -799,7 +804,7 @@ export default function FacultyReports() {
                       </td>
                       <td style={{ textAlign: "right", paddingRight: "24px" }}>
                         <span className="rate-capsule" style={{ background: rc.bg, color: rc.color, border: `1px solid ${rc.border}` }}>
-                          {s.rate}%
+                          {hasSessions ? `${s.rate}%` : "—"}
                         </span>
                       </td>
                     </tr>
@@ -932,7 +937,8 @@ export default function FacultyReports() {
                   </tr>
                 ) : (
                   sectionBreakdown.map(s => {
-                    const rc = getRateColor(s.rate);
+                    const rc = getRateColor(s.rate, s.total);
+                    const hasSessions = s.total > 0;
                     return (
                       <tr key={s.name}>
                         <td style={{ paddingLeft: "24px", fontWeight: 600, color: "#111827" }}>{s.name}</td>
@@ -940,13 +946,13 @@ export default function FacultyReports() {
                         <td>
                           <div className="progress-wrap" style={{ maxWidth: "320px" }}>
                             <div className="progress-bar-bg">
-                              <div className="progress-bar-fill" style={{ width: `${s.rate}%`, background: rc.color }} />
+                              <div className="progress-bar-fill" style={{ width: `${hasSessions ? s.rate : 0}%`, background: rc.color }} />
                             </div>
                           </div>
                         </td>
                         <td style={{ textAlign: "right", paddingRight: "24px" }}>
                           <span className="rate-capsule" style={{ background: rc.bg, color: rc.color, border: `1px solid ${rc.border}` }}>
-                            {s.rate}%
+                            {hasSessions ? `${s.rate}%` : "—"}
                           </span>
                         </td>
                       </tr>
