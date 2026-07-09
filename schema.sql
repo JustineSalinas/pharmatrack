@@ -652,19 +652,12 @@ BEGIN
   END IF;
 END $$;
 
--- Same reasoning as attendance_records above, for the admin User Management
--- table's live-avatar-sync subscription: without this, a student uploading
--- a new profile photo never reaches the admin's open tab until they
--- manually reload.
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_publication_tables
-    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'users'
-  ) THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.users;
-  END IF;
-END $$;
+-- NOTE: users table intentionally NOT added to supabase_realtime publication.
+-- It was previously included for live avatar sync in the admin User Management
+-- page, but it caused excessive WAL disk IO on the Nano compute tier. The
+-- admin-users-rt channel still subscribes but will never fire; admins need a
+-- manual page reload to see newly uploaded profile photos. The trade-off is
+-- worth it: avatar sync is a minor UX nicety, disk IO budget is not.
 
 -- Prevents duplicate check-in rows for the same student+event when two scans
 -- race each other (e.g. two facilitator devices scanning the same student
