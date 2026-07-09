@@ -27,6 +27,7 @@ export default function StudentRecords() {
   const [records, setRecords] = useState<AttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
 
   const [filterStatus, setFilterStatus] = useState("All");
@@ -117,6 +118,7 @@ export default function StudentRecords() {
     try {
       const u = await getCurrentUser();
       if (!u) { router.push("/login"); return; }
+      setUserId(u.id);
 
       const { data, error } = await supabase
         .from("attendance_records")
@@ -179,11 +181,13 @@ export default function StudentRecords() {
 
   // ── Real-time subscription ──────────────────────────────────────────────────
   useEffect(() => {
+    if (!userId) return;
+
     const channel = supabase
       .channel("student-records-rt")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "attendance_records" },
+        { event: "*", schema: "public", table: "attendance_records", filter: `student_id=eq.${userId}` },
         debounce(() => fetchRecords(true), 1500)
       )
       .subscribe();
@@ -191,7 +195,7 @@ export default function StudentRecords() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchRecords]);
+  }, [userId, fetchRecords]);
 
   const filtered = records.filter((r) => {
     const sMatch = filterStatus === "All" || r.status.toLowerCase() === filterStatus.toLowerCase();

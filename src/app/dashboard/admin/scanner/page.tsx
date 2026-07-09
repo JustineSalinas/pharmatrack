@@ -96,7 +96,7 @@ export default function ScannerPage() {
       .channel(`attendance-scans-${selectedEventId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "attendance_records" },
+        { event: "*", schema: "public", table: "attendance_records", filter: `event_id=eq.${selectedEventId}` },
         debounce(() => fetchRecentScans(selectedEventId), 1500)
       )
       .subscribe();

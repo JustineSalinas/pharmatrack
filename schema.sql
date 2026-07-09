@@ -617,6 +617,20 @@ WHERE NOT EXISTS (
 -- txn — run each statement on its own. The IF NOT EXISTS forms below are safe to
 -- re-run and are what belongs in this schema file of record.)
 
+-- CANONICAL INDEX SET for attendance_records — exactly the objects created
+-- below (7 indexes here + uq_attendance_student_event further down). On
+-- 2026-07-10 a second, undocumented generation of indexes was found live in
+-- prod (idx_attendance_records_student_id/event_id/session_id/created_at)
+-- that duplicated these under a different naming convention — applied
+-- directly to the DB out-of-band at some point and never reconciled here,
+-- roughly doubling write-path IO on this table's every INSERT/UPDATE. They
+-- were dropped via DROP INDEX CONCURRENTLY. One extra, idx_attendance_records_
+-- event_status, was kept (and is now declared below) because pg_stat_user_
+-- indexes showed real idx_scan activity on it, not just a scan-and-guess.
+-- If `\d attendance_records` in the Supabase SQL editor ever shows an index
+-- not listed in this file, that's the signal something was applied outside
+-- schema.sql again — reconcile it here, don't silently leave it.
+--
 -- attendance_records — the highest-traffic table (insert on check-in, update on
 -- check-out, scanned+aggregated constantly).
 CREATE INDEX IF NOT EXISTS idx_attendance_student
@@ -634,6 +648,11 @@ CREATE INDEX IF NOT EXISTS idx_attendance_scanned_by
 -- scans + sorts the whole table.
 CREATE INDEX IF NOT EXISTS idx_attendance_created
   ON public.attendance_records (created_at DESC);
+-- Confirmed live-used via pg_stat_user_indexes (idx_scan > 0) on 2026-07-10;
+-- kept rather than dropped as part of the duplicate-index cleanup above, and
+-- formally declared here so it's no longer off the books.
+CREATE INDEX IF NOT EXISTS idx_attendance_records_event_status
+  ON public.attendance_records (event_id, status);
 
 -- Required for every dashboard's "live update on scan" behavior — the app
 -- has multiple supabase.channel(...).on("postgres_changes", ...) subscriptions

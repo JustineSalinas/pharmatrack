@@ -143,6 +143,10 @@ export default function FacilitatorOverview() {
   }, [fetchFacilitatorData]);
 
   // ── Real-time: refresh feed + stats whenever any attendance record changes ──
+  // Intentionally unfiltered — stats here are platform-wide, not scoped to
+  // this facilitator, and attendance_records/events carry no facilitator_id
+  // column to filter on (only qr_sessions.facilitator_id does, and
+  // postgres_changes filters can't reference a joined table).
   useEffect(() => {
     const channel = supabase
       .channel("facilitator-dashboard-rt")

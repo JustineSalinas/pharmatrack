@@ -202,6 +202,9 @@ export default function FacilitatorAttendance() {
   }, [fetchAttendance]);
 
   // ── Real-time subscription ──────────────────────────────────────────────────
+  // Intentionally unfiltered — client-side filters default to "All" over an
+  // unbounded fetch, and attendance_records has no facilitator_id column to
+  // scope a postgres_changes filter to.
   useEffect(() => {
     const channel = supabase
       .channel("facilitator-attendance-log-rt")

@@ -127,21 +127,18 @@ export default function StudentsPage() {
     fetchStudents(true);
   }, [fetchStudents]);
 
-  // Real-time updates: refresh list when students register or update profiles/attendance
+  // Real-time updates: refresh list when student attendance changes.
+  // Note: `users` and `student_profiles` are not in the supabase_realtime
+  // publication (see schema.sql), so subscribing to them here would never
+  // fire — removed rather than left as dead code that invites someone to
+  // "fix" it by re-adding those tables to the publication.
+  // Intentionally unfiltered on attendance_records — this page has no fixed
+  // per-facilitator scope to filter on (see facilitator/page.tsx for the
+  // same reasoning).
   useEffect(() => {
     const debouncedFetchStudents = debounce(() => fetchStudents(), 1500);
     const channel = supabase
       .channel("student-management-rt")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "users" },
-        debouncedFetchStudents
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "student_profiles" },
-        debouncedFetchStudents
-      )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "attendance_records" },

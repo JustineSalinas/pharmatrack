@@ -228,6 +228,9 @@ export default function AdminAttendance() {
   }, [router, fetchAttendance, currentUser]);
 
   // ── Real-time subscription: refresh log whenever attendance_records changes ──
+  // Intentionally unfiltered — filterStatus/filterEvent/etc. are applied
+  // client-side after an unbounded fetch and default to "All"; binding this
+  // to the current selection would silently stop live-updating the default view.
   useEffect(() => {
     const channel = supabase
       .channel("admin-attendance-log-rt")

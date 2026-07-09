@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
-import { debounce } from "@/lib/debounce";
 import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck, ChevronUp, ChevronDown, Trash2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -61,24 +60,11 @@ export default function AdminUsers() {
     if (currentUser) fetchUsers();
   }, [currentUser]);
 
-  // Live sync: a student uploading a new avatar (or any other profile/status
-  // change) shows up here without the admin needing to reload the page.
-  // Debounced so a burst of changes (e.g. many students uploading right
-  // before an event) collapses into one refetch instead of one per row —
-  // without this, a wave of uploads would hammer the users/student_profiles
-  // queries and repeatedly blank the table with the full-page spinner.
-  useEffect(() => {
-    if (!currentUser) return;
-    const debouncedRefetch = debounce(() => fetchUsers(true), 1500);
-    const channel = supabase
-      .channel("admin-users-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "users" }, debouncedRefetch)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser]);
+  // Note: a live-sync subscription on `users` used to live here, but `users`
+  // is intentionally excluded from the supabase_realtime publication (see
+  // schema.sql) since it caused excessive WAL disk IO — that subscription
+  // never fired, so it was removed. Admins need a manual reload to see newly
+  // uploaded avatars or other profile/status changes.
 
   async function fetchUsers(silent = false) {
     try {

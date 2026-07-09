@@ -134,6 +134,8 @@ export default function AdminDashboard() {
   // ── Real-time: refresh feed + stats whenever any attendance record changes ──
   // Debounced so a burst of scans collapses into one refetch instead of one
   // per row change.
+  // Intentionally unfiltered — this is a campus-wide overview with no fixed
+  // event/date scope to filter on.
   useEffect(() => {
     const debouncedRefetch = debounce(() => fetchDashboard(true), 1500);
     const channel = supabase

@@ -39,7 +39,8 @@ export async function GET(req: NextRequest) {
     .from("attendance_records")
     .select("*")
     .eq("student_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
 
   if (recordsError) {
     console.error(`[Student Profile API] Error fetching attendance records for student ${user.id}:`, recordsError);
