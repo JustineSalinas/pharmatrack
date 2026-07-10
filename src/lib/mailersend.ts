@@ -27,10 +27,16 @@ export async function getMailerSendUsage(): Promise<MailerSendUsageResult> {
   try {
     const now = new Date();
     const dateFrom = Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) / 1000);
-    // The current moment, not end-of-month — MailerSend's analytics API
-    // rejects a date_to in the future (422), which end-of-month always is
-    // except on the last second of the month.
-    const dateTo = Math.floor(now.getTime() / 1000);
+    // Not just "now" — MailerSend's analytics data lags several hours behind
+    // real time, and date_to landing inside that unprocessed window also
+    // 422s (same symptom as an actually-future date, confirmed by hitting
+    // this live: a date_to only 2 hours in the past still failed, 6 hours
+    // back succeeded). Back off by a safety margin so this doesn't
+    // intermittently fail and silently fall back to the internal-only count.
+    const ANALYTICS_LAG_SAFETY_MARGIN_MS = 6 * 60 * 60 * 1000;
+    // Clamp to dateFrom: in the first 6 hours of a new month, subtracting the
+    // margin would otherwise push date_to before the 1st, an invalid range.
+    const dateTo = Math.max(dateFrom, Math.floor((now.getTime() - ANALYTICS_LAG_SAFETY_MARGIN_MS) / 1000));
 
     const url = new URL("https://api.mailersend.com/v1/analytics/date");
     url.searchParams.set("date_from", String(dateFrom));
