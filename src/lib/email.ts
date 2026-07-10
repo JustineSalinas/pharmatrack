@@ -103,12 +103,17 @@ export async function sendEventBroadcast(event: EventBroadcastInput): Promise<{ 
     return { sent: 0, failed: 0 };
   }
 
+  // This runs server-side (Vercel functions default to UTC), but event times
+  // are always meant to be read as Manila wall-clock time — without an
+  // explicit timeZone, these would silently render 8 hours off from what the
+  // admin actually entered.
   const localDate = new Date(event.date);
   const displayDate = localDate.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
+    timeZone: "Asia/Manila",
   });
 
   const formatTime = (isoString: string) => {
@@ -117,6 +122,7 @@ export async function sendEventBroadcast(event: EventBroadcastInput): Promise<{ 
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
+        timeZone: "Asia/Manila",
       });
     } catch {
       return isoString;

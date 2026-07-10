@@ -97,8 +97,10 @@ export async function POST(req: NextRequest) {
 
   // Prevent scanning before the event has started
   if (now < checkInStart) {
-    const localTimeStr = checkInStart.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-    const localDateStr = checkInStart.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    // This route runs server-side (Vercel functions default to UTC) but the
+    // message must read in Manila wall-clock time — same fix as email.ts.
+    const localTimeStr = checkInStart.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" });
+    const localDateStr = checkInStart.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" });
     console.warn(`[Scan API] Scan attempted before event start. Event check-in opens at ${checkInStart.toISOString()}`);
     return NextResponse.json(
       { error: `Event has not started yet. Check-in opens at ${localTimeStr} on ${localDateStr}.` },
