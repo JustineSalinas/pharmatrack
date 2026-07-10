@@ -4,9 +4,7 @@ import { supabase } from "./supabase";
 export type ConfigKey =
   | "absenceNotifications"
   | "weeklyReports"
-  | "lateThreshold"
   | "academicPeriod"
-  | "qrExpiry"
   | "minAttendance"
   | "registrationMode";
 
@@ -15,9 +13,7 @@ export type SystemConfig = Record<ConfigKey, string>;
 export const SYSTEM_CONFIG_DEFAULTS: SystemConfig = {
   absenceNotifications: "true",
   weeklyReports: "true",
-  lateThreshold: "07:35",
   academicPeriod: "2025–2026 · 2nd Semester",
-  qrExpiry: "10 min",
   minAttendance: "75%",
   registrationMode: "approval",
 };

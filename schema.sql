@@ -472,9 +472,7 @@ CREATE POLICY "Admin manages config" ON public.system_config
 INSERT INTO public.system_config (key, value) VALUES
   ('absenceNotifications', 'true'),
   ('weeklyReports',        'true'),
-  ('lateThreshold',        '7:35 AM'),
   ('academicPeriod',       '2025–2026 · 2nd Semester'),
-  ('qrExpiry',             '10 min'),
   ('minAttendance',        '75%'),
   ('twoFactorAuth',        'false'),
   ('registrationMode',     'approval'),

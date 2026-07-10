@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  Bell, Mail, Clock, Calendar, Timer, BarChart2,
+  Bell, Mail, Calendar, BarChart2,
   Shield, Save, AlertTriangle, Loader2, CheckCircle,
   UserCheck, Lock, Database, RefreshCw, Eye, EyeOff, Info,
 } from "lucide-react";
@@ -34,21 +34,6 @@ const LEFT_GROUPS = [
         desc: "At-risk threshold — students below this are flagged",
         type: "select",
         options: ["50%", "55%", "60%", "65%", "70%", "75%", "80%", "85%"],
-      },
-      {
-        id: "lateThreshold" as ConfigKey,
-        icon: Clock,
-        title: "Late Check-In Threshold",
-        desc: "Students arriving after this time are marked late",
-        type: "time",
-      },
-      {
-        id: "qrExpiry" as ConfigKey,
-        icon: Timer,
-        title: "QR Code Expiry",
-        desc: "Default session duration when not explicitly set",
-        type: "select",
-        options: ["5 min", "10 min", "15 min", "30 min"],
       },
     ],
   },

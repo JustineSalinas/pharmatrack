@@ -3,14 +3,12 @@
 import { useState, useEffect } from "react";
 import { supabase, parseDateLocal } from "@/lib/supabase";
 import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
-import { getSystemConfig } from "@/lib/systemConfig";
 import { EVENT_TYPES, getEventTypeStyle } from "@/lib/event-type";
 import { 
-  PlusCircle, 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  Trash2, 
+  PlusCircle,
+  Calendar,
+  MapPin,
+  Trash2,
   CheckCircle2,
   X,
   Loader2,
@@ -19,6 +17,8 @@ import {
   AlertTriangle,
   Info
 } from "lucide-react";
+
+const DEFAULT_LATE_TIME = "07:35";
 
 export default function EventsManagement() {
   const [events, setEvents] = useState<any[]>([]);
@@ -48,7 +48,6 @@ export default function EventsManagement() {
   const [targetYearLevels, setTargetYearLevels] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const [defaultLateThreshold, setDefaultLateThreshold] = useState("07:35");
 
   const filteredEvents = events.filter(event => 
     event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -91,10 +90,6 @@ export default function EventsManagement() {
       fetchEvents();
     }
     init();
-
-    getSystemConfig()
-      .then((config) => setDefaultLateThreshold(config.lateThreshold))
-      .catch(() => {});
   }, []);
 
   async function fetchEvents() {
@@ -268,7 +263,7 @@ export default function EventsManagement() {
     setLocation("");
     setDate("");
     setStartTime("");
-    setLateTime(defaultLateThreshold);
+    setLateTime(DEFAULT_LATE_TIME);
     setEndTime("");
     setCheckOutStartTime("");
     setCheckOutEndTime("");
