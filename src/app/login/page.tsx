@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { loginUser, getCurrentUser, getAuthUser, logoutUser, resendVerificationEmail } from "@/lib/auth-client";
+import { loginUser, getCurrentUser, getAuthUser, resendVerificationEmail } from "@/lib/auth-client";
 import { Suspense } from "react";
 import { Eye, EyeOff, Clock, CheckCircle2 } from "lucide-react";
 
@@ -76,8 +76,10 @@ function LoginForm() {
       }
 
       if (!authUser.email_confirmed_at) {
-        // Email not verified — sign them out and show message
-        await logoutUser();
+        // Email not verified — show message. Not signing out: RLS/allow_own_read
+        // and requireAuth() both gate on status/verification independent of
+        // session validity, so holding the session costs nothing and avoids
+        // a full sessions/refresh_tokens churn cycle on every repeat check.
         setError("Please verify your email first. Check your inbox for the verification link.");
         setShowResend(true);
         setLoading(false);
@@ -103,8 +105,7 @@ function LoginForm() {
 
       if (user.account_type === "facilitator") {
         if (user.status === "pending") {
-          // Sign them out and show pending approval screen
-          await logoutUser();
+          // Show pending approval screen. Not signing out — see note above.
           setIsPendingApproval(true);
           setPendingUserName(user.full_name);
           setPendingAccountType("facilitator");
@@ -112,7 +113,6 @@ function LoginForm() {
           return;
         }
         if (user.status === "rejected") {
-          await logoutUser();
           setError("Your facilitator account has been rejected by the administrator. Please contact support for more information.");
           setLoading(false);
           return;
@@ -124,7 +124,6 @@ function LoginForm() {
 
       if (user.account_type === "student") {
         if (user.status === "pending") {
-          await logoutUser();
           setIsPendingApproval(true);
           setPendingUserName(user.full_name);
           setPendingAccountType("student");
@@ -132,7 +131,6 @@ function LoginForm() {
           return;
         }
         if (user.status === "rejected") {
-          await logoutUser();
           setError("Your student account has been rejected by the administrator. Please contact support for more information.");
           setLoading(false);
           return;
