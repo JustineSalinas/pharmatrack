@@ -2825,6 +2825,14 @@ html {
     pointer-events: auto;
   }
 
+  /* The logout/support confirmation modals render as siblings of .sidebar
+     (not descendants), so the rule above doesn't cover them — without this
+     they're visible but untappable on mobile. */
+  .sidebar-wrapper .logout-overlay,
+  .sidebar-wrapper .support-overlay {
+    pointer-events: auto;
+  }
+
   .mobile-menu-btn {
     display: flex !important;
     position: fixed !important;
@@ -6744,6 +6752,16 @@ input[type="password"]::-ms-clear {
   .sk-quick-card {
     animation: none;
   }
+}
+
+/* Modal overlay must scroll when content (e.g. the Create/Edit Event form)
+   is taller than the viewport — position: fixed removes it from document
+   flow, so without this the overflow is simply clipped with no way to
+   reach it. Unconditional (not mobile-gated) since a short viewport can
+   happen at any width; mirrors .sd-modal-backdrop above. */
+.modal-overlay {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ============================================================ */
