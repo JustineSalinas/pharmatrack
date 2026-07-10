@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { downloadQRPng } from "@/lib/downloadQR";
 import {
@@ -583,7 +584,12 @@ function StudentDashboardContent() {
       </div>
 
       {/* ── REPAIR QR MODAL ────────────────────────────────────── */}
-      {showRepairModal && (
+      {/* Portaled to document.body: sd-root has a .fade-in entrance animation,
+          and any non-"none" transform makes the animating element the
+          containing block for position:fixed descendants — without the
+          portal, this modal would center against sd-root's tall content box
+          instead of the viewport for the ~0.8s the animation is in flight. */}
+      {showRepairModal && createPortal(
         <div
           className="sd-modal-backdrop"
           role="dialog"
@@ -688,11 +694,15 @@ function StudentDashboardContent() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── CHECK-IN MODAL ────────────────────────────────────── */}
-      {showCheckInModal && (
+      {/* Portaled for the same reason as the repair modal above — this one
+          is the higher-risk case since it can open via the ?checkin=true
+          deep link on mount, right as sd-root's fade-in animation starts. */}
+      {showCheckInModal && createPortal(
         <div
           className="sd-modal-backdrop"
           role="dialog"
@@ -906,7 +916,8 @@ function StudentDashboardContent() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
