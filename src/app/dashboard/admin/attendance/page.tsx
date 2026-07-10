@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
 import { debounce } from "@/lib/debounce";
@@ -191,10 +191,10 @@ export default function AdminAttendance() {
           date: rawDate,
           displayDate,
           timeIn: r.time_in
-            ? new Date(r.time_in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+            ? formatManilaTime(r.time_in, { hour: "numeric", minute: "2-digit" })
             : "—",
           timeOut: r.time_out
-            ? new Date(r.time_out).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+            ? formatManilaTime(r.time_out, { hour: "numeric", minute: "2-digit" })
             : "—",
           status: r.status,
           rawDate,

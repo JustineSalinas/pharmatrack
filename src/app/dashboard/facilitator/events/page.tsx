@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase, parseDateLocal } from "@/lib/supabase";
+import { supabase, parseDateLocal, manilaWallClockToISO, manilaTimeInputValue, formatManilaTime } from "@/lib/supabase";
 import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { EVENT_TYPES, getEventTypeStyle } from "@/lib/event-type";
 import { 
@@ -108,14 +108,13 @@ export default function EventsManagement() {
     if (!user) return;
     setFormError("");
 
-    // Build the timestamps from the facilitator's wall-clock input. Parsing
-    // without a trailing "Z" interprets the time in the browser's LOCAL zone
-    // (e.g. Asia/Manila), then .toISOString() converts it to the correct UTC
-    // instant for storage — so it reads back as the same local time. The old
-    // code appended "Z", mislabelling local times as UTC and causing drift.
-    const startDt = new Date(`${date}T${startTime}:00`);
-    const lateDt = new Date(`${date}T${lateTime}:00`);
-    const endDt = new Date(`${date}T${endTime}:00`);
+    // Build the timestamps from the facilitator's wall-clock input, always as
+    // Manila time regardless of the entering device's own system clock/
+    // timezone — a device not set to Philippine time used to silently create
+    // event windows hours off from what was actually typed in.
+    const startDt = new Date(manilaWallClockToISO(date, startTime));
+    const lateDt = new Date(manilaWallClockToISO(date, lateTime));
+    const endDt = new Date(manilaWallClockToISO(date, endTime));
 
     if (isNaN(startDt.getTime()) || isNaN(lateDt.getTime()) || isNaN(endDt.getTime())) {
       setFormError("Please provide a valid date and check-in times.");
@@ -140,8 +139,8 @@ export default function EventsManagement() {
     let checkOutStartTS: string | null = null;
     let checkOutEndTS: string | null = null;
     if (checkOutStartTime && checkOutEndTime) {
-      const checkOutStartDt = new Date(`${date}T${checkOutStartTime}:00`);
-      const checkOutEndDt = new Date(`${date}T${checkOutEndTime}:00`);
+      const checkOutStartDt = new Date(manilaWallClockToISO(date, checkOutStartTime));
+      const checkOutEndDt = new Date(manilaWallClockToISO(date, checkOutEndTime));
       if (isNaN(checkOutStartDt.getTime()) || isNaN(checkOutEndDt.getTime())) {
         setFormError("Please provide valid check-out times.");
         return;
@@ -279,17 +278,15 @@ export default function EventsManagement() {
     setLocation(event.location);
     setDate(event.date);
     
-    const parseTime = (isoStr: string) => {
-      const d = new Date(isoStr);
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    };
-    
-    setStartTime(parseTime(event.check_in_start));
-    setLateTime(parseTime(event.check_in_late));
-    setEndTime(parseTime(event.check_in_end));
-    setCheckOutStartTime(event.check_out_start ? parseTime(event.check_out_start) : "");
-    setCheckOutEndTime(event.check_out_end ? parseTime(event.check_out_end) : "");
+    // Pre-fill the <input type="time"> fields with the event's Manila
+    // wall-clock time, NOT the viewing device's local interpretation — a
+    // device not on Philippine time used to show these hours off and, worse,
+    // would re-save that wrong value on "Update Event".
+    setStartTime(manilaTimeInputValue(event.check_in_start));
+    setLateTime(manilaTimeInputValue(event.check_in_late));
+    setEndTime(manilaTimeInputValue(event.check_in_end));
+    setCheckOutStartTime(event.check_out_start ? manilaTimeInputValue(event.check_out_start) : "");
+    setCheckOutEndTime(event.check_out_end ? manilaTimeInputValue(event.check_out_end) : "");
     setTargetYearLevels(event.target_year_levels ?? []);
     setEventType(event.event_type ?? "Department");
     setFormError("");
@@ -445,7 +442,7 @@ export default function EventsManagement() {
                   <div style={{ width: "130px", flexShrink: 0 }}>
                      <div style={{ fontSize: "10px", color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "2px", fontWeight: 600 }}>Starts At</div>
                      <div style={{ fontSize: "13px", color: "var(--white-shade)", fontWeight: 500 }}>
-                       {new Date(event.check_in_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                       {formatManilaTime(event.check_in_start, { hour: '2-digit', minute: '2-digit' })}
                      </div>
                   </div>
 
@@ -453,7 +450,7 @@ export default function EventsManagement() {
                   <div style={{ width: "130px", flexShrink: 0 }}>
                      <div style={{ fontSize: "10px", color: "#f97316", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "2px", fontWeight: 600 }}>Mark Late At</div>
                      <div style={{ fontSize: "13px", color: "#f97316", fontWeight: 500 }}>
-                       {new Date(event.check_in_late).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                       {formatManilaTime(event.check_in_late, { hour: '2-digit', minute: '2-digit' })}
                      </div>
                   </div>
 
@@ -461,7 +458,7 @@ export default function EventsManagement() {
                   <div style={{ width: "130px", flexShrink: 0 }}>
                      <div style={{ fontSize: "10px", color: "var(--danger)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "2px", fontWeight: 600 }}>Ends At</div>
                      <div style={{ fontSize: "13px", color: "var(--danger)", fontWeight: 500 }}>
-                       {new Date(event.check_in_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                       {formatManilaTime(event.check_in_end, { hour: '2-digit', minute: '2-digit' })}
                      </div>
                   </div>
 

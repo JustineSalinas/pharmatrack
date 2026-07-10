@@ -31,7 +31,7 @@ const SECTIONS_BY_YEAR: Record<string, string[]> = {
 };
 import Link from "next/link";
 import { getCurrentUser, ensureStudentProfile } from "@/lib/auth-client";
-import { supabase, parseDateLocal } from "@/lib/supabase";
+import { supabase, parseDateLocal, formatManilaTime } from "@/lib/supabase";
 import { debounce } from "@/lib/debounce";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -484,9 +484,9 @@ function StudentDashboardContent() {
                           <div className="sd-event-meta">
                             <span className="sd-event-meta-item">
                               <Clock size={11} />
-                              {new Date(event.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              {formatManilaTime(event.check_in_start, { hour: "2-digit", minute: "2-digit" })}
                               {" – "}
-                              {new Date(event.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              {formatManilaTime(event.check_in_end, { hour: "2-digit", minute: "2-digit" })}
                             </span>
                             <span className="sd-event-meta-item">
                               <MapPin size={11} />

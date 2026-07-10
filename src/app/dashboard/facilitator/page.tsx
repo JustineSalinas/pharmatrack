@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { debounce } from "@/lib/debounce";
 import { backfillEventStatusesShared, runIfDue, notifyAbsences } from "@/lib/attendance";
@@ -122,7 +122,7 @@ export default function FacilitatorOverview() {
             id: r.id,
             name: uData?.full_name || "Unknown Student",
             section: section,
-            timeIn: r.time_in ? new Date(r.time_in).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
+            timeIn: r.time_in ? formatManilaTime(r.time_in, { hour: "2-digit", minute: "2-digit" }) : "—",
             status: r.status || "present",
             eventName: r.events?.name || "Event",
           };

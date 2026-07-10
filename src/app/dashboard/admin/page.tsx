@@ -15,7 +15,7 @@ import {
   ScanLine,
   UserCircle,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
 import { debounce } from "@/lib/debounce";
@@ -354,7 +354,7 @@ export default function AdminDashboard() {
               const fname = scan.users?.full_name || "Unknown User";
               const initials = fname.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() || "U";
               const timeIn = scan.time_in
-                ? new Date(scan.time_in).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                ? formatManilaTime(scan.time_in, { hour: "2-digit", minute: "2-digit" })
                 : "—";
               return (
                 <div className="scan-item" key={scan.id}>

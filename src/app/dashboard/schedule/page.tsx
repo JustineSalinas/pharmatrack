@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-client";
-import { supabase, parseDateLocal } from "@/lib/supabase";
+import { supabase, parseDateLocal, formatManilaTime } from "@/lib/supabase";
 import {
   Loader2, Calendar, AlertTriangle, Clock, MapPin, X, ChevronRight,
 } from "lucide-react";
@@ -33,7 +33,8 @@ interface SessionBlock {
 }
 
 function fmtTime(iso: string) {
-  try { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+  // Always Manila time, independent of the viewing device's system clock.
+  try { return formatManilaTime(iso, { hour: "2-digit", minute: "2-digit" }); }
   catch { return iso; }
 }
 
@@ -151,8 +152,8 @@ export default function SchedulePage() {
           const key = DAY_INDEX_MAP[date.getDay()];
           if (!key || !DAY_LABELS.includes(key)) continue;
 
-          const checkInStart = new Date(ev.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          const checkInEnd = new Date(ev.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const checkInStart = fmtTime(ev.check_in_start);
+          const checkInEnd = fmtTime(ev.check_in_end);
           const timeRange = `${checkInStart} – ${checkInEnd}`;
 
           let sortTime = 0;
@@ -428,9 +429,9 @@ export default function SchedulePage() {
                         <div className="sd-event-meta">
                           <span className="sd-event-meta-item">
                             <Clock size={11} />
-                            {new Date(event.check_in_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            {fmtTime(event.check_in_start)}
                             {" – "}
-                            {new Date(event.check_in_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            {fmtTime(event.check_in_end)}
                           </span>
                           <span className="sd-event-meta-item">
                             <MapPin size={11} />

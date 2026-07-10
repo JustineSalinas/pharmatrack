@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { supabase, toLocalDateKey } from "@/lib/supabase";
+import { supabase, toLocalDateKey, formatManilaTime } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import {
   Loader2, ChevronLeft, ChevronRight, Calendar as CalendarIcon,
@@ -22,7 +22,8 @@ function fmtMonthYear(d: Date) {
 }
 
 function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  // Always Manila time, independent of the viewing device's system clock.
+  return formatManilaTime(iso, { hour: "numeric", minute: "2-digit" });
 }
 
 function isSameDay(a: Date, b: Date) {

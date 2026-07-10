@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { supabase } from "@/lib/supabase";
+import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { debounce } from "@/lib/debounce";
 import { 
@@ -157,8 +157,8 @@ export default function FacilitatorScannerPage() {
           email: u?.email || "",
           idNumber: profile.student_id_number || "—",
           section: profile.section || "N/A",
-          timeIn: r.time_in ? new Date(r.time_in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—",
-          timeOut: r.time_out ? new Date(r.time_out).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—",
+          timeIn: r.time_in ? formatManilaTime(r.time_in, { hour: "numeric", minute: "2-digit" }) : "—",
+          timeOut: r.time_out ? formatManilaTime(r.time_out, { hour: "numeric", minute: "2-digit" }) : "—",
           status: r.status
         };
       });
@@ -406,15 +406,15 @@ export default function FacilitatorScannerPage() {
                     <div className="info-time-rows">
                       <div className="info-time-row">
                         <span>Opens at:</span>
-                        <strong>{new Date(selectedEvent.check_in_start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                        <strong>{formatManilaTime(selectedEvent.check_in_start, { hour: "numeric", minute: "2-digit" })}</strong>
                       </div>
                       <div className="info-time-row">
                         <span>Late at:</span>
-                        <strong>{new Date(selectedEvent.check_in_late).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                        <strong>{formatManilaTime(selectedEvent.check_in_late, { hour: "numeric", minute: "2-digit" })}</strong>
                       </div>
                       <div className="info-time-row">
                         <span>Closes:</span>
-                        <strong>{new Date(selectedEvent.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                        <strong>{formatManilaTime(selectedEvent.check_in_end, { hour: "numeric", minute: "2-digit" })}</strong>
                       </div>
                     </div>
                   </div>
@@ -427,11 +427,11 @@ export default function FacilitatorScannerPage() {
                       <div className="info-time-rows">
                         <div className="info-time-row">
                           <span>Opens at:</span>
-                          <strong>{new Date(selectedEvent.check_out_start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                          <strong>{formatManilaTime(selectedEvent.check_out_start, { hour: "numeric", minute: "2-digit" })}</strong>
                         </div>
                         <div className="info-time-row">
                           <span>Closes:</span>
-                          <strong>{new Date(selectedEvent.check_out_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                          <strong>{formatManilaTime(selectedEvent.check_out_end, { hour: "numeric", minute: "2-digit" })}</strong>
                         </div>
                       </div>
                     ) : (

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { supabase } from "@/lib/supabase";
+import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { debounce } from "@/lib/debounce";
 import { 
@@ -149,8 +149,8 @@ export default function ScannerPage() {
           email: u?.email || "",
           idNumber: profile.student_id_number || "—",
           section: profile.section || "N/A",
-          timeIn: r.time_in ? new Date(r.time_in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—",
-          timeOut: r.time_out ? new Date(r.time_out).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—",
+          timeIn: r.time_in ? formatManilaTime(r.time_in, { hour: "numeric", minute: "2-digit" }) : "—",
+          timeOut: r.time_out ? formatManilaTime(r.time_out, { hour: "numeric", minute: "2-digit" }) : "—",
           status: r.status
         };
       });
@@ -338,9 +338,9 @@ export default function ScannerPage() {
                   <div>
                     <span className="info-label">Check-in Windows</span>
                     <span className="info-val">
-                      Late at: <strong>{new Date(selectedEvent.check_in_late).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                      Late at: <strong>{formatManilaTime(selectedEvent.check_in_late, { hour: "numeric", minute: "2-digit" })}</strong>
                       <br />
-                      Closes: <strong>{new Date(selectedEvent.check_in_end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+                      Closes: <strong>{formatManilaTime(selectedEvent.check_in_end, { hour: "numeric", minute: "2-digit" })}</strong>
                     </span>
                   </div>
                 </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-client";
-import { supabase, parseDateLocal } from "@/lib/supabase";
+import { supabase, parseDateLocal, formatManilaTime } from "@/lib/supabase";
 import { Loader2, Bell, CheckCheck, X, Calendar, CheckCircle2, Clock, AlertCircle, Info } from "lucide-react";
 import type { NotificationItem, PharmaUser, Event, AttendanceRecord } from "@/lib/schema";
 
@@ -28,10 +28,10 @@ function buildEventNotif(event: Event): NotificationItem {
   const localDate = parseDateLocal(event.date);
   const displayDate = localDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   const startTime = event.check_in_start
-    ? new Date(event.check_in_start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    ? formatManilaTime(event.check_in_start, { hour: "numeric", minute: "2-digit" })
     : null;
   const endTime = event.check_in_end
-    ? new Date(event.check_in_end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    ? formatManilaTime(event.check_in_end, { hour: "numeric", minute: "2-digit" })
     : null;
 
   const timePart = startTime && endTime ? `${startTime} – ${endTime}` : startTime ?? null;
@@ -81,7 +81,7 @@ function buildAttendanceNotif(record: AttendanceRecord & {
   }
 
   const timeIn = record.time_in
-    ? new Date(record.time_in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    ? formatManilaTime(record.time_in, { hour: "numeric", minute: "2-digit" })
     : null;
 
   const body =

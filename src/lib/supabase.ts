@@ -78,3 +78,69 @@ export function toLocalDateKey(date: Date): string {
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+
+/**
+ * All of the above (parseDateLocal/formatDateLocal/toLocalDateKey) — and
+ * event check-in/check-out time handling elsewhere in the app — used to
+ * assume "the browser's local timezone" and "Asia/Manila" are the same
+ * thing. That broke in production: a device with its system clock/timezone
+ * set to anything other than Philippine time silently created and displayed
+ * event windows hours off from what was actually entered, without any error.
+ *
+ * These helpers make Manila explicit and independent of the viewing
+ * device's own clock — Manila is a fixed UTC+8 offset with no DST, so this
+ * is safe to hardcode rather than relying on Intl/timezone detection.
+ */
+const MANILA_TIME_ZONE = "Asia/Manila";
+const MANILA_UTC_OFFSET = "+08:00";
+
+/**
+ * Converts a wall-clock date + time (as entered by an admin, always meant
+ * as Manila local time) into the correct UTC ISO timestamp for storage —
+ * regardless of what timezone the entering device's system clock reports.
+ *
+ * ✅ manilaWallClockToISO("2026-07-10", "11:30") → "2026-07-10T03:30:00.000Z"
+ *    (correct, always, on any device)
+ * ❌ new Date("2026-07-10T11:30:00").toISOString() → correct ONLY if the
+ *    device's own system timezone happens to be Asia/Manila
+ */
+export function manilaWallClockToISO(dateStr: string, timeStr: string): string {
+  return new Date(`${dateStr}T${timeStr}:00${MANILA_UTC_OFFSET}`).toISOString();
+}
+
+/**
+ * Formats a stored UTC timestamp as Manila wall-clock time for display,
+ * regardless of the viewing device's own system timezone.
+ */
+export function formatManilaTime(
+  isoString: string,
+  options: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit", hour12: true }
+): string {
+  return new Date(isoString).toLocaleTimeString("en-US", { ...options, timeZone: MANILA_TIME_ZONE });
+}
+
+/** Same as formatManilaTime, for the date portion. */
+export function formatManilaDate(
+  isoString: string,
+  options: Intl.DateTimeFormatOptions = { weekday: "long", month: "long", day: "numeric", year: "numeric" }
+): string {
+  return new Date(isoString).toLocaleDateString("en-US", { ...options, timeZone: MANILA_TIME_ZONE });
+}
+
+/**
+ * Returns a 24-hour "HH:MM" string in Manila time, suitable for pre-filling
+ * an <input type="time"> when editing an existing event — regardless of the
+ * viewing device's own system timezone.
+ */
+export function manilaTimeInputValue(isoString: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: MANILA_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(isoString));
+  const hh = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const mm = parts.find((p) => p.type === "minute")?.value ?? "00";
+  // Intl's 24h formatting can return "24" for midnight in some environments.
+  return `${hh === "24" ? "00" : hh}:${mm}`;
+}
