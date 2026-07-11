@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     supabase.from("student_profiles").select("user_id").eq("qr_code_id", qr_code_id).single(),
     supabase
       .from("events")
-      .select("check_in_start, check_in_late, check_in_end, check_out_start, check_out_end")
+      .select("check_in_start, check_in_late, check_in_end, check_out_start, check_out_end, check_in_only")
       .eq("id", event_id)
       .single(),
   ]);
@@ -172,6 +172,17 @@ export async function POST(req: NextRequest) {
   //         Second scan = Time Out (within 4 hours)
   // ────────────────────────────────────────────────────────
   if (existing.time_in && !existing.time_out) {
+    // check_in_only events have no concept of checking out — a duplicate scan
+    // is a no-op, not a check-out, regardless of any stale check_out_start/end
+    // values on the row.
+    if (event.check_in_only) {
+      console.log(`[Scan API] Check-in-only event ${event_id} — second scan for student ${studentId} is a no-op (no check-out required)`);
+      return NextResponse.json(
+        { error: `This event is check-in only — already recorded as ${existing.status}. No check-out is required.` },
+        { status: 409 },
+      );
+    }
+
     const timeIn = new Date(existing.time_in);
     const hoursSinceIn = (now.getTime() - timeIn.getTime()) / (1000 * 60 * 60);
 

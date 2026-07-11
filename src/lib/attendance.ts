@@ -6,6 +6,9 @@
  *   • Incomplete — record has a time_in but no time_out, and the check-out
  *                  deadline has passed (the event's check_out_end if set,
  *                  otherwise 4 hours after that record's own time_in).
+ *                  Skipped entirely for events flagged check_in_only — those
+ *                  never require a check-out, so their records stay whatever
+ *                  check-in status they got.
  *
  * Designed to be safe and idempotent:
  *   - Only touches events whose check_in_end is strictly in the past.
@@ -39,7 +42,7 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   // 1. Completed events within the lookback window.
   const { data: rawEvents, error: evErr } = await supabase
     .from("events")
-    .select("id, check_in_end, check_out_end")
+    .select("id, check_in_end, check_out_end, check_in_only")
     .lt("check_in_end", nowIso)
     .gte("check_in_end", lookbackIso);
   if (evErr) { result.errors.push("events: " + evErr.message); return result; }
@@ -111,8 +114,9 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
     // use that; otherwise fall back to 4 hours after this record's own time_in —
     // mirroring the hard check-out cap the scan API itself enforces ("more than 4
     // hours since check-in") — so events with no explicit check-out window still
-    // eventually get marked incomplete instead of never.
-    const incomplete = existing.filter((r: any) => {
+    // eventually get marked incomplete instead of never. check_in_only events opt
+    // out of this entirely — checkout is never expected, so there's nothing to mark.
+    const incomplete = ev.check_in_only ? [] : existing.filter((r: any) => {
       if (!r.time_in || r.time_out || r.status === "incomplete" || r.status === "absent") return false;
       const deadline = ev.check_out_end
         ? new Date(ev.check_out_end)

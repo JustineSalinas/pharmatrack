@@ -39,6 +39,7 @@ export interface Event {
   check_in_end: string;
   check_out_start: string | null;
   check_out_end: string | null;
+  check_in_only: boolean;
   created_by: string;
   created_at: string;
   event_type: string | null;

@@ -81,6 +81,7 @@ function makeOpenEvent() {
     check_in_end: future,
     check_out_start: null,
     check_out_end: null,
+    check_in_only: false,
   };
 }
 
@@ -96,6 +97,7 @@ function makeLateEvent() {
     check_in_end: future,
     check_out_start: null,
     check_out_end: null,
+    check_in_only: false,
   };
 }
 
@@ -110,6 +112,23 @@ function makeClosedEvent() {
     check_in_end: past(30),
     check_out_start: null,
     check_out_end: null,
+    check_in_only: false,
+  };
+}
+
+// A check-in-only event — no check-out is ever expected
+function makeCheckInOnlyEvent() {
+  const past = new Date(Date.now() - 60 * 60 * 1000).toISOString(); // 1 hour ago
+  const future = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour from now
+  const late = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min from now
+  return {
+    id: EVENT_ID,
+    check_in_start: past,
+    check_in_late: late,
+    check_in_end: future,
+    check_out_start: null,
+    check_out_end: null,
+    check_in_only: true,
   };
 }
 
@@ -328,5 +347,62 @@ describe("POST /api/scan", () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toMatch(/4 hours/i);
+  });
+
+  // ── Check-in only events ────────────────────────────────────────────────
+
+  it("returns 409 and does not write time_out on a second scan for a check_in_only event", async () => {
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = { data: makeCheckInOnlyEvent(), error: null };
+    tableResults["attendance_records"] = {
+      data: {
+        id: "record-1",
+        student_id: STUDENT_ID,
+        event_id: EVENT_ID,
+        status: "present",
+        time_in: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min ago
+        time_out: null,
+      },
+      error: null,
+    };
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID }));
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toMatch(/check-in only/i);
+    expect(mockUpdateRecord).not.toHaveBeenCalledWith(
+      "attendance_records",
+      expect.objectContaining({ time_out: expect.anything() })
+    );
+  });
+
+  it("treats check_in_only as authoritative even when stale check-out window data is present", async () => {
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = {
+      data: {
+        ...makeCheckInOnlyEvent(),
+        check_out_start: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        check_out_end: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      },
+      error: null,
+    };
+    tableResults["attendance_records"] = {
+      data: {
+        id: "record-1",
+        student_id: STUDENT_ID,
+        event_id: EVENT_ID,
+        status: "present",
+        time_in: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        time_out: null,
+      },
+      error: null,
+    };
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID }));
+    expect(res.status).toBe(409);
+    expect(mockUpdateRecord).not.toHaveBeenCalledWith(
+      "attendance_records",
+      expect.objectContaining({ time_out: expect.anything() })
+    );
   });
 });

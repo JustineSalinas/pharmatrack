@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 // serverless function enough runway to finish before it gets torn down.
 export const maxDuration = 120;
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getBackendUser } from "@/lib/auth";
 import { sendEventBroadcast } from "@/lib/email";
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const { name, location, date, check_in_start, check_in_late, check_in_end, check_out_start, check_out_end, target_year_levels, event_type } = body;
+  const { name, location, date, check_in_start, check_in_late, check_in_end, check_out_start, check_out_end, target_year_levels, event_type, check_in_only } = body;
   if (!name || !location || !date || !check_in_start || !check_in_late || !check_in_end) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
         check_in_end,
         check_out_start: check_out_start ?? null,
         check_out_end: check_out_end ?? null,
+        check_in_only: check_in_only ?? false,
         created_by: user.id,
         target_year_levels: target_year_levels?.length ? target_year_levels : null,
         event_type: event_type ?? null,
@@ -85,45 +86,63 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Events API] Event successfully created: "${name}" (ID: ${newEvent.id})`);
 
-    // 5. Query approved student emails for broadcasting — filtered by year level if event targets specific years
-    const targetYears: string[] | null = target_year_levels?.length ? target_year_levels : null;
+    // 5. Broadcast to approved student emails — filtered by year level if the
+    // event targets specific years. Run via after() so the SMTP send (which
+    // can take anywhere from instant to the full maxDuration if MailerSend is
+    // slow/rate-limited/unreachable) never blocks the response the client is
+    // waiting on — the event is already committed above regardless of how
+    // the broadcast goes. after() keeps the function alive for this via
+    // Vercel's waitUntil, within the existing maxDuration budget.
+    const runBroadcast = async () => {
+      const targetYears: string[] | null = target_year_levels?.length ? target_year_levels : null;
 
-    let studentsQuery = supabase
-      .from("users")
-      .select("email, full_name, student_profiles!inner(current_year)")
-      .eq("account_type", "student")
-      .eq("status", "approved")
-      .ilike("email", "%@usa.edu.ph");
+      let studentsQuery = supabase
+        .from("users")
+        .select("email, full_name, student_profiles!inner(current_year)")
+        .eq("account_type", "student")
+        .eq("status", "approved")
+        .ilike("email", "%@usa.edu.ph");
 
-    if (targetYears) {
-      studentsQuery = studentsQuery.in("student_profiles.current_year", targetYears);
-    }
-
-    const { data: students, error: studentsErr } = await studentsQuery;
-
-    if (studentsErr) {
-      console.error("[Events API] Failed to fetch student recipients for broadcast:", studentsErr.message);
-    } else if (students && students.length > 0) {
-      // Awaited — on serverless, the function is torn down once the response
-      // is sent, which would kill an unawaited broadcast mid-flight.
-      try {
-        const { sent } = await sendEventBroadcast({
-          name,
-          location,
-          date,
-          checkInStart: check_in_start,
-          checkInLate: check_in_late,
-          checkInEnd: check_in_end,
-          eventType: event_type ?? null,
-          targetYearLevels: targetYears,
-          recipients: students,
-        });
-        await recordEmailsSent(supabase, sent);
-      } catch (broadcastErr: any) {
-        console.error("[Events API] Email broadcast failed:", broadcastErr.message);
+      if (targetYears) {
+        studentsQuery = studentsQuery.in("student_profiles.current_year", targetYears);
       }
-    } else {
-      console.log("[Events API] No approved students found to broadcast to.");
+
+      const { data: students, error: studentsErr } = await studentsQuery;
+
+      if (studentsErr) {
+        console.error("[Events API] Failed to fetch student recipients for broadcast:", studentsErr.message);
+      } else if (students && students.length > 0) {
+        try {
+          const { sent } = await sendEventBroadcast({
+            name,
+            location,
+            date,
+            checkInStart: check_in_start,
+            checkInLate: check_in_late,
+            checkInEnd: check_in_end,
+            eventType: event_type ?? null,
+            targetYearLevels: targetYears,
+            recipients: students,
+          });
+          await recordEmailsSent(supabase, sent);
+        } catch (broadcastErr: any) {
+          console.error("[Events API] Email broadcast failed:", broadcastErr.message);
+        }
+      } else {
+        console.log("[Events API] No approved students found to broadcast to.");
+      }
+    };
+
+    try {
+      after(runBroadcast);
+    } catch {
+      // after() requires Next's request-scope, which only exists inside a
+      // real next dev/Vercel request — it throws synchronously when the
+      // route handler is invoked directly outside that (e.g. Vitest calling
+      // POST() as a plain function). Fall back to a plain fire-and-forget
+      // call so tests don't depend on after() plumbing that doesn't apply
+      // to them; this branch never runs in the actual deployed app.
+      void runBroadcast();
     }
 
     return NextResponse.json({ success: true, event: newEvent });

@@ -45,6 +45,7 @@ export default function EventsManagement() {
   const [endTime, setEndTime] = useState("");
   const [checkOutStartTime, setCheckOutStartTime] = useState("");
   const [checkOutEndTime, setCheckOutEndTime] = useState("");
+  const [checkInOnly, setCheckInOnly] = useState(false);
   const [targetYearLevels, setTargetYearLevels] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -130,27 +131,29 @@ export default function EventsManagement() {
       return;
     }
 
-    // Check-out window is optional — both times must be provided together, or neither.
-    if ((checkOutStartTime && !checkOutEndTime) || (!checkOutStartTime && checkOutEndTime)) {
-      setFormError("Provide both check-out times, or leave both blank.");
-      return;
-    }
-
     let checkOutStartTS: string | null = null;
     let checkOutEndTS: string | null = null;
-    if (checkOutStartTime && checkOutEndTime) {
-      const checkOutStartDt = new Date(manilaWallClockToISO(date, checkOutStartTime));
-      const checkOutEndDt = new Date(manilaWallClockToISO(date, checkOutEndTime));
-      if (isNaN(checkOutStartDt.getTime()) || isNaN(checkOutEndDt.getTime())) {
-        setFormError("Please provide valid check-out times.");
+    if (!checkInOnly) {
+      // Check-out window is optional — both times must be provided together, or neither.
+      if ((checkOutStartTime && !checkOutEndTime) || (!checkOutStartTime && checkOutEndTime)) {
+        setFormError("Provide both check-out times, or leave both blank.");
         return;
       }
-      if (checkOutEndDt <= checkOutStartDt) {
-        setFormError("“Check-out Ends” must be later than “Check-out Starts”.");
-        return;
+
+      if (checkOutStartTime && checkOutEndTime) {
+        const checkOutStartDt = new Date(manilaWallClockToISO(date, checkOutStartTime));
+        const checkOutEndDt = new Date(manilaWallClockToISO(date, checkOutEndTime));
+        if (isNaN(checkOutStartDt.getTime()) || isNaN(checkOutEndDt.getTime())) {
+          setFormError("Please provide valid check-out times.");
+          return;
+        }
+        if (checkOutEndDt <= checkOutStartDt) {
+          setFormError("“Check-out Ends” must be later than “Check-out Starts”.");
+          return;
+        }
+        checkOutStartTS = checkOutStartDt.toISOString();
+        checkOutEndTS = checkOutEndDt.toISOString();
       }
-      checkOutStartTS = checkOutStartDt.toISOString();
-      checkOutEndTS = checkOutEndDt.toISOString();
     }
 
     setIsSubmitting(true);
@@ -159,6 +162,8 @@ export default function EventsManagement() {
       const startTS = startDt.toISOString();
       const lateTS = lateDt.toISOString();
       const endTS = endDt.toISOString();
+
+      let revertedCount = 0;
 
       if (editingEvent) {
         const { error } = await supabase
@@ -172,12 +177,45 @@ export default function EventsManagement() {
             check_in_end: endTS,
             check_out_start: checkOutStartTS,
             check_out_end: checkOutEndTS,
+            check_in_only: checkInOnly,
             target_year_levels: targetYearLevels.length ? targetYearLevels : null,
             event_type: eventType,
           })
           .eq("id", editingEvent.id);
 
         if (error) throw error;
+
+        // Turning check-in-only on retroactively fixes any records this
+        // event's own backfill run had already auto-marked incomplete —
+        // scoped to that exact auto-marked remark so a staff member's own
+        // manual "Incomplete" call is never touched.
+        if (checkInOnly && !editingEvent.check_in_only) {
+          const { data: staleIncomplete } = await supabase
+            .from("attendance_records")
+            .select("id, time_in")
+            .eq("event_id", editingEvent.id)
+            .eq("status", "incomplete")
+            .eq("remarks", "Auto-marked: time-in recorded but no time-out.");
+
+          if (staleIncomplete && staleIncomplete.length > 0) {
+            const lateCutoffMs = lateDt.getTime();
+            const presentIds = staleIncomplete.filter((r: any) => new Date(r.time_in).getTime() <= lateCutoffMs).map((r: any) => r.id);
+            const lateIds = staleIncomplete.filter((r: any) => new Date(r.time_in).getTime() > lateCutoffMs).map((r: any) => r.id);
+            const revertedRemarks = "Reverted: event marked check-in only; check-out no longer required.";
+
+            if (presentIds.length) {
+              await supabase.from("attendance_records")
+                .update({ status: "present", remarks: revertedRemarks })
+                .in("id", presentIds);
+            }
+            if (lateIds.length) {
+              await supabase.from("attendance_records")
+                .update({ status: "late", remarks: revertedRemarks })
+                .in("id", lateIds);
+            }
+            revertedCount = staleIncomplete.length;
+          }
+        }
       } else {
         const res = await fetch("/api/events", {
           method: "POST",
@@ -194,6 +232,7 @@ export default function EventsManagement() {
             check_in_end: endTS,
             check_out_start: checkOutStartTS,
             check_out_end: checkOutEndTS,
+            check_in_only: checkInOnly,
             target_year_levels: targetYearLevels.length ? targetYearLevels : null,
             event_type: eventType,
           }),
@@ -210,7 +249,9 @@ export default function EventsManagement() {
       fetchEvents();
       showToast(
         editingEvent
-          ? "Event updated successfully."
+          ? revertedCount > 0
+            ? `Event updated — ${revertedCount} previously-incomplete record${revertedCount === 1 ? "" : "s"} reverted.`
+            : "Event updated successfully."
           : "Event created — students will be notified via email.",
         "success"
       );
@@ -266,6 +307,7 @@ export default function EventsManagement() {
     setEndTime("");
     setCheckOutStartTime("");
     setCheckOutEndTime("");
+    setCheckInOnly(false);
     setTargetYearLevels([]);
     setEventType("Department");
     setFormError("");
@@ -287,6 +329,7 @@ export default function EventsManagement() {
     setEndTime(manilaTimeInputValue(event.check_in_end));
     setCheckOutStartTime(event.check_out_start ? manilaTimeInputValue(event.check_out_start) : "");
     setCheckOutEndTime(event.check_out_end ? manilaTimeInputValue(event.check_out_end) : "");
+    setCheckInOnly(event.check_in_only ?? false);
     setTargetYearLevels(event.target_year_levels ?? []);
     setEventType(event.event_type ?? "Department");
     setFormError("");
@@ -574,26 +617,59 @@ export default function EventsManagement() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Check-out Window <span style={{ textTransform: "none", fontWeight: 400, letterSpacing: 0 }}>(optional)</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <label
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "fit-content",
+                    fontSize: "13px",
+                    color: checkInOnly ? "#a5b4fc" : "var(--white-shade)",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checkInOnly}
+                    onChange={() => {
+                      setCheckInOnly(prev => {
+                        if (!prev) {
+                          setCheckOutStartTime("");
+                          setCheckOutEndTime("");
+                        }
+                        return !prev;
+                      });
+                    }}
+                    style={{ accentColor: "#4f46e5", width: "14px", height: "14px" }}
+                  />
+                  Check-in only <span style={{ color: "var(--dimmed)" }}>(no check-out required)</span>
                 </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Check-out Starts</label>
-                    <input
-                      type="time" className="settings-input"
-                      value={checkOutStartTime} onChange={e => setCheckOutStartTime(e.target.value)}
-                      style={{ colorScheme: "light" }}
-                    />
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Check-out Ends</label>
-                    <input
-                      type="time" className="settings-input"
-                      value={checkOutEndTime} onChange={e => setCheckOutEndTime(e.target.value)}
-                      style={{ colorScheme: "light" }}
-                    />
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", opacity: checkInOnly ? 0.4 : 1 }}>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    Check-out Window <span style={{ textTransform: "none", fontWeight: 400, letterSpacing: 0 }}>(optional)</span>
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Check-out Starts</label>
+                      <input
+                        type="time" className="settings-input"
+                        value={checkOutStartTime} onChange={e => setCheckOutStartTime(e.target.value)}
+                        disabled={checkInOnly}
+                        style={{ colorScheme: "light" }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Check-out Ends</label>
+                      <input
+                        type="time" className="settings-input"
+                        value={checkOutEndTime} onChange={e => setCheckOutEndTime(e.target.value)}
+                        disabled={checkInOnly}
+                        style={{ colorScheme: "light" }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

@@ -423,7 +423,9 @@ export default function FacilitatorScannerPage() {
                   <Clock size={16} className="info-icon" />
                   <div style={{ width: "100%" }}>
                     <span className="info-label">Check-out Window</span>
-                    {selectedEvent.check_out_start && selectedEvent.check_out_end ? (
+                    {selectedEvent.check_in_only ? (
+                      <span className="info-val"><strong>Check-in only — no check-out required</strong></span>
+                    ) : selectedEvent.check_out_start && selectedEvent.check_out_end ? (
                       <div className="info-time-rows">
                         <div className="info-time-row">
                           <span>Opens at:</span>

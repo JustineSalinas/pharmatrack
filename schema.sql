@@ -266,7 +266,8 @@ CREATE TABLE IF NOT EXISTS public.events (
   created_by         UUID NOT NULL REFERENCES public.users(id),
   created_at         TIMESTAMPTZ DEFAULT NOW(),
   target_year_levels  TEXT[],
-  event_type          TEXT
+  event_type          TEXT,
+  check_in_only       BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;

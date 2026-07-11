@@ -3,12 +3,13 @@ import { NextRequest } from "next/server";
 
 // ── Hoisted refs (available inside vi.mock factory closures) ─────────────────
 
-const { mockGetBackendUser, mockSendEventBroadcast, getTableResults } = vi.hoisted(() => {
+const { mockGetBackendUser, mockSendEventBroadcast, mockInsertEvent, getTableResults } = vi.hoisted(() => {
   const tableResults: Record<string, { data: unknown; error: unknown }> = {};
 
   return {
     mockGetBackendUser: vi.fn(),
     mockSendEventBroadcast: vi.fn(),
+    mockInsertEvent: vi.fn(),
     getTableResults: () => tableResults,
   };
 });
@@ -35,11 +36,14 @@ vi.mock("@supabase/supabase-js", () => {
     chain.in = () => chain;
     chain.single = () => Promise.resolve(result());
 
-    chain.insert = () => ({
-      select: () => ({
-        single: () => Promise.resolve(result()),
-      }),
-    });
+    chain.insert = (payload: unknown) => {
+      if (table === "events") mockInsertEvent(payload);
+      return {
+        select: () => ({
+          single: () => Promise.resolve(result()),
+        }),
+      };
+    };
 
     return chain;
   }
@@ -102,6 +106,7 @@ const APPROVED_ADMIN = {
 beforeEach(() => {
   mockGetBackendUser.mockReset();
   mockSendEventBroadcast.mockReset();
+  mockInsertEvent.mockReset();
   clearTables();
 
   mockGetBackendUser.mockResolvedValue({ id: "facilitator-uuid-123" });
@@ -240,6 +245,23 @@ describe("POST /api/events", () => {
     const { event_type: _, ...body } = VALID_EVENT_BODY;
     const res = await POST(makeReq(body));
     expect(res.status).toBe(200);
+  });
+
+  it("defaults check_in_only to false when omitted", async () => {
+    const res = await POST(makeReq(VALID_EVENT_BODY));
+    expect(res.status).toBe(200);
+    expect(mockInsertEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ check_in_only: false })
+    );
+  });
+
+  it("persists check_in_only: true when provided", async () => {
+    const body = { ...VALID_EVENT_BODY, check_in_only: true };
+    const res = await POST(makeReq(body));
+    expect(res.status).toBe(200);
+    expect(mockInsertEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ check_in_only: true })
+    );
   });
 
   // ── DB failure ────────────────────────────────────────────────────────────

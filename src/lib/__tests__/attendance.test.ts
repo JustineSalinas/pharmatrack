@@ -150,7 +150,7 @@ describe('backfillEventStatuses — incomplete marking', () => {
   it('marks incomplete when the event has an explicit check_out_end that has passed', async () => {
     const pastCheckOutEnd = new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30 min ago
     setSelect('events', {
-      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: pastCheckOutEnd }],
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: pastCheckOutEnd, check_in_only: false }],
       error: null,
     })
     setSelect('attendance_records', {
@@ -166,7 +166,7 @@ describe('backfillEventStatuses — incomplete marking', () => {
   it('marks incomplete via the 4-hour fallback when the event has no check_out_end', async () => {
     const timeIn5hAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
     setSelect('events', {
-      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: null }],
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: null, check_in_only: false }],
       error: null,
     })
     setSelect('attendance_records', {
@@ -181,11 +181,26 @@ describe('backfillEventStatuses — incomplete marking', () => {
   it('does not mark incomplete yet when no check_out_end and under 4 hours have passed', async () => {
     const timeIn1hAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
     setSelect('events', {
-      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: null }],
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: null, check_in_only: false }],
       error: null,
     })
     setSelect('attendance_records', {
       data: [{ id: RECORD_ID, student_id: STUDENT_ID, event_id: EVENT_ID, time_in: timeIn1hAgo, time_out: null, status: 'present' }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.incompleteUpdated).toBe(0)
+  })
+
+  it('never marks incomplete when the event is check_in_only, even well past the 4h fallback', async () => {
+    const timeIn10hAgo = new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString()
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: null, check_in_only: true }],
+      error: null,
+    })
+    setSelect('attendance_records', {
+      data: [{ id: RECORD_ID, student_id: STUDENT_ID, event_id: EVENT_ID, time_in: timeIn10hAgo, time_out: null, status: 'present' }],
       error: null,
     })
 
