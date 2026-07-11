@@ -38,6 +38,63 @@ interface EventOption {
 
 const MANUAL_STATUS_OPTIONS = ["present", "late", "absent", "incomplete"] as const;
 
+// Join BOTH events and qr_sessions — scanner scans write event_id, QR
+// session check-ins write session_id. We prefer whichever is non-null.
+// student_profiles(section) is the real source of a student's section —
+// qr_sessions.section only applies to the legacy classroom check-in path
+// and is null for the school-wide scanner flow that most attendance goes
+// through, so it's kept only as a fallback, not the primary source.
+const ATTENDANCE_SELECT = `
+  id,
+  time_in,
+  time_out,
+  status,
+  remarks,
+  event_id,
+  session_id,
+  events ( name, date, location ),
+  qr_sessions ( subject, date, section ),
+  users!student_id ( full_name, email, student_profiles ( section ) )
+`;
+
+function formatAttendanceRows(data: any[]): AttendanceRow[] {
+  return (data || []).map((r: any) => {
+    const uData = r.users;
+    const ev = r.events;      // school-wide event (scanner)
+    const sess = r.qr_sessions; // classroom session (self check-in)
+
+    const studentProfiles = uData?.student_profiles;
+    const studentSection = Array.isArray(studentProfiles) ? studentProfiles[0]?.section : studentProfiles?.section;
+
+    // Prefer event data if available, fall back to session data
+    const subject = ev?.name || sess?.subject || "General Event";
+    const section = studentSection || sess?.section || "N/A";
+    const rawDate = ev?.date || sess?.date || "";
+    const displayDate = rawDate
+      ? new Date(rawDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "—";
+
+    return {
+      id: r.id,
+      name: uData?.full_name || "Unknown Student",
+      email: uData?.email || "",
+      subject,
+      section,
+      date: rawDate,
+      displayDate,
+      timeIn: r.time_in
+        ? formatManilaTime(r.time_in, { hour: "numeric", minute: "2-digit" })
+        : "—",
+      timeOut: r.time_out
+        ? formatManilaTime(r.time_out, { hour: "numeric", minute: "2-digit" })
+        : "—",
+      status: r.status,
+      rawDate,
+      remarks: r.remarks || "",
+    };
+  });
+}
+
 export default function AdminAttendance() {
   const currentUser = useCurrentUser();
   const [records, setRecords] = useState<AttendanceRow[]>([]);
@@ -144,72 +201,67 @@ export default function AdminAttendance() {
     else setRefreshing(true);
 
     try {
-      // Join BOTH events and qr_sessions — scanner scans write event_id,
-      // QR session check-ins write session_id. We prefer whichever is non-null.
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select(`
-          id,
-          time_in,
-          time_out,
-          status,
-          remarks,
-          event_id,
-          session_id,
-          events ( name, date, location ),
-          qr_sessions ( subject, date, section ),
-          users!student_id ( full_name, email )
-        `)
-        // Bound the log to the most recent records so this doesn't seq-scan an
-        // ever-growing table on every load / realtime refresh. Backed by
-        // idx_attendance_created. (Server-side date paging for older records is
-        // the Phase 2 follow-up.)
-        .order("created_at", { ascending: false })
-        .limit(2000);
+      let data: any[] | null = null;
+      let error: any = null;
+
+      if (selectedDate) {
+        // The default fetch below is bounded to the most recent 2000 records
+        // (by created_at) so it doesn't seq-scan an ever-growing table — but
+        // that means an older date can silently show zero results even when
+        // real records exist for it, once the table grows past that window.
+        // Resolve exactly which events/qr_sessions fall on the selected date
+        // first (both are small, non-hot tables), then pull attendance for
+        // those via the existing event_id/session_id indexes
+        // (idx_attendance_event / idx_attendance_session) instead of relying
+        // on the created_at window at all.
+        const [{ data: evRows }, { data: sessRows }] = await Promise.all([
+          supabase.from("events").select("id").eq("date", selectedDate),
+          supabase.from("qr_sessions").select("id").eq("date", selectedDate),
+        ]);
+        const eventIds = (evRows || []).map((e: any) => e.id);
+        const sessionIds = (sessRows || []).map((s: any) => s.id);
+
+        if (eventIds.length === 0 && sessionIds.length === 0) {
+          data = [];
+        } else {
+          const orParts = [
+            eventIds.length ? `event_id.in.(${eventIds.join(",")})` : null,
+            sessionIds.length ? `session_id.in.(${sessionIds.join(",")})` : null,
+          ].filter(Boolean).join(",");
+
+          const res = await supabase
+            .from("attendance_records")
+            .select(ATTENDANCE_SELECT)
+            .or(orParts)
+            // Defensive cap — a single day's attendance across every event
+            // shouldn't approach this, just a circuit breaker.
+            .limit(5000);
+          data = res.data;
+          error = res.error;
+        }
+      } else {
+        const res = await supabase
+          .from("attendance_records")
+          .select(ATTENDANCE_SELECT)
+          // Bound the log to the most recent records so this doesn't seq-scan
+          // an ever-growing table on every load / realtime refresh. Backed by
+          // idx_attendance_created.
+          .order("created_at", { ascending: false })
+          .limit(2000);
+        data = res.data;
+        error = res.error;
+      }
 
       if (error) throw error;
 
-      const formatted: AttendanceRow[] = (data || []).map((r: any) => {
-        const uData = r.users;
-        const ev = r.events;      // school-wide event (scanner)
-        const sess = r.qr_sessions; // classroom session (self check-in)
-
-        // Prefer event data if available, fall back to session data
-        const subject = ev?.name || sess?.subject || "General Event";
-        const section = sess?.section || "N/A";
-        const rawDate = ev?.date || sess?.date || "";
-        const displayDate = rawDate
-          ? new Date(rawDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-          : "—";
-
-        return {
-          id: r.id,
-          name: uData?.full_name || "Unknown Student",
-          email: uData?.email || "",
-          subject,
-          section,
-          date: rawDate,
-          displayDate,
-          timeIn: r.time_in
-            ? formatManilaTime(r.time_in, { hour: "numeric", minute: "2-digit" })
-            : "—",
-          timeOut: r.time_out
-            ? formatManilaTime(r.time_out, { hour: "numeric", minute: "2-digit" })
-            : "—",
-          status: r.status,
-          rawDate,
-          remarks: r.remarks || "",
-        };
-      });
-
-      setRecords(formatted);
+      setRecords(formatAttendanceRows(data || []));
     } catch (err) {
       console.error("Error fetching admin attendance", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   // Distinct sections for the filter dropdown — fetched once on mount, not
   // from the realtime-triggered fetchAttendance above, since section
@@ -236,9 +288,12 @@ export default function AdminAttendance() {
   }, [router, fetchAttendance, fetchSections, currentUser]);
 
   // ── Real-time subscription: refresh log whenever attendance_records changes ──
-  // Intentionally unfiltered — filterStatus/filterEvent/etc. are applied
-  // client-side after an unbounded fetch and default to "All"; binding this
-  // to the current selection would silently stop live-updating the default view.
+  // Intentionally unfiltered on the subscription itself — any change re-runs
+  // fetchAttendance, which already re-scopes its own query to selectedDate
+  // when one is set. filterStatus/filterSection/filterEvent/search stay
+  // client-side on top of whatever fetchAttendance returns and default to
+  // "All"; binding the subscription itself to those would silently stop
+  // live-updating the default view.
   useEffect(() => {
     const channel = supabase
       .channel("admin-attendance-log-rt")
