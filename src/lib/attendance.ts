@@ -53,21 +53,27 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   if (events.length === 0) return result;
 
   // 2. All approved students (target set for "absent" calculation).
+  // Defensive cap — well above current enrollment, just a circuit breaker
+  // against this becoming an unbounded scan as the student body grows.
   const { data: students, error: stuErr } = await supabase
     .from("users")
     .select("id")
     .eq("account_type", "student")
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .limit(5000);
   if (stuErr) { result.errors.push("students: " + stuErr.message); return result; }
   const studentIds = (students ?? []).map((s: any) => s.id as string);
   if (studentIds.length === 0) return result;
 
   // 3. Fetch ALL existing attendance records for these events in a SINGLE query!
+  // Defensive cap for the same reason as above — the 60-day event window
+  // already bounds this, but a hard ceiling avoids relying on that alone.
   const eventIds = events.map((ev: any) => ev.id);
   const { data: allRecords, error: arErr } = await supabase
     .from("attendance_records")
     .select("id, student_id, event_id, time_in, time_out, status")
-    .in("event_id", eventIds);
+    .in("event_id", eventIds)
+    .limit(20000);
   if (arErr) { result.errors.push("attendance_records fetch: " + arErr.message); return result; }
 
   // 4. Group existing records by event_id for fast O(1) in-memory lookup

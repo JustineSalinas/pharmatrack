@@ -231,6 +231,13 @@ export default function FacultyReports() {
         setLoading(true);
         // 1. Fetch Students, Events, Attendance Records, and Sessions
         void triggerSummaryRefresh();
+        // Bound to the last 6 months so this doesn't seq-scan attendance_records
+        // (the highest-traffic table) on every report load — same window
+        // admin/reports/page.tsx already applies to its qr_sessions query.
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const cutoffDate = sixMonthsAgo.toISOString().slice(0, 10);
+        const cutoffIso = sixMonthsAgo.toISOString();
         const [
           { data: summaryData, error: sErr },
           { data: events, error: eErr },
@@ -239,15 +246,15 @@ export default function FacultyReports() {
           config
         ] = await Promise.all([
           supabase.rpc("get_student_attendance_summary"),
-          supabase.from("events").select("id, name, location, date"),
+          supabase.from("events").select("id, name, location, date").gte("date", cutoffDate),
           supabase.from("attendance_records").select(`
             id,
             event_id,
             status,
             created_at,
             events ( name, location, date )
-          `),
-          supabase.from("qr_sessions").select(`date, section, attendance_records(status)`),
+          `).gte("created_at", cutoffIso),
+          supabase.from("qr_sessions").select(`date, section, attendance_records(status)`).gte("date", cutoffDate),
           getSystemConfig().catch(() => null)
         ]);
 

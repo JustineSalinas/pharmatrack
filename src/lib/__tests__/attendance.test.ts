@@ -30,6 +30,7 @@ vi.mock('../supabase', () => {
     chain.lt = () => chain
     chain.gte = () => chain
     chain.in = () => chain
+    chain.limit = () => chain
     chain.insert = () => { mode = 'write'; return chain }
     chain.update = () => { mode = 'write'; return chain }
     chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {

@@ -78,13 +78,20 @@ export default function AdminDashboard() {
         supabase.from("users").select("*", { count: "exact", head: true }).neq("account_type", "admin").eq("status", "pending"),
       ]);
 
-      // Attendance Rate — use server-side counts instead of fetching all rows
-      const [{ count: totalLogs }, { count: presentLateCount }] = await Promise.all([
-        supabase.from("attendance_records").select("*", { count: "exact", head: true }),
-        supabase.from("attendance_records").select("*", { count: "exact", head: true }).in("status", ["present", "late"]),
-      ]);
-      const rate = (totalLogs ?? 0) > 0
-        ? parseFloat((((presentLateCount ?? 0) / (totalLogs ?? 1)) * 100).toFixed(1))
+      // Attendance Rate — derived from the pre-aggregated summary matview
+      // (via get_student_attendance_summary()) instead of two exact counts
+      // against attendance_records directly, which required Postgres to scan
+      // the highest-traffic table on every dashboard load. Rate is accurate
+      // as of the matview's last refresh (throttled to ~15min), same
+      // tradeoff already accepted on the Reports pages.
+      const { data: summaryRows } = await supabase.rpc("get_student_attendance_summary");
+      const totalLogs = (summaryRows ?? []).reduce((sum: number, s: any) => sum + (s.total_records || 0), 0);
+      const presentLateCount = (summaryRows ?? []).reduce(
+        (sum: number, s: any) => sum + (s.present_count || 0) + (s.late_count || 0),
+        0
+      );
+      const rate = totalLogs > 0
+        ? parseFloat(((presentLateCount / totalLogs) * 100).toFixed(1))
         : 0;
 
       setStats({

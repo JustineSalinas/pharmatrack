@@ -177,11 +177,6 @@ export default function FacilitatorAttendance() {
         };
       });
 
-      const { data: sectionData } = await supabase.from("student_profiles").select("section");
-      const allSections = Array.from(
-        new Set((sectionData || []).map((s: any) => s.section).filter(Boolean))
-      ).sort() as string[];
-      setAvailableSections(allSections);
       setRecords(formatted);
     } catch (err) {
       console.error("Error fetching attendance", err);
@@ -191,15 +186,28 @@ export default function FacilitatorAttendance() {
     }
   }, []);
 
+  // Distinct sections for the filter dropdown — fetched once on mount, not
+  // from the realtime-triggered fetchAttendance above, since section
+  // membership doesn't change on a scan event and this would otherwise be a
+  // full student_profiles scan on every attendance_records change school-wide.
+  const fetchSections = useCallback(async () => {
+    const { data: sectionData } = await supabase.from("student_profiles").select("section");
+    const allSections = Array.from(
+      new Set((sectionData || []).map((s: any) => s.section).filter(Boolean))
+    ).sort() as string[];
+    setAvailableSections(allSections);
+  }, []);
+
   // Initial load
   useEffect(() => {
     async function init() {
       const u = await getCurrentUser();
       if (!u) return;
       fetchAttendance();
+      fetchSections();
     }
     init();
-  }, [fetchAttendance]);
+  }, [fetchAttendance, fetchSections]);
 
   // ── Real-time subscription ──────────────────────────────────────────────────
   // Intentionally unfiltered — client-side filters default to "All" over an

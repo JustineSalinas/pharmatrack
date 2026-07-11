@@ -202,11 +202,6 @@ export default function AdminAttendance() {
         };
       });
 
-      const { data: sectionData } = await supabase.from("student_profiles").select("section");
-      const allSections = Array.from(
-        new Set((sectionData || []).map((s: any) => s.section).filter(Boolean))
-      ).sort() as string[];
-      setAvailableSections(allSections);
       setRecords(formatted);
     } catch (err) {
       console.error("Error fetching admin attendance", err);
@@ -214,6 +209,18 @@ export default function AdminAttendance() {
       setLoading(false);
       setRefreshing(false);
     }
+  }, []);
+
+  // Distinct sections for the filter dropdown — fetched once on mount, not
+  // from the realtime-triggered fetchAttendance above, since section
+  // membership doesn't change on a scan event and this would otherwise be a
+  // full student_profiles scan on every attendance_records change school-wide.
+  const fetchSections = useCallback(async () => {
+    const { data: sectionData } = await supabase.from("student_profiles").select("section");
+    const allSections = Array.from(
+      new Set((sectionData || []).map((s: any) => s.section).filter(Boolean))
+    ).sort() as string[];
+    setAvailableSections(allSections);
   }, []);
 
   // Initial load + auth guard — waits for DashboardLayout to resolve
@@ -225,7 +232,8 @@ export default function AdminAttendance() {
       return;
     }
     fetchAttendance();
-  }, [router, fetchAttendance, currentUser]);
+    fetchSections();
+  }, [router, fetchAttendance, fetchSections, currentUser]);
 
   // ── Real-time subscription: refresh log whenever attendance_records changes ──
   // Intentionally unfiltered — filterStatus/filterEvent/etc. are applied
