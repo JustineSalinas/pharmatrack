@@ -22,6 +22,15 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+type ScannedStudent = {
+  userId: string;
+  fullName: string;
+  studentIdNumber: string;
+  currentYear: string;
+  section: string;
+  qrCodeId: string;
+};
+
 export default function ScannerPage() {
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -31,8 +40,11 @@ export default function ScannerPage() {
   const [loading, setLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState<any[]>([]);
+  // Phase-1: student profile fetched on scan, shown for verification before attendance is written
+  const [verifiedStudent, setVerifiedStudent] = useState<ScannedStudent | null>(null);
+  const [verifyingStudent, setVerifyingStudent] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const lastScannedCodeRef = useRef<string | null>(null);
   const router = useRouter();
 
   // Load events and admin profile with robust error handling
@@ -207,10 +219,53 @@ export default function ScannerPage() {
     }
   };
 
-  async function submitScan(qrCodeId: string) {
+  // ── PHASE 1: Lookup — fetch student profile, show verification card ──
+  async function onScanSuccess(decodedText: string) {
     if (!selectedEventId || !admin) return;
 
-    setScanResult({ success: true, message: "Verifying...", submessage: `Code: ${qrCodeId}` });
+    await stopCamera();
+    setVerifyingStudent(true);
+    setVerifiedStudent(null);
+    setScanResult(null);
+
+    try {
+      const { data: student, error: studentErr } = await supabase
+        .from("student_profiles")
+        .select("user_id, student_id_number, section, current_year, qr_code_id, users(full_name, avatar_url)")
+        .eq("qr_code_id", decodedText)
+        .maybeSingle();
+
+      if (studentErr || !student) {
+        setVerifyingStudent(false);
+        setScanResult({
+          success: false,
+          message: "Invalid QR Code",
+          submessage: "Student record not found in the system database.",
+        });
+        return;
+      }
+
+      setVerifyingStudent(false);
+      setVerifiedStudent({
+        userId: student.user_id,
+        fullName: (student.users as any)?.full_name ?? "Unknown Student",
+        studentIdNumber: student.student_id_number,
+        currentYear: student.current_year,
+        section: student.section,
+        qrCodeId: student.qr_code_id,
+        avatarUrl: (student.users as any)?.avatar_url ?? null,
+      } as any);
+    } catch (err: any) {
+      console.error(err);
+      setVerifyingStudent(false);
+      setScanResult({ success: false, message: "Scan Failed", submessage: err.message });
+    }
+  }
+
+  // ── PHASE 2: Confirm — admin clicks Confirm Check-In, calls /api/scan ──
+  async function confirmCheckIn() {
+    if (!verifiedStudent || !selectedEventId || !admin) return;
+    setConfirmLoading(true);
 
     try {
       const res = await fetch("/api/scan", {
@@ -219,7 +274,7 @@ export default function ScannerPage() {
           "Content-Type": "application/json",
           ...(await getAuthHeader()),
         },
-        body: JSON.stringify({ qr_code_id: qrCodeId, event_id: selectedEventId }),
+        body: JSON.stringify({ qr_code_id: verifiedStudent.qrCodeId, event_id: selectedEventId }),
       });
 
       const json = await res.json();
@@ -233,32 +288,47 @@ export default function ScannerPage() {
         setScanResult({
           success: true,
           message: `${(json.status || "present").toUpperCase()}!`,
-          submessage: "Student checked in successfully.",
+          submessage: `${verifiedStudent.fullName} checked in successfully.`,
         });
+        setVerifiedStudent(null);
       } else if (json.action === "time_out") {
         setScanResult({
           success: true,
           message: "Check-out Recorded!",
-          submessage: "Student has checked out successfully.",
+          submessage: `${verifiedStudent.fullName} has checked out successfully.`,
         });
+        setVerifiedStudent(null);
       } else {
+        // Keep verifiedStudent set so the Retry button can re-submit without
+        // requiring a fresh QR scan.
         setScanResult({ success: false, message: "Scan Failed", submessage: json.message || json.error || "Unexpected response." });
       }
 
       fetchRecentScans(selectedEventId);
     } catch (err: any) {
       console.error(err);
-      // lastScannedCodeRef is kept set so the Retry button can resubmit
-      // without requiring a fresh camera scan.
-      setScanResult({ success: false, message: "Scan Failed", submessage: err.message });
+      // Keep verifiedStudent set — a network blip shouldn't force a rescan.
+      setScanResult({ success: false, message: "Confirmation Failed", submessage: err.message });
+    } finally {
+      setConfirmLoading(false);
     }
   }
 
-  async function onScanSuccess(decodedText: string) {
-    if (!selectedEventId || !admin) return;
-    await stopCamera();
-    lastScannedCodeRef.current = decodedText;
-    await submitScan(decodedText);
+  // Helper: generate initials avatar background colour from name
+  function avatarColor(name: string): string {
+    const palette = [
+      "#4f46e5", "#0891b2", "#059669", "#d97706",
+      "#dc2626", "#7c3aed", "#db2777", "#0284c7",
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return palette[Math.abs(hash) % palette.length];
+  }
+
+  function initials(name: string): string {
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
   function onScanFailure(error: any) {
@@ -335,13 +405,44 @@ export default function ScannerPage() {
                 </div>
                 <div className="info-row">
                   <Clock size={16} className="info-icon" />
-                  <div>
+                  <div style={{ width: "100%" }}>
                     <span className="info-label">Check-in Windows</span>
-                    <span className="info-val">
-                      Late at: <strong>{formatManilaTime(selectedEvent.check_in_late, { hour: "numeric", minute: "2-digit" })}</strong>
-                      <br />
-                      Closes: <strong>{formatManilaTime(selectedEvent.check_in_end, { hour: "numeric", minute: "2-digit" })}</strong>
-                    </span>
+                    <div className="info-time-rows">
+                      <div className="info-time-row">
+                        <span>Opens at:</span>
+                        <strong>{formatManilaTime(selectedEvent.check_in_start, { hour: "numeric", minute: "2-digit" })}</strong>
+                      </div>
+                      <div className="info-time-row">
+                        <span>Late at:</span>
+                        <strong>{formatManilaTime(selectedEvent.check_in_late, { hour: "numeric", minute: "2-digit" })}</strong>
+                      </div>
+                      <div className="info-time-row">
+                        <span>Closes:</span>
+                        <strong>{formatManilaTime(selectedEvent.check_in_end, { hour: "numeric", minute: "2-digit" })}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <Clock size={16} className="info-icon" />
+                  <div style={{ width: "100%" }}>
+                    <span className="info-label">Check-out Window</span>
+                    {selectedEvent.check_in_only ? (
+                      <span className="info-val"><strong>Check-in only — no check-out required</strong></span>
+                    ) : selectedEvent.check_out_start && selectedEvent.check_out_end ? (
+                      <div className="info-time-rows">
+                        <div className="info-time-row">
+                          <span>Opens at:</span>
+                          <strong>{formatManilaTime(selectedEvent.check_out_start, { hour: "numeric", minute: "2-digit" })}</strong>
+                        </div>
+                        <div className="info-time-row">
+                          <span>Closes:</span>
+                          <strong>{formatManilaTime(selectedEvent.check_out_end, { hour: "numeric", minute: "2-digit" })}</strong>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="info-val"><strong>Not required for this event</strong></span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -354,7 +455,7 @@ export default function ScannerPage() {
         <div className="viewport-column">
           
           {/* CAMERA FEED PLACEHOLDER */}
-          {!isScanning && !scanResult && (
+          {!isScanning && !scanResult && !verifiedStudent && !verifyingStudent && (
             <div className="viewport-placeholder">
               <div className="pulse-circle">
                 <QrCode size={40} className="placeholder-icon" />
@@ -395,37 +496,120 @@ export default function ScannerPage() {
             </div>
           )}
 
+          {/* PHASE 1: Brief lookup spinner between scan and card render */}
+          {verifyingStudent && (
+            <div className="viewport-result">
+              <div className="verify-loading">
+                <Loader2 className="verify-spinner" size={32} />
+                <p className="verify-loading-text">Retrieving student profile…</p>
+              </div>
+            </div>
+          )}
+
+          {/* PHASE 1: Student Verification Card — shown before attendance is written */}
+          {verifiedStudent && !confirmLoading && (
+            <div className="viewport-result">
+              <div className="verify-card">
+                {/* Header badge */}
+                <div className="verify-header-badge">
+                  <Users size={13} />
+                  <span>Student Identified — Please Verify</span>
+                </div>
+
+                {/* Avatar initials or uploaded profile picture */}
+                <div
+                  className="verify-avatar"
+                  style={{
+                    background: (verifiedStudent as any).avatarUrl ? "none" : avatarColor(verifiedStudent.fullName),
+                    padding: 0,
+                    overflow: "hidden"
+                  }}
+                >
+                  {(verifiedStudent as any).avatarUrl ? (
+                    <img
+                      src={(verifiedStudent as any).avatarUrl}
+                      alt={verifiedStudent.fullName}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                    />
+                  ) : (
+                    initials(verifiedStudent.fullName)
+                  )}
+                </div>
+
+                {/* Name */}
+                <h2 className="verify-name">{verifiedStudent.fullName}</h2>
+
+                {/* ID + Section row */}
+                <div className="verify-meta-row">
+                  <span className="verify-id-badge">{verifiedStudent.studentIdNumber}</span>
+                  <span className="verify-dot">·</span>
+                  <span className="verify-section-badge">{verifiedStudent.section}</span>
+                </div>
+
+                {/* Year level */}
+                <div className="verify-year-pill">
+                  {verifiedStudent.currentYear} Year
+                </div>
+
+                {/* Action buttons */}
+                <div className="verify-actions">
+                  <button
+                    className="btn-confirm-checkin"
+                    onClick={confirmCheckIn}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>Confirm Check-In</span>
+                  </button>
+                  <button
+                    className="btn-cancel-scan"
+                    onClick={() => { setVerifiedStudent(null); startCamera(); }}
+                  >
+                    <XCircle size={15} />
+                    <span>Wrong Student</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PHASE 2: Confirm loading spinner */}
+          {confirmLoading && (
+            <div className="viewport-result">
+              <div className="verify-loading">
+                <Loader2 className="verify-spinner" size={32} />
+                <p className="verify-loading-text">Recording attendance…</p>
+              </div>
+            </div>
+          )}
+
           {/* SCAN OUTCOME STATUS SCREEN */}
           {scanResult && (
             <div className="viewport-result">
               <div className="result-card">
-                <div className={`status-icon-wrap ${scanResult.success ? "success" : "error"}`}>
-                  {scanResult.success ? (
-                    <CheckCircle2 size={44} />
-                  ) : (
-                    <XCircle size={44} />
-                  )}
+                <div className="result-top-group">
+                  <div className={`status-icon-wrap ${scanResult.success ? "success" : "error"}`}>
+                    {scanResult.success ? <CheckCircle2 size={44} /> : <XCircle size={44} />}
+                  </div>
+                  <div className="result-text-block">
+                    <h2 className={`result-headline ${scanResult.success ? "success" : "error"}`}>
+                      {scanResult.message}
+                    </h2>
+                    <p className="result-explanation">{scanResult.submessage}</p>
+                  </div>
                 </div>
-                
-                <div className="result-text-block">
-                  <h2 className={`result-headline ${scanResult.success ? "success" : "error"}`}>
-                    {scanResult.message}
-                  </h2>
-                  <p className="result-explanation">{scanResult.submessage}</p>
-                </div>
-                
-                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
-                  {!scanResult.success && lastScannedCodeRef.current && (
+                <div style={{ display: "flex", gap: "10px", width: "100%", justifyContent: "center" }}>
+                  {!scanResult.success && verifiedStudent && (
                     <button
-                      onClick={() => submitScan(lastScannedCodeRef.current!)}
+                      onClick={confirmCheckIn}
                       className="btn-next-scan"
+                      disabled={confirmLoading}
                     >
                       <RefreshCw size={16} />
                       <span>Retry</span>
                     </button>
                   )}
                   <button
-                    onClick={() => { setScanResult(null); startCamera(); }}
+                    onClick={() => { setScanResult(null); setVerifiedStudent(null); startCamera(); }}
                     className="btn-next-scan"
                   >
                     <Sparkles size={16} />
@@ -578,6 +762,11 @@ export default function ScannerPage() {
           gap: 20px;
         }
 
+        .qr-scanner-terminal-page .viewport-column {
+          display: flex;
+          flex-direction: column;
+        }
+
         .qr-scanner-terminal-page .setup-card {
           background: #ffffff !important;
           border: 1px solid rgba(79, 70, 229, 0.12) !important;
@@ -673,6 +862,32 @@ export default function ScannerPage() {
           font-size: 13.5px !important;
           color: #111827 !important;
           line-height: 1.4 !important;
+        }
+
+        .qr-scanner-terminal-page .info-time-rows {
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 3px !important;
+          width: 100% !important;
+        }
+
+        .qr-scanner-terminal-page .info-time-row {
+          display: flex !important;
+          align-items: baseline !important;
+          justify-content: flex-start !important;
+          gap: 5px !important;
+          font-size: 13.5px !important;
+          line-height: 1.4 !important;
+        }
+
+        .qr-scanner-terminal-page .info-time-row span {
+          color: #6b7280 !important;
+        }
+
+        .qr-scanner-terminal-page .info-time-row strong {
+          color: #111827 !important;
+          font-weight: 600 !important;
+          white-space: nowrap !important;
         }
 
         .qr-scanner-terminal-page .metrics-card {
@@ -915,9 +1130,21 @@ export default function ScannerPage() {
           display: flex !important;
           flex-direction: column !important;
           align-items: center !important;
+          justify-content: space-between !important;
           gap: 20px !important;
           text-align: center !important;
+          height: 100% !important;
+          width: 100% !important;
           animation: resultSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        .qr-scanner-terminal-page .result-top-group {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 20px !important;
+          flex: 1 !important;
         }
 
         .qr-scanner-terminal-page .status-icon-wrap {
@@ -1067,6 +1294,180 @@ export default function ScannerPage() {
           background: rgba(220, 38, 38, 0.1) !important;
           color: #dc2626 !important;
           border: 1px solid rgba(220, 38, 38, 0.2) !important;
+        }
+
+        /* ── VERIFICATION CARD ── */
+        .qr-scanner-terminal-page .verify-card {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 18px !important;
+          text-align: center !important;
+          animation: resultSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          width: 100% !important;
+          max-width: 340px !important;
+        }
+
+        .qr-scanner-terminal-page .verify-header-badge {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          background: rgba(79, 70, 229, 0.08) !important;
+          border: 1px solid rgba(79, 70, 229, 0.18) !important;
+          border-radius: 999px !important;
+          padding: 5px 14px !important;
+          font-size: 11.5px !important;
+          font-weight: 600 !important;
+          color: #4f46e5 !important;
+          letter-spacing: 0.02em !important;
+        }
+
+        .qr-scanner-terminal-page .verify-avatar {
+          width: 88px !important;
+          height: 88px !important;
+          border-radius: 50% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 30px !important;
+          font-weight: 800 !important;
+          color: #ffffff !important;
+          letter-spacing: -0.02em !important;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.18) !important;
+          flex-shrink: 0 !important;
+        }
+
+        .qr-scanner-terminal-page .verify-name {
+          font-size: 22px !important;
+          font-weight: 700 !important;
+          color: #111827 !important;
+          letter-spacing: -0.03em !important;
+          margin: 0 !important;
+          line-height: 1.2 !important;
+        }
+
+        .qr-scanner-terminal-page .verify-meta-row {
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          flex-wrap: wrap !important;
+          justify-content: center !important;
+        }
+
+        .qr-scanner-terminal-page .verify-id-badge {
+          font-family: monospace !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          color: #374151 !important;
+          background: #f3f4f6 !important;
+          border: 1px solid #e5e7eb !important;
+          border-radius: 4px !important;
+          padding: 2px 8px !important;
+        }
+
+        .qr-scanner-terminal-page .verify-dot {
+          color: #9ca3af !important;
+          font-size: 14px !important;
+        }
+
+        .qr-scanner-terminal-page .verify-section-badge {
+          background: rgba(79, 70, 229, 0.06) !important;
+          border: 1px solid rgba(79, 70, 229, 0.15) !important;
+          border-radius: 4px !important;
+          padding: 2px 8px !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          color: #4f46e5 !important;
+        }
+
+        .qr-scanner-terminal-page .verify-year-pill {
+          background: rgba(22, 163, 74, 0.07) !important;
+          border: 1px solid rgba(22, 163, 74, 0.18) !important;
+          border-radius: 999px !important;
+          padding: 4px 16px !important;
+          font-size: 12.5px !important;
+          font-weight: 600 !important;
+          color: #16a34a !important;
+        }
+
+        .qr-scanner-terminal-page .verify-actions {
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 10px !important;
+          width: 100% !important;
+          margin-top: 4px !important;
+        }
+
+        .qr-scanner-terminal-page .btn-confirm-checkin {
+          width: 100% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px !important;
+          background: #16a34a !important;
+          color: #ffffff !important;
+          border: none !important;
+          border-radius: 8px !important;
+          padding: 13px 20px !important;
+          font-size: 14px !important;
+          font-weight: 700 !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25) !important;
+          letter-spacing: 0.01em !important;
+        }
+
+        .qr-scanner-terminal-page .btn-confirm-checkin:hover {
+          filter: brightness(1.08) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 20px rgba(22, 163, 74, 0.35) !important;
+        }
+
+        .qr-scanner-terminal-page .btn-cancel-scan {
+          width: 100% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px !important;
+          background: transparent !important;
+          color: #6b7280 !important;
+          border: 1px solid #e5e7eb !important;
+          border-radius: 8px !important;
+          padding: 11px 20px !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          transition: all 0.15s ease !important;
+        }
+
+        .qr-scanner-terminal-page .btn-cancel-scan:hover {
+          background: rgba(220, 38, 38, 0.05) !important;
+          border-color: rgba(220, 38, 38, 0.25) !important;
+          color: #dc2626 !important;
+        }
+
+        /* Lookup / confirm loading state */
+        .qr-scanner-terminal-page .verify-loading {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 14px !important;
+        }
+
+        .qr-scanner-terminal-page .verify-spinner {
+          color: #4f46e5 !important;
+          animation: spin 0.8s linear infinite !important;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .qr-scanner-terminal-page .verify-loading-text {
+          font-size: 14px !important;
+          color: #6b7280 !important;
+          font-weight: 500 !important;
+          margin: 0 !important;
         }
       `}</style>
     </div>
