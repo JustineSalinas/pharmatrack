@@ -3411,6 +3411,9 @@ html {
 
 .sd-qr-code-wrap {
   background: #fff;
+  /* Opt the QR out of the browser's forced/auto dark-mode so it never renders
+     as a blank white box on mobile (canvas is bitmap, but this guards the box). */
+  color-scheme: light;
   padding: 12px;
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);

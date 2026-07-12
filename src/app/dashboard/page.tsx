@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 import { downloadQRPng } from "@/lib/downloadQR";
 import {
   Activity,
@@ -383,8 +383,8 @@ function StudentDashboardContent() {
                     <span className="sd-idcard-org-sub">College of Pharmacy</span>
                   </div>
                 </div>
-                <div className="sd-qr-code-wrap" ref={qrWrapRef}>
-                  <QRCodeSVG value={qrCodeValue} size={148} level="H" includeMargin={false} />
+                <div className="sd-qr-code-wrap" ref={qrWrapRef} style={{ colorScheme: "light" }}>
+                  <QRCodeCanvas value={qrCodeValue} size={148} level="H" marginSize={2} />
                 </div>
                 <button
                   type="button"
@@ -883,8 +883,8 @@ function StudentDashboardContent() {
               <div className="sp-present-panel" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", width: "100%" }}>
                 {qrCodeValue !== "NOT-FOUND" ? (
                   <>
-                    <div className="sp-qr-wrapper" ref={modalQrWrapRef} style={{ background: "#fff", padding: "24px", borderRadius: "20px", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 16px 48px rgba(0, 0, 0, 0.3), 0 0 24px rgba(232, 184, 75, 0.1)" }}>
-                      <QRCodeSVG value={qrCodeValue} size={200} level="H" includeMargin={false} />
+                    <div className="sp-qr-wrapper" ref={modalQrWrapRef} style={{ background: "#fff", colorScheme: "light", padding: "24px", borderRadius: "20px", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 16px 48px rgba(0, 0, 0, 0.3), 0 0 24px rgba(232, 184, 75, 0.1)" }}>
+                      <QRCodeCanvas value={qrCodeValue} size={200} level="H" marginSize={2} />
                     </div>
                     <p className="checkin-qr-code-label">{qrCodeValue}</p>
                     <p className="checkin-qr-instruction">
