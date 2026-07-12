@@ -158,7 +158,12 @@ export async function sendEventBroadcast(event: EventBroadcastInput): Promise<{ 
         { label: "Mark Late At", value: lateTimeStr },
         { label: "Check-in Ends", value: endTimeStr },
       ])}
-      <p>Make sure to bring your <strong>PharmaTrack Student QR Code Pass</strong> to verify your attendance at the venue.</p>
+      <p>To get ready, log in to <strong>PharmaTrack</strong> and:</p>
+      <ul style="margin: 0 0 16px; padding-left: 20px; color: inherit;">
+        <li style="margin-bottom: 6px;"><strong>Upload your profile picture</strong> so facilitators can verify it's really you at check-in.</li>
+        <li><strong>Download your QR code</strong> ahead of time — then just present the saved image to a facilitator to check in, even if your connection drops at the venue.</li>
+      </ul>
+      <p>Bring your saved <strong>QR Code Pass</strong> to verify your attendance.</p>
     `;
 
     return renderEmailShell({ eyebrow: "Event Notification", bodyHtml });
