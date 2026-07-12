@@ -26,7 +26,11 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Parse body ───────────────────────────────────────────
-  let body: { qr_code_id?: string; event_id?: string };
+  // `scanned_at` is optional and set only when replaying a scan that was
+  // captured OFFLINE (backend was unreachable at scan time). When present it
+  // becomes the effective "now" below, so status/time_in reflect when the
+  // student was actually scanned, not when the queue synced.
+  let body: { qr_code_id?: string; event_id?: string; scanned_at?: string };
   try {
     body = await req.json();
   } catch {
@@ -34,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { qr_code_id, event_id } = body;
+  const { qr_code_id, event_id, scanned_at } = body;
   if (!qr_code_id || !event_id) {
     console.warn(`[Scan API] Missing fields in scan payload: qr_code_id=${qr_code_id}, event_id=${event_id}`);
     return NextResponse.json({ error: "qr_code_id and event_id are required" }, { status: 400 });
@@ -88,7 +92,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Student account is pending approval or inactive" }, { status: 400 });
   }
 
-  const now = new Date();
+  // Effective scan time. Defaults to server time (online scan). For an offline
+  // replay, use the original capture time instead — but only trust it within a
+  // small future skew tolerance (the caller is already an approved
+  // admin/facilitator, verified above). Everything downstream (window checks,
+  // present/late, time_in/out, the 4-hour checkout cap) keys off `now`, so this
+  // one substitution makes the whole flow honour the real offline time.
+  const serverNow = new Date();
+  let now = serverNow;
+  if (scanned_at) {
+    const parsed = new Date(scanned_at);
+    if (isNaN(parsed.getTime())) {
+      console.warn(`[Scan API] Invalid scanned_at value: ${scanned_at}`);
+      return NextResponse.json({ error: "Invalid scanned_at timestamp" }, { status: 400 });
+    }
+    const SKEW_TOLERANCE_MS = 5 * 60 * 1000;
+    if (parsed.getTime() > serverNow.getTime() + SKEW_TOLERANCE_MS) {
+      console.warn(`[Scan API] Rejected future scanned_at: ${scanned_at}`);
+      return NextResponse.json({ error: "scanned_at cannot be in the future" }, { status: 400 });
+    }
+    now = parsed;
+    console.log(`[Scan API] Offline replay — using captured scan time ${parsed.toISOString()}`);
+  }
   const checkInStart = new Date(event.check_in_start);
   const checkInEnd = new Date(event.check_in_end);
   const checkInLate = new Date(event.check_in_late);

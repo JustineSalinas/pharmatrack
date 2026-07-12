@@ -5,6 +5,9 @@ import { Html5Qrcode } from "html5-qrcode";
 import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { debounce } from "@/lib/debounce";
+import { submitScanOrQueue, enqueue } from "@/lib/offlineScanQueue";
+import { useOfflineScanSync } from "@/lib/useOfflineScanSync";
+import { OfflineScanIndicator } from "@/components/OfflineScanIndicator";
 import { 
   ScanLine, 
   CheckCircle2, 
@@ -42,6 +45,7 @@ export default function ScannerPage() {
   const [recentScans, setRecentScans] = useState<any[]>([]);
   // Phase-1: student profile fetched on scan, shown for verification before attendance is written
   const [verifiedStudent, setVerifiedStudent] = useState<ScannedStudent | null>(null);
+  const offlineSync = useOfflineScanSync();
   const [verifyingStudent, setVerifyingStudent] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -220,10 +224,28 @@ export default function ScannerPage() {
   };
 
   // ── PHASE 1: Lookup — fetch student profile, show verification card ──
+  // Captures a scan into the offline queue and shows the "Saved Offline"
+  // confirmation, skipping the live verify card (which needs the backend).
+  async function queueOffline(decodedText: string, submessage: string) {
+    await enqueue({ qrCodeId: decodedText, eventId: selectedEventId, scannedAt: new Date().toISOString() });
+    await offlineSync.refresh();
+    setVerifyingStudent(false);
+    setVerifiedStudent(null);
+    setScanResult({ success: true, message: "Saved Offline", submessage });
+  }
+
   async function onScanSuccess(decodedText: string) {
     if (!selectedEventId || !admin) return;
 
     await stopCamera();
+
+    // Offline: skip the live student lookup entirely and queue the scan. It
+    // syncs and gets validated/identified automatically when the backend is back.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      await queueOffline(decodedText, "Queued — will sync automatically when the connection returns.");
+      return;
+    }
+
     setVerifyingStudent(true);
     setVerifiedStudent(null);
     setScanResult(null);
@@ -235,7 +257,15 @@ export default function ScannerPage() {
         .eq("qr_code_id", decodedText)
         .maybeSingle();
 
-      if (studentErr || !student) {
+      if (studentErr) {
+        // Lookup failed while nominally online → treat the backend as
+        // unreachable and queue the scan rather than losing it or showing a
+        // false "invalid QR".
+        await queueOffline(decodedText, "Couldn't reach the server — queued and will sync automatically.");
+        return;
+      }
+
+      if (!student) {
         setVerifyingStudent(false);
         setScanResult({
           success: false,
@@ -255,10 +285,9 @@ export default function ScannerPage() {
         qrCodeId: student.qr_code_id,
         avatarUrl: (student.users as any)?.avatar_url ?? null,
       } as any);
-    } catch (err: any) {
-      console.error(err);
-      setVerifyingStudent(false);
-      setScanResult({ success: false, message: "Scan Failed", submessage: err.message });
+    } catch {
+      // Network throw during lookup → queue rather than lose the scan.
+      await queueOffline(decodedText, "Couldn't reach the server — queued and will sync automatically.");
     }
   }
 
@@ -268,18 +297,23 @@ export default function ScannerPage() {
     setConfirmLoading(true);
 
     try {
-      const res = await fetch("/api/scan", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(await getAuthHeader()),
-        },
-        body: JSON.stringify({ qr_code_id: verifiedStudent.qrCodeId, event_id: selectedEventId }),
+      const outcome = await submitScanOrQueue({
+        qrCodeId: verifiedStudent.qrCodeId,
+        eventId: selectedEventId,
+        authHeader: (await getAuthHeader()) as Record<string, string>,
       });
 
-      const json = await res.json();
+      // Backend was unreachable — the scan was captured offline instead of lost.
+      if (outcome.queued) {
+        await offlineSync.refresh();
+        setScanResult({ success: true, message: "Saved Offline", submessage: `${verifiedStudent.fullName}'s scan was queued and will sync automatically.` });
+        setVerifiedStudent(null);
+        return;
+      }
 
-      if (!res.ok) {
+      const json = outcome.data;
+
+      if (!outcome.ok) {
         setScanResult({ success: false, message: "Scan Failed", submessage: json.error || "An error occurred." });
         return;
       }
@@ -385,6 +419,10 @@ export default function ScannerPage() {
                   )}
                 </select>
               </div>
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <OfflineScanIndicator state={offlineSync} />
             </div>
 
             {selectedEvent && (

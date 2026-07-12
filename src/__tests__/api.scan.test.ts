@@ -405,4 +405,43 @@ describe("POST /api/scan", () => {
       expect.objectContaining({ time_out: expect.anything() })
     );
   });
+
+  // ── Offline replay: optional scanned_at ─────────────────────────────────
+
+  it("uses scanned_at as time_in (and derives status from it) when replaying an offline scan", async () => {
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = { data: makeOpenEvent(), error: null };
+    tableResults["attendance_records"] = { data: null, error: { code: "PGRST116" } };
+    // 45 min ago — inside the open window and before the (future) late cutoff.
+    const scannedAt = new Date(Date.now() - 45 * 60 * 1000).toISOString();
+    await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID, scanned_at: scannedAt }));
+    expect(mockInsertRecord).toHaveBeenCalledWith(
+      "attendance_records",
+      expect.objectContaining({ time_in: scannedAt, status: "present" }),
+    );
+  });
+
+  it("returns 400 for an invalid scanned_at value", async () => {
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = { data: makeOpenEvent(), error: null };
+    tableResults["attendance_records"] = { data: null, error: { code: "PGRST116" } };
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID, scanned_at: "not-a-date" }));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toMatch(/invalid scanned_at/i);
+  });
+
+  it("returns 400 when scanned_at is in the future beyond tolerance", async () => {
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = { data: makeOpenEvent(), error: null };
+    tableResults["attendance_records"] = { data: null, error: { code: "PGRST116" } };
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID, scanned_at: future }));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toMatch(/future/i);
+  });
 });
