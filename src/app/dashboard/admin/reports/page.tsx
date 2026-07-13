@@ -161,12 +161,18 @@ export default function AdminReports() {
         // Monthly trend + Total Sessions come from EVENT-based attendance
         // (attendance_records → events), not the legacy qr_sessions table, which
         // is empty now that all attendance flows through the scanner/events path.
-        // Explicit high limit so a 6-month window isn't silently truncated by
-        // PostgREST's ~1000-row default (same class as the Issue 2 fix).
+        //
+        // get_event_attendance_stats() aggregates SERVER-SIDE, one row per
+        // event, rather than fetching every matching attendance_records row and
+        // tallying client-side — that per-record fetch is a multi-row response
+        // subject to Supabase/PostgREST's per-query row cap (confirmed at 1,000
+        // rows), and with no explicit ORDER BY, WHICH rows got dropped past that
+        // cap was non-deterministic between calls. Confirmed this was already
+        // silently omitting an entire event (196 records) from these numbers.
         const cutoffIso = (() => { const d = new Date(); d.setMonth(d.getMonth() - 6); return d.toISOString(); })();
-        const [ { data: studentStats, error: sErr }, { data: eventRecords, error: rErr }, config ] = await Promise.all([
+        const [ { data: studentStats, error: sErr }, { data: eventStats, error: rErr }, config ] = await Promise.all([
            supabase.rpc("get_student_attendance_summary"),
-           supabase.from("attendance_records").select(`status, event_id, events!inner(date)`).gte("created_at", cutoffIso).limit(20000),
+           supabase.rpc("get_event_attendance_stats", { cutoff: cutoffIso }),
            getSystemConfig().catch(() => null)
         ]);
 
@@ -174,7 +180,7 @@ export default function AdminReports() {
         if (rErr) throw rErr;
 
         const validStats = studentStats || [];
-        const validRecords = eventRecords || [];
+        const validEventStats = eventStats || [];
 
         const riskThreshold = config ? parseInt(config.minAttendance, 10) || 75 : 75;
         setMinAttendance(riskThreshold);
@@ -226,21 +232,18 @@ export default function AdminReports() {
           count: sectionsMap[sec].count
         })).sort((a,b) => b.rate - a.rate);
 
-        // Monthly Trend — bucket each attendance record by the month of its
-        // event's date; rate = attended (present/late) / total per month.
+        // Monthly Trend — bucket each EVENT's already-aggregated totals by the
+        // month of its date; rate = attended (present/late) / total per month.
+        // Sums the event-level counts (server-side aggregate), not raw records.
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const monthlyStats: Record<string, { total: number, attended: number }> = {};
-        const distinctEvents = new Set<string>();
 
-        validRecords.forEach((r: any) => {
-           const ev = r.events;
-           const evDate = Array.isArray(ev) ? ev[0]?.date : ev?.date;
-           if (r.event_id) distinctEvents.add(r.event_id);
-           if (!evDate) return;
-           const m = months[parseDateLocal(evDate).getMonth()];
+        validEventStats.forEach((e: any) => {
+           if (!e.date) return;
+           const m = months[parseDateLocal(e.date).getMonth()];
            if (!monthlyStats[m]) monthlyStats[m] = { total: 0, attended: 0 };
-           monthlyStats[m].total++;
-           if (r.status === "present" || r.status === "late") monthlyStats[m].attended++;
+           monthlyStats[m].total += Number(e.total_count || 0);
+           monthlyStats[m].attended += Number(e.attended_count || 0);
         });
 
         const monthKeys = Object.keys(monthlyStats).sort((a,b) => months.indexOf(a) - months.indexOf(b));
@@ -251,7 +254,7 @@ export default function AdminReports() {
 
         setMetrics({
           avgRate,
-          totalSessions: distinctEvents.size,
+          totalSessions: validEventStats.length,
           perfectRecords: perfect,
           flaggedStudents: flagged
         });

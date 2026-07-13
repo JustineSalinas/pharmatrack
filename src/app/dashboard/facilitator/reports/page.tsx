@@ -238,24 +238,22 @@ export default function FacultyReports() {
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
         const cutoffDate = sixMonthsAgo.toISOString().slice(0, 10);
         const cutoffIso = sixMonthsAgo.toISOString();
+        // get_event_attendance_stats() aggregates SERVER-SIDE, one row per
+        // event, rather than fetching every matching attendance_records row and
+        // tallying client-side — that per-record fetch is a multi-row response
+        // subject to Supabase/PostgREST's per-query row cap (confirmed at 1,000
+        // rows), and with no explicit ORDER BY, WHICH rows got dropped past that
+        // cap was non-deterministic between calls. Confirmed this was already
+        // silently omitting an entire event (196 records) from these numbers.
         const [
           { data: summaryData, error: sErr },
           { data: events, error: eErr },
-          { data: records, error: rErr },
+          { data: eventStats, error: rErr },
           config
         ] = await Promise.all([
           supabase.rpc("get_student_attendance_summary"),
           supabase.from("events").select("id, name, location, date").gte("date", cutoffDate),
-          // Explicit high limit so the 6-month window isn't silently truncated by
-          // PostgREST's ~1000-row default (feeds both "Most Attended Events" and
-          // the event-based Monthly Trend below).
-          supabase.from("attendance_records").select(`
-            id,
-            event_id,
-            status,
-            created_at,
-            events ( name, location, date )
-          `).gte("created_at", cutoffIso).limit(20000),
+          supabase.rpc("get_event_attendance_stats", { cutoff: cutoffIso }),
           getSystemConfig().catch(() => null)
         ]);
 
@@ -281,34 +279,18 @@ export default function FacultyReports() {
         setAllStudents(parsedStudents);
         setTotalEvents(events?.length || 0);
 
-        // Group records to calculate Most Attended Events dynamically
-        const eventStatsMap: Record<string, { id: string, name: string, location: string, date: string, attended: number, total: number }> = {};
-        records?.forEach((r: any) => {
-          if (!r.event_id || !r.events) return;
-          const evt = r.events;
-          const key = r.event_id;
-          if (!eventStatsMap[key]) {
-            eventStatsMap[key] = {
-              id: key,
-              name: evt.name,
-              location: evt.location || "N/A",
-              date: evt.date,
-              attended: 0,
-              total: 0
-            };
-          }
-          eventStatsMap[key].total += 1;
-          if (r.status === "present" || r.status === "late") {
-            eventStatsMap[key].attended += 1;
-          }
-        });
-
-        const sortedEvents = Object.values(eventStatsMap)
-          .map(e => ({
-            ...e,
-            rate: e.total > 0 ? Math.round((e.attended / e.total) * 100) : 0
+        // Most Attended Events — already aggregated per-event server-side.
+        const sortedEvents = (eventStats || [])
+          .map((e: any) => ({
+            id: e.event_id,
+            name: e.name,
+            location: e.location || "N/A",
+            date: e.date,
+            attended: Number(e.attended_count || 0),
+            total: Number(e.total_count || 0),
+            rate: e.total_count > 0 ? Math.round((e.attended_count / e.total_count) * 100) : 0
           }))
-          .sort((a, b) => b.rate - a.rate)
+          .sort((a: any, b: any) => b.rate - a.rate)
           .slice(0, 5);
         setTopEvents(sortedEvents);
 
@@ -345,19 +327,18 @@ export default function FacultyReports() {
         const overallAvgRate = totalOverallRecords > 0 ? Math.round((totalOverallAttended / totalOverallRecords) * 100) : 0;
         setAvgAttendanceRate(overallAvgRate);
 
-        // Monthly Trend — bucket each event-based attendance record by the month
-        // of its event's date (event-based, not the empty legacy qr_sessions).
+        // Monthly Trend — bucket each EVENT's already-aggregated totals by the
+        // month of its date (event-based, not the empty legacy qr_sessions).
+        // Sums the event-level counts (server-side aggregate), not raw records.
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const monthlyStats: Record<string, { total: number, attended: number }> = {};
 
-        (records || []).forEach((r: any) => {
-          const ev = r.events;
-          const evDate = Array.isArray(ev) ? ev[0]?.date : ev?.date;
-          if (!evDate) return;
-          const m = months[parseDateLocal(evDate).getMonth()];
+        (eventStats || []).forEach((e: any) => {
+          if (!e.date) return;
+          const m = months[parseDateLocal(e.date).getMonth()];
           if (!monthlyStats[m]) monthlyStats[m] = { total: 0, attended: 0 };
-          monthlyStats[m].total++;
-          if (r.status === "present" || r.status === "late") monthlyStats[m].attended++;
+          monthlyStats[m].total += Number(e.total_count || 0);
+          monthlyStats[m].attended += Number(e.attended_count || 0);
         });
 
         const monthKeys = Object.keys(monthlyStats).sort((a,b) => months.indexOf(a) - months.indexOf(b));

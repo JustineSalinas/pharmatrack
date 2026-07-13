@@ -435,6 +435,51 @@ $$;
 REVOKE ALL ON FUNCTION public.get_attendance_rate_totals() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_attendance_rate_totals() TO authenticated;
 
+-- Per-event attendance totals for the Reports pages' "Monthly Trend" and
+-- "Most Attended Events" — aggregated SERVER-SIDE, one row per event, instead
+-- of the caller fetching every matching attendance_records row (event_id,
+-- status, created_at) and tallying client-side. That per-record fetch is a
+-- multi-row response subject to the same per-query row cap documented above
+-- (confirmed at 1,000 rows) — and unlike the student-roster case, this one is
+-- ALREADY actively truncating: the last-6-months window currently holds all
+-- 1,198 attendance_records (this project is new enough that "last 6 months"
+-- is "all of it"), so the existing .limit(20000) query silently returns only
+-- 1,000 of them, undercounting Monthly Trend/Most-Attended-Events by ~200
+-- records today. Grouping by event server-side sidesteps this the same way
+-- get_attendance_rate_totals() does — but here we need per-EVENT rows (not a
+-- single sum), so the safety margin comes from event count growing far slower
+-- than scan count (currently 4 events vs. 1,198+ records), not from avoiding
+-- multi-row output entirely.
+CREATE OR REPLACE FUNCTION public.get_event_attendance_stats(cutoff TIMESTAMPTZ DEFAULT NULL)
+RETURNS TABLE (
+  event_id UUID,
+  name TEXT,
+  location TEXT,
+  date DATE,
+  total_count BIGINT,
+  attended_count BIGINT
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT
+    e.id AS event_id,
+    e.name,
+    e.location,
+    e.date,
+    COUNT(ar.id) AS total_count,
+    COUNT(ar.id) FILTER (WHERE ar.status IN ('present', 'late')) AS attended_count
+  FROM public.events e
+  JOIN public.attendance_records ar ON ar.event_id = e.id
+  WHERE public.is_council()
+    AND (cutoff IS NULL OR ar.created_at >= cutoff)
+  GROUP BY e.id, e.name, e.location, e.date;
+$$;
+REVOKE ALL ON FUNCTION public.get_event_attendance_stats(TIMESTAMPTZ) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_event_attendance_stats(TIMESTAMPTZ) TO authenticated;
+
 -- Refreshes the matview. SECURITY DEFINER so a throttled server route (service
 -- role) can trigger it. Plain (non-CONCURRENT) REFRESH because CONCURRENTLY
 -- can't run inside the transaction PostgREST/RPC wraps around it; the matview
