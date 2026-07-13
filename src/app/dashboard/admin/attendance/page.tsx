@@ -106,6 +106,7 @@ export default function AdminAttendance() {
   const [filterSection, setFilterSection] = useState("All");
   const [filterEvent, setFilterEvent] = useState("All");
   const [availableSections, setAvailableSections] = useState<string[]>([]);
+  const [availableEvents, setAvailableEvents] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -281,6 +282,22 @@ export default function AdminAttendance() {
     setAvailableSections(allSections);
   }, []);
 
+  // Distinct event names for the filter dropdown — fetched once on mount from
+  // the events table, NOT derived from the fetched records. Deriving from records
+  // makes an event vanish from the dropdown when its rows fall outside the current
+  // fetch window (e.g. a bulk-absent burst pushing older rows past the row cap —
+  // the "CPMT Orientation disappeared" symptom). Mirrors fetchSections.
+  const fetchEventNames = useCallback(async () => {
+    const { data: eventData } = await supabase
+      .from("events")
+      .select("name")
+      .order("date", { ascending: false });
+    const names = Array.from(
+      new Set((eventData || []).map((e: any) => e.name).filter(Boolean))
+    ) as string[];
+    setAvailableEvents(names);
+  }, []);
+
   // Initial load + auth guard — waits for DashboardLayout to resolve
   // currentUser via context instead of re-fetching it here.
   useEffect(() => {
@@ -291,7 +308,8 @@ export default function AdminAttendance() {
     }
     fetchAttendance();
     fetchSections();
-  }, [router, fetchAttendance, fetchSections, currentUser]);
+    fetchEventNames();
+  }, [router, fetchAttendance, fetchSections, fetchEventNames, currentUser]);
 
   // ── Real-time subscription: refresh log whenever attendance_records changes ──
   // Intentionally unfiltered on the subscription itself — any change re-runs
@@ -320,7 +338,12 @@ export default function AdminAttendance() {
       ? availableSections
       : Array.from(new Set(records.map((r) => r.section).filter((s) => s !== "N/A"))).sort();
 
-  const eventNames = Array.from(new Set(records.map((r) => r.subject).filter(Boolean))).sort();
+  // Prefer the events-table list (always complete) and fall back to the
+  // records-derived set only until it loads — mirrors `sections` above.
+  const eventNames =
+    availableEvents.length > 0
+      ? availableEvents
+      : Array.from(new Set(records.map((r) => r.subject).filter(Boolean))).sort();
 
   const filtered = records.filter((r) => {
     const sMatch = filterStatus === "All" || r.status.toLowerCase() === filterStatus.toLowerCase();
