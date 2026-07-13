@@ -86,6 +86,13 @@ export default function FacilitatorAttendance() {
   const [availableSections, setAvailableSections] = useState<string[]>([]);
   const [availableEvents, setAvailableEvents] = useState<{ id: string; name: string }[]>([]);
   const [eventScopedRows, setEventScopedRows] = useState<AttendanceRow[] | null>(null);
+  // Which event name `eventScopedRows` currently reflects — lets us tell
+  // "still loading the newly-selected event" apart from "loaded and stale"
+  // (e.g. switching directly from one specific event to another), so we never
+  // fall back to the capped `records` set (which can show a materially wrong
+  // count once total volume passes Supabase's row cap) or a previous event's
+  // numbers while the correct data is in flight.
+  const [eventScopedFor, setEventScopedFor] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Date Range Picker States
@@ -240,11 +247,13 @@ export default function FacilitatorAttendance() {
   useEffect(() => {
     if (filterEvent === "All") {
       setEventScopedRows(null);
+      setEventScopedFor(null);
       return;
     }
     const match = availableEvents.find((e) => e.name === filterEvent);
     if (!match) {
       setEventScopedRows(null);
+      setEventScopedFor(null);
       return;
     }
     let cancelled = false;
@@ -256,6 +265,7 @@ export default function FacilitatorAttendance() {
       .then(({ data, error }) => {
         if (cancelled || error) return;
         setEventScopedRows(formatAttendanceRows(data || []));
+        setEventScopedFor(filterEvent);
       });
     return () => {
       cancelled = true;
@@ -307,8 +317,14 @@ export default function FacilitatorAttendance() {
 
   // Base row set for filtering/stats: the event-scoped fetch (complete, not
   // row-cap-truncated) when a specific event is selected, otherwise the
-  // default bounded log fetch.
-  const baseRows = filterEvent !== "All" && eventScopedRows !== null ? eventScopedRows : records;
+  // default bounded log fetch. While the event-scoped fetch for the CURRENTLY
+  // selected event is still in flight (or holds a previous event's data),
+  // deliberately use an empty set rather than falling back to `records` — the
+  // capped set can be materially wrong (that's the bug this fetch fixes), so
+  // showing 0 briefly (with a loading spinner on the stat cards below) beats
+  // flashing an incorrect nonzero count.
+  const eventScopePending = filterEvent !== "All" && eventScopedFor !== filterEvent;
+  const baseRows = filterEvent === "All" ? records : eventScopePending ? [] : (eventScopedRows ?? []);
 
   const filtered = baseRows.filter((r) => {
     const sMatch = filterStatus === "All" || r.status.toLowerCase() === filterStatus.toLowerCase();
@@ -480,7 +496,11 @@ export default function FacilitatorAttendance() {
                 {item.icon}
               </div>
             </div>
-            <div style={{ fontSize: "32px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em", lineHeight: "1" }}>{item.count}</div>
+            {eventScopePending ? (
+              <Loader2 className="animate-spin" size={24} color="var(--muted)" />
+            ) : (
+              <div style={{ fontSize: "32px", fontWeight: 700, color: item.color, letterSpacing: "-0.02em", lineHeight: "1" }}>{item.count}</div>
+            )}
           </div>
         ))}
       </div>
@@ -588,7 +608,12 @@ export default function FacilitatorAttendance() {
               })}
             </tbody>
           </table>
-          {filtered.length === 0 && (
+          {eventScopePending ? (
+            <div style={{ padding: "64px 24px", textAlign: "center", color: "var(--muted)", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+              <Loader2 className="animate-spin" size={20} color="var(--muted)" />
+              <p style={{ fontSize: 13, margin: 0 }}>Loading {filterEvent}…</p>
+            </div>
+          ) : filtered.length === 0 && (
             <div style={{ padding: "64px 24px", textAlign: "center", color: "var(--muted)", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
               <div style={{ width: 48, height: 48, border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Search size={20} color="var(--muted)" />
