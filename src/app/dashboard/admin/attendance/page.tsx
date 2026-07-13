@@ -246,8 +246,14 @@ export default function AdminAttendance() {
           // Bound the log to the most recent records so this doesn't seq-scan
           // an ever-growing table on every load / realtime refresh. Backed by
           // idx_attendance_created.
+          //
+          // NOTE: the cap must stay well above a single day's roster volume. A
+          // bulk backfill can insert ~1 row per student per event in one burst
+          // (~2k rows for a day of orientations); a 2,000 cap let that burst
+          // fill the whole window and hide the day's real present/late scans
+          // (the "1 present" bug). 20,000 matches the backfill's own ceiling.
           .order("created_at", { ascending: false })
-          .limit(2000);
+          .limit(20000);
         data = res.data;
         error = res.error;
       }

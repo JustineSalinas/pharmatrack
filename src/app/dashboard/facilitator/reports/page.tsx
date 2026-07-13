@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, parseDateLocal } from "@/lib/supabase";
 import { getSystemConfig } from "@/lib/systemConfig";
 import { triggerSummaryRefresh } from "@/lib/attendance";
 import * as XLSX from "xlsx";
@@ -242,26 +242,26 @@ export default function FacultyReports() {
           { data: summaryData, error: sErr },
           { data: events, error: eErr },
           { data: records, error: rErr },
-          { data: sessions, error: sessErr },
           config
         ] = await Promise.all([
           supabase.rpc("get_student_attendance_summary"),
           supabase.from("events").select("id, name, location, date").gte("date", cutoffDate),
+          // Explicit high limit so the 6-month window isn't silently truncated by
+          // PostgREST's ~1000-row default (feeds both "Most Attended Events" and
+          // the event-based Monthly Trend below).
           supabase.from("attendance_records").select(`
             id,
             event_id,
             status,
             created_at,
             events ( name, location, date )
-          `).gte("created_at", cutoffIso),
-          supabase.from("qr_sessions").select(`date, section, attendance_records(status)`).gte("date", cutoffDate),
+          `).gte("created_at", cutoffIso).limit(20000),
           getSystemConfig().catch(() => null)
         ]);
 
         if (sErr) throw sErr;
         if (eErr) throw eErr;
         if (rErr) throw rErr;
-        if (sessErr) throw sessErr;
 
         const riskThreshold = config ? parseInt(config.minAttendance, 10) || 75 : 75;
         setMinAttendance(riskThreshold);
@@ -345,24 +345,19 @@ export default function FacultyReports() {
         const overallAvgRate = totalOverallRecords > 0 ? Math.round((totalOverallAttended / totalOverallRecords) * 100) : 0;
         setAvgAttendanceRate(overallAvgRate);
 
-        // Monthly Trend
+        // Monthly Trend — bucket each event-based attendance record by the month
+        // of its event's date (event-based, not the empty legacy qr_sessions).
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const monthlyStats: Record<string, { total: number, attended: number }> = {};
-        
-        const validSessions = sessions || [];
-        validSessions.forEach(s => {
-          if (!s.date) return;
-          const date = new Date(s.date);
-          const m = months[date.getMonth()];
+
+        (records || []).forEach((r: any) => {
+          const ev = r.events;
+          const evDate = Array.isArray(ev) ? ev[0]?.date : ev?.date;
+          if (!evDate) return;
+          const m = months[parseDateLocal(evDate).getMonth()];
           if (!monthlyStats[m]) monthlyStats[m] = { total: 0, attended: 0 };
-          
-          const recs = s.attendance_records as any[];
-          if (recs) {
-            recs.forEach(r => {
-              monthlyStats[m].total++;
-              if (r.status === "present" || r.status === "late") monthlyStats[m].attended++;
-            });
-          }
+          monthlyStats[m].total++;
+          if (r.status === "present" || r.status === "late") monthlyStats[m].attended++;
         });
 
         const monthKeys = Object.keys(monthlyStats).sort((a,b) => months.indexOf(a) - months.indexOf(b));

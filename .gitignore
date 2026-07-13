@@ -58,6 +58,8 @@ docs/*.html
 docs/*.docx
 docs/*.pdf
 docs/auth-setup.md
+docs/identify-malformed-qr-students.md
+docs/supabase-outage-resilience.md
 docs/superpowers/
 
 # student sign-in data / generated attendance imports (contain PII — never commit)

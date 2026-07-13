@@ -136,10 +136,18 @@ export default function FacilitatorAttendance() {
         `)
         // Bound the log to the most recent records so this doesn't seq-scan an
         // ever-growing table on every load / realtime refresh. Backed by
-        // idx_attendance_created. (Server-side date paging for older records is
-        // the Phase 2 follow-up.)
+        // idx_attendance_created.
+        //
+        // NOTE: the cap must stay well above a single day's roster volume. A
+        // bulk backfill can insert ~1 row per student per event in one burst
+        // (e.g. ~2k rows for one day of orientations); with a 2,000 cap that
+        // burst filled the entire window and pushed the day's real present/late
+        // scans OUT of it, so the log showed "1 present" while the data was
+        // intact in the DB. 20,000 matches the backfill's own ceiling and keeps
+        // a realistic multi-event window visible. (Server-side date paging for
+        // older records is the Phase 2 follow-up.)
         .order("created_at", { ascending: false })
-        .limit(2000);
+        .limit(20000);
 
       if (error) throw error;
 
