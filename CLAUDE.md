@@ -98,6 +98,33 @@ Supabase stores `date` columns as plain `YYYY-MM-DD`. Never use `new Date("YYYY-
 
 `schema.sql` is the source of truth for tables, RLS policies, and the `is_admin()`/`is_council()` functions — there's no migration framework, so schema changes are applied by hand via `scripts/apply_rls.js` or the Supabase SQL editor. Key tables: `users`, `student_profiles`, `facilitator_profiles`, `events`, `qr_sessions`, `attendance_records`, `system_config`, `products` (merch). `src/lib/schema.ts` holds the TypeScript types mirroring these tables; `src/lib/supabase.ts` additionally types the Supabase `Database` generic.
 
+### Row limits (Supabase/PostgREST)
+
+Supabase/PostgREST enforces a **hard per-query row cap of 1,000**, confirmed empirically on this
+project (2026-07 CPMT incident) — it silently overrides whatever `.limit()` the client requests
+(e.g. `.limit(20000)` still returns at most 1,000 rows) and applies uniformly to both table
+`.select()` calls and RPC calls that return multiple rows (`SETOF`/`TABLE`). There is no error;
+the query just quietly returns a subset.
+
+This bites any query that fetches rows and then counts/sums/tallies them **client-side** —
+`.length`, `.filter().length`, `.reduce()` — once the true result set for that query exceeds
+1,000 rows. It has already caused two real incidents: attendance-log stats undercounting after a
+bulk backfill, and Reports pages *non-deterministically* dropping an entire event's worth of
+records (no `ORDER BY` meant which rows survived the cap varied between calls).
+
+Rules of thumb when adding a new stat, count, or dashboard tile:
+- **Need a total/count?** Use `.select("*", { count: "exact", head: true })`, not
+  fetch-then-`.length`. `head: true` doesn't transfer rows and is never subject to the cap.
+- **Need a sum/aggregate over many rows (e.g. per-student or per-event totals)?** Aggregate
+  **server-side in SQL** and return one row per *entity* (student, event), not per *record* —
+  `attendance_records` grows fast (per scan) and can cross 1,000 within days for a single busy
+  event; `events`/`users` grow slowly and are safe to return one-row-per-entity indefinitely. See
+  `get_attendance_rate_totals()` and `get_event_attendance_stats()` in `schema.sql` for the
+  pattern (both `SECURITY DEFINER`, gated by `is_council()`, `STABLE`).
+- **Need a row list to display (e.g. "recent scans")?** Add an explicit, deliberate `.limit()`
+  sized for genuine display purposes (e.g. 500) and treat it as a "recent activity" feed, not a
+  source of truth for any count — never derive a stat from that same array.
+
 ### Tests
 
 Vitest tests live in `src/__tests__/` (API route handlers, mocking the Supabase chain manually — see `api.scan.test.ts` for the pattern) and `src/lib/__tests__/` (pure logic: `attendance.ts`, `merch.ts`, `validations.ts`). `vitest.config.ts` injects placeholder Supabase env vars so tests never hit a real backend.
