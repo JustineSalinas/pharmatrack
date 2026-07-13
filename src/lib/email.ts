@@ -231,7 +231,7 @@ export async function sendAbsenceNotifications(notifications: AbsenceNotificatio
         { label: "Event Name", value: n.eventName },
         { label: "Date", value: n.eventDateDisplay },
       ])}
-      <p>If you believe this is a mistake, please contact your facilitator or the Pharmacy Department as soon as possible.</p>
+      <p>If you believe this is a mistake, please contact support at <a href="mailto:cdg.solutionsph@gmail.com">cdg.solutionsph@gmail.com</a> as soon as possible.</p>
     `;
     return renderEmailShell({ eyebrow: "Absence Notice", bodyHtml });
   };

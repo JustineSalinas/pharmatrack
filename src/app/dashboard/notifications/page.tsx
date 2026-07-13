@@ -86,7 +86,7 @@ function buildAttendanceNotif(record: AttendanceRecord & {
 
   const body =
     record.status === "absent"
-      ? `You were marked absent from ${context}. Contact your facilitator if this is an error.`
+      ? `You were marked absent from ${context}. If this is an error, contact support at cdg.solutionsph@gmail.com.`
       : record.status === "late"
       ? `You were marked late for ${context}${timeIn ? ` — checked in at ${timeIn}` : ""}.`
       : `Attendance confirmed for ${context}${timeIn ? ` — checked in at ${timeIn}` : ""}.`;
