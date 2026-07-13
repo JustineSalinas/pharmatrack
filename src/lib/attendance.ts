@@ -36,12 +36,27 @@ export interface BackfillResult {
 
 const LOOKBACK_DAYS = 60;
 
+// Grace period after an event's check-in window closes before its no-shows are
+// auto-marked absent. This guards against the 2026-07-13 incident's Flaw B: an
+// event whose check_in_end is already in the past — because it was created with
+// placeholder times, or its window was edited after the fact — otherwise gets
+// its entire roster pre-marked `absent` *before* students have actually scanned.
+// The buffer gives staff time to finish scanning stragglers or correct a mis-set
+// window before genuine attendees are written off as absent. Deferring is cheap:
+// the backfill is idempotent and re-runs opportunistically, so absents just land
+// on a later run. (Attendees who do scan are additionally protected by the scan
+// API converting a pre-marked-absent placeholder into a real check-in.)
+const ABSENT_SETTLE_MS = 60 * 60_000; // 1 hour
+
 export async function backfillEventStatuses(): Promise<BackfillResult> {
   const result: BackfillResult = {
     eventsProcessed: 0, absentInserted: 0, incompleteUpdated: 0, errors: [], absentEntries: [],
   };
   const nowIso = new Date().toISOString();
   const lookbackIso = new Date(Date.now() - LOOKBACK_DAYS * 86400_000).toISOString();
+  // Events may only be absent-marked once their check-in window has been closed
+  // for at least ABSENT_SETTLE_MS (see the constant for why).
+  const absentCutoffMs = Date.now() - ABSENT_SETTLE_MS;
 
   // 1. Completed events within the lookback window.
   const { data: rawEvents, error: evErr } = await supabase
@@ -109,25 +124,31 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
     const existing = recordsByEvent.get(ev.id) ?? [];
     const recorded = new Set(existing.map((r: any) => r.student_id as string));
 
-    // 2b. Collect "absent" rows for any TARGETED student without a record.
+    // 2b. Collect "absent" rows for any TARGETED student without a record —
+    // but only once the check-in window has been closed past the settle margin
+    // (Flaw B guard: don't pre-mark a roster absent while staff may still be
+    // scanning stragglers or about to fix a mis-set/placeholder window).
     // Scope to the event's target_year_levels so a year-specific event only marks
     // its own year(s) absent; a null/empty target means the event is general
     // (e.g. CPMT) and applies to the whole student body.
-    const targetYears: string[] | null =
-      Array.isArray(ev.target_year_levels) && ev.target_year_levels.length > 0
-        ? (ev.target_year_levels as string[])
-        : null;
-    const eligible = targetYears
-      ? studentList.filter((s) => s.year && targetYears.includes(s.year))
-      : studentList;
-    const missing = eligible.filter((s) => !recorded.has(s.id));
-    for (const s of missing) {
-      absentRowsToInsert.push({
-        student_id: s.id,
-        event_id: ev.id,
-        status: "absent" as const,
-        remarks: "Auto-marked: no scan recorded during the event.",
-      });
+    const absentReady = new Date(ev.check_in_end).getTime() < absentCutoffMs;
+    if (absentReady) {
+      const targetYears: string[] | null =
+        Array.isArray(ev.target_year_levels) && ev.target_year_levels.length > 0
+          ? (ev.target_year_levels as string[])
+          : null;
+      const eligible = targetYears
+        ? studentList.filter((s) => s.year && targetYears.includes(s.year))
+        : studentList;
+      const missing = eligible.filter((s) => !recorded.has(s.id));
+      for (const s of missing) {
+        absentRowsToInsert.push({
+          student_id: s.id,
+          event_id: ev.id,
+          status: "absent" as const,
+          remarks: "Auto-marked: no scan recorded during the event.",
+        });
+      }
     }
 
     // 2c. Collect "incomplete" record IDs: time_in present, time_out missing, and the
@@ -150,20 +171,41 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
     }
   }
 
-  // 5. Batch insert the absent records (using batches of 500)
-  if (absentRowsToInsert.length > 0) {
-    for (let i = 0; i < absentRowsToInsert.length; i += 500) {
-      const slice = absentRowsToInsert.slice(i, i + 500);
-      const { error: insErr } = await supabase.from("attendance_records").insert(slice);
-      if (insErr) {
-        result.errors.push("absent insert failed: " + insErr.message);
-      } else {
-        result.absentInserted += slice.length;
-        result.absentEntries.push(
-          ...slice.map((r) => ({ studentId: r.student_id as string, eventId: r.event_id as string }))
-        );
-      }
+  // 5. Insert the absent rows with DO-NOTHING-on-conflict semantics.
+  //
+  // The only (student_id, event_id) uniqueness guard is a PARTIAL unique index
+  // (`... WHERE event_id IS NOT NULL`, schema.sql), which PostgREST's upsert
+  // can't target — so we can't lean on `.upsert({ ignoreDuplicates: true })`.
+  // A plain `.insert()` of a 500-row batch is also unsafe: one conflicting row
+  // (a concurrent scan/manual entry, or the documented double-claim backfill
+  // race) fails the *entire* statement, dropping up to 499 valid absents.
+  //
+  // Instead we insert in batches and, on a unique violation (23505), binary-
+  // split the batch and retry each half — isolating and skipping only the rows
+  // that already exist. Crucially this NEVER updates an existing row, so a real
+  // `present`/`late` record can never be clobbered back to `absent`.
+  const insertAbsentBatch = async (rows: typeof absentRowsToInsert): Promise<void> => {
+    if (rows.length === 0) return;
+    const { error: insErr } = await supabase.from("attendance_records").insert(rows);
+    if (!insErr) {
+      result.absentInserted += rows.length;
+      result.absentEntries.push(
+        ...rows.map((r) => ({ studentId: r.student_id as string, eventId: r.event_id as string }))
+      );
+      return;
     }
+    if (insErr.code === "23505") {
+      // A single row that still conflicts already exists → treat as DO NOTHING.
+      if (rows.length === 1) return;
+      const mid = Math.floor(rows.length / 2);
+      await insertAbsentBatch(rows.slice(0, mid));
+      await insertAbsentBatch(rows.slice(mid));
+      return;
+    }
+    result.errors.push("absent insert failed: " + insErr.message);
+  };
+  for (let i = 0; i < absentRowsToInsert.length; i += 500) {
+    await insertAbsentBatch(absentRowsToInsert.slice(i, i + 500));
   }
 
   // 6. Batch update the incomplete records (using batches of 500)

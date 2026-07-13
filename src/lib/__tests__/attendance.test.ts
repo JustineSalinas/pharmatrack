@@ -4,13 +4,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // attendance.ts imports the browser `supabase` client directly; each `.from(table)`
 // call gets its own chain instance so parallel selects/inserts/updates on the
 // same table (e.g. "attendance_records" is both read and written) don't collide.
+type WriteResult = { data: unknown; error: unknown }
+// A write result can be a static value, or a function of the rows passed to
+// insert()/update() — the latter lets a test simulate a real (partial) unique
+// violation, so the conflict-tolerant absent insert can be exercised.
+type WriteResolver = WriteResult | ((rows: unknown) => WriteResult)
+
 const selectResults: Record<string, { data: unknown; error: unknown }> = {}
-const writeResults: Record<string, { data: unknown; error: unknown }> = {}
+const writeResults: Record<string, WriteResolver> = {}
 
 function setSelect(table: string, value: { data: unknown; error: unknown }) {
   selectResults[table] = value
 }
-function setWrite(table: string, value: { data: unknown; error: unknown }) {
+function setWrite(table: string, value: WriteResolver) {
   writeResults[table] = value
 }
 function clearMockTables() {
@@ -24,6 +30,7 @@ const mockFetch = vi.fn()
 vi.mock('../supabase', () => {
   function buildChain(table: string) {
     let mode: 'select' | 'write' = 'select'
+    let lastRows: unknown = null
     const chain: Record<string, unknown> = {}
     chain.select = () => { mode = 'select'; return chain }
     chain.eq = () => chain
@@ -31,12 +38,16 @@ vi.mock('../supabase', () => {
     chain.gte = () => chain
     chain.in = () => chain
     chain.limit = () => chain
-    chain.insert = () => { mode = 'write'; return chain }
-    chain.update = () => { mode = 'write'; return chain }
+    chain.insert = (rows: unknown) => { mode = 'write'; lastRows = rows; return chain }
+    chain.update = (vals: unknown) => { mode = 'write'; lastRows = vals; return chain }
     chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {
-      const value = mode === 'select'
-        ? (selectResults[table] ?? { data: null, error: null })
-        : (writeResults[table] ?? { data: null, error: null })
+      let value: { data: unknown; error: unknown }
+      if (mode === 'select') {
+        value = selectResults[table] ?? { data: null, error: null }
+      } else {
+        const wr = writeResults[table]
+        value = typeof wr === 'function' ? wr(lastRows) : (wr ?? { data: null, error: null })
+      }
       return Promise.resolve(value).then(resolve, reject)
     }
     return chain
@@ -289,6 +300,91 @@ describe('backfillEventStatuses — absent scoping by target_year_levels (Issue 
 
     const result = await backfillEventStatuses()
     expect(result.absentInserted).toBe(2)
+  })
+})
+
+describe('backfillEventStatuses — premature-absent settle guard (Flaw B)', () => {
+  const EVENT_ID = 'event-1'
+
+  beforeEach(() => {
+    clearMockTables()
+    setSelect('users', { data: [{ id: 's1', student_profiles: { current_year: '1st Year' } }], error: null })
+    setSelect('attendance_records', { data: [], error: null }) // no records → s1 is a no-show
+    setWrite('attendance_records', { data: null, error: null })
+  })
+
+  it('does NOT mark absent while the check-in window closed within the settle margin', async () => {
+    const justClosed = new Date(Date.now() - 60 * 1000).toISOString() // 1 min ago
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: justClosed, check_out_start: null, check_out_end: null, check_in_only: false, target_year_levels: null }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(0)
+    expect(result.eventsProcessed).toBe(1) // event is still processed (for incomplete), just not absent-marked
+  })
+
+  it('marks absent once the window has been closed longer than the settle margin', async () => {
+    const wellClosed = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() // 3h ago
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: wellClosed, check_out_start: null, check_out_end: null, check_in_only: false, target_year_levels: null }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(1)
+  })
+})
+
+describe('backfillEventStatuses — conflict-tolerant absent insert (DO-NOTHING semantics)', () => {
+  const EVENT_ID = 'event-1'
+  const wellClosed = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() // past settle margin
+
+  beforeEach(() => {
+    clearMockTables()
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: wellClosed, check_out_start: null, check_out_end: null, check_in_only: false, target_year_levels: null }],
+      error: null,
+    })
+    setSelect('attendance_records', { data: [], error: null }) // stale read: sees no existing records
+  })
+
+  it('skips an already-existing (student,event) row instead of failing the whole batch', async () => {
+    setSelect('users', {
+      data: [
+        { id: 's1', student_profiles: { current_year: '1st Year' } },
+        { id: 's2', student_profiles: { current_year: '1st Year' } },
+        { id: 's3', student_profiles: { current_year: '1st Year' } },
+      ],
+      error: null,
+    })
+    // Simulate a real partial unique violation: s1 already has a row (a concurrent
+    // scan/manual entry, or the documented double-claim backfill race). Any insert
+    // batch containing s1 gets a 23505; batches without it succeed.
+    const existing = new Set<string>(['s1|event-1'])
+    setWrite('attendance_records', (rows) => {
+      const arr = rows as Array<{ student_id: string; event_id: string }>
+      if (arr.some((r) => existing.has(`${r.student_id}|${r.event_id}`))) {
+        return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } }
+      }
+      for (const r of arr) existing.add(`${r.student_id}|${r.event_id}`)
+      return { data: null, error: null }
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(2) // s2 + s3 inserted; s1 skipped, not overwritten
+    expect(result.absentEntries.map((e) => e.studentId).sort()).toEqual(['s2', 's3'])
+    expect(result.errors).toEqual([]) // a unique violation is not surfaced as an error
+  })
+
+  it('still surfaces a genuine (non-conflict) insert error', async () => {
+    setSelect('users', { data: [{ id: 's1', student_profiles: { current_year: '1st Year' } }], error: null })
+    setWrite('attendance_records', { data: null, error: { code: '42501', message: 'permission denied' } })
+
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(0)
+    expect(result.errors.length).toBeGreaterThan(0)
   })
 })
 

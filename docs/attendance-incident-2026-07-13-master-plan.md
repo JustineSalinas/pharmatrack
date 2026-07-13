@@ -11,6 +11,8 @@
 > | Item | Status |
 > |------|--------|
 > | Issue 0 — backfill scoped to `target_year_levels` | ✅ implemented + tests (`src/lib/attendance.ts`) |
+> | Issue 0 — **premature-backfill guard** (settle margin before absent-marking, Flaw B) | ✅ implemented + tests (`src/lib/attendance.ts`) |
+> | Issue 0 — **conflict-tolerant absent insert** (DO-NOTHING semantics; can't overwrite a `present` row) | ✅ implemented + tests (`src/lib/attendance.ts`) |
 > | Issue 1 — scan API converts `time_in IS NULL` placeholder → check-in | ✅ implemented + tests (`src/app/api/scan/route.ts`) |
 > | Issue 4 — backfill no longer marks `incomplete` without a check-out window | ✅ implemented + tests (`src/lib/attendance.ts`) |
 > | Issue 2 — attendance-log window cap 2,000 → 20,000 (both pages) | ✅ implemented (interim; full count-based redesign deferred) |
@@ -18,8 +20,22 @@
 > | CPMT `present` restore / placeholder `DELETE` / `late`→`present` | ⏳ manual SQL (below) — not code |
 >
 > **Deferred:** Issue 2's fully robust count-based stat cards / event-scoped table (needs live UI
-> testing); Issue 0's optional "premature backfill" guard. The 20,000 cap resolves the reported
-> "1 present" truncation for current data volume (2,681 rows) with headroom.
+> testing). The 20,000 cap resolves the reported "1 present" truncation for current data volume
+> (2,681 rows) with headroom.
+>
+> ### Update — premature-backfill guard + conflict-tolerant insert landed (2026-07-13)
+> Two further `backfillEventStatuses` hardenings shipped on this branch:
+> - **Flaw B guard (settle margin):** no-shows are auto-marked `absent` only once an event's
+>   check-in window has been closed for at least `ABSENT_SETTLE_MS` (1 hour, tunable). Stops an
+>   event whose `check_in_end` is already past (placeholder times, or a window edited after the
+>   fact) from having its whole roster pre-marked absent *before* students scan. Absent-marking is
+>   idempotent, so it just lands on a later run.
+> - **Conflict-tolerant absent insert:** the batch insert now binary-splits and retries on a
+>   `23505` unique violation, skipping only already-existing rows with true `DO NOTHING` semantics
+>   — a single concurrent scan/manual entry (or the double-claim race) no longer drops up to 499
+>   valid absents, and an existing `present`/`late` row can never be clobbered back to `absent`. A
+>   raw `.upsert()` is not usable here: the `(student_id, event_id)` guard is a *partial* unique
+>   index (`WHERE event_id IS NOT NULL`) that PostgREST can't target, so the logic lives in app code.
 
 ---
 
@@ -148,9 +164,15 @@ The fix below still needs to be completed.
 2. **Make auto-absents non-blocking** (the durable safety net): implement Issue 1's scan-API
    branch so an existing `absent` row with `time_in IS NULL` is convertible to a check-in. Then
    even if backfill (or a window edit) pre-creates absents, a real scan still succeeds.
-3. **Optional guard against premature backfill.** Consider skipping events whose `date` is today
-   and whose window may still be re-opened, or requiring `check_out_end`/a "finalized" flag before
-   inserting absents — so an event being set up ahead of time isn't pre-filled with absents.
+3. **Guard against premature backfill.** ✅ **Implemented (2026-07-13).** No-shows are auto-marked
+   `absent` only once the event's check-in window has been closed for at least `ABSENT_SETTLE_MS`
+   (1 hour, tunable) — so an event being set up ahead of time, or one whose window was edited after
+   the fact, isn't pre-filled with absents while staff may still be scanning. Absent inserts also
+   now use DO-NOTHING-on-conflict semantics (binary-split retry on `23505`) so they can neither
+   drop valid absents on a race nor overwrite a real `present`/`late` record. Tests in
+   `src/lib/__tests__/attendance.test.ts`. Note: the margin narrows but doesn't fully eliminate a
+   window set *hours* in the past — the durable protections remain the scan→placeholder conversion
+   (Issue 1) and the operational rule of not editing windows mid-event.
 4. Add tests in `src/lib/__tests__/attendance.test.ts`: (a) a year-specific event only marks its
    target year absent; (b) a general (`null`) event marks all years.
 
