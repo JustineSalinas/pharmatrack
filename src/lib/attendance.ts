@@ -42,7 +42,7 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   // 1. Completed events within the lookback window.
   const { data: rawEvents, error: evErr } = await supabase
     .from("events")
-    .select("id, check_in_end, check_out_end, check_in_only")
+    .select("id, check_in_end, check_out_end, check_in_only, target_year_levels")
     .lt("check_in_end", nowIso)
     .gte("check_in_end", lookbackIso);
   if (evErr) { result.errors.push("events: " + evErr.message); return result; }
