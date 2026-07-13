@@ -106,7 +106,8 @@ export default function AdminAttendance() {
   const [filterSection, setFilterSection] = useState("All");
   const [filterEvent, setFilterEvent] = useState("All");
   const [availableSections, setAvailableSections] = useState<string[]>([]);
-  const [availableEvents, setAvailableEvents] = useState<string[]>([]);
+  const [availableEvents, setAvailableEvents] = useState<{ id: string; name: string }[]>([]);
+  const [eventScopedRows, setEventScopedRows] = useState<AttendanceRow[] | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -290,13 +291,49 @@ export default function AdminAttendance() {
   const fetchEventNames = useCallback(async () => {
     const { data: eventData } = await supabase
       .from("events")
-      .select("name")
+      .select("id, name")
       .order("date", { ascending: false });
-    const names = Array.from(
-      new Set((eventData || []).map((e: any) => e.name).filter(Boolean))
-    ) as string[];
-    setAvailableEvents(names);
+    setAvailableEvents(
+      (eventData || []).filter((e: any) => e.name) as { id: string; name: string }[]
+    );
   }, []);
+
+  // When a specific event is selected, fetch ITS rows directly by event_id
+  // (indexed, unbounded by student-count-scale limit) instead of relying on
+  // the default log fetch below, which orders by created_at and is capped —
+  // Supabase/PostgREST enforces a hard per-query row ceiling (1,000)
+  // regardless of the .limit() the client requests. Once total attendance
+  // volume crosses that ceiling, an event whose rows were UPDATED (not
+  // re-inserted) — e.g. a reconciliation flipping absent/incomplete to
+  // present — keeps its OLD created_at and can fall outside the "most
+  // recent N" window, silently under-counting that event's stats even
+  // though the underlying data is correct. Querying by event_id sidesteps
+  // the created_at ordering entirely, same technique already used in the
+  // selectedDate branch below.
+  useEffect(() => {
+    if (filterEvent === "All") {
+      setEventScopedRows(null);
+      return;
+    }
+    const match = availableEvents.find((e) => e.name === filterEvent);
+    if (!match) {
+      setEventScopedRows(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("attendance_records")
+      .select(ATTENDANCE_SELECT)
+      .eq("event_id", match.id)
+      .limit(5000)
+      .then(({ data, error }) => {
+        if (cancelled || error) return;
+        setEventScopedRows(formatAttendanceRows(data || []));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filterEvent, availableEvents]);
 
   // Initial load + auth guard — waits for DashboardLayout to resolve
   // currentUser via context instead of re-fetching it here.
@@ -342,10 +379,15 @@ export default function AdminAttendance() {
   // records-derived set only until it loads — mirrors `sections` above.
   const eventNames =
     availableEvents.length > 0
-      ? availableEvents
+      ? Array.from(new Set(availableEvents.map((e) => e.name)))
       : Array.from(new Set(records.map((r) => r.subject).filter(Boolean))).sort();
 
-  const filtered = records.filter((r) => {
+  // Base row set for filtering/stats: the event-scoped fetch (complete, not
+  // row-cap-truncated) when a specific event is selected, otherwise the
+  // default bounded log fetch.
+  const baseRows = filterEvent !== "All" && eventScopedRows !== null ? eventScopedRows : records;
+
+  const filtered = baseRows.filter((r) => {
     const sMatch = filterStatus === "All" || r.status.toLowerCase() === filterStatus.toLowerCase();
     const secMatch = filterSection === "All" || r.section === filterSection;
     const eventMatch = filterEvent === "All" || r.subject === filterEvent;

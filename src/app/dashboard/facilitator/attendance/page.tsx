@@ -24,6 +24,56 @@ interface AttendanceRow {
   rawDate: string;
 }
 
+// Join BOTH events (scanner-based) and qr_sessions (self check-in). The scan
+// API writes event_id; the check_in_student RPC writes session_id.
+const ATTENDANCE_SELECT = `
+  id,
+  time_in,
+  time_out,
+  status,
+  event_id,
+  session_id,
+  events ( name, date, location ),
+  qr_sessions ( subject, date, section ),
+  users!student_id ( full_name, email, student_profiles ( section ) )
+`;
+
+function formatAttendanceRows(data: any[]): AttendanceRow[] {
+  return (data || []).map((r: any) => {
+    const uData = r.users;
+    const ev = r.events;         // school-wide event (scanner)
+    const sess = r.qr_sessions;  // classroom session (self check-in)
+
+    // Prefer event data when event_id is set; fall back to session data
+    const subject = ev?.name || sess?.subject || "General Event";
+    const studentProfiles = uData?.student_profiles;
+    const studentSection = Array.isArray(studentProfiles) ? studentProfiles[0]?.section : studentProfiles?.section;
+    const section = studentSection || sess?.section || "N/A";
+    const rawDate = ev?.date || sess?.date || "";
+    const displayDate = rawDate
+      ? parseDateLocal(rawDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "—";
+
+    return {
+      id: r.id,
+      name: uData?.full_name || "Unknown Student",
+      email: uData?.email || "",
+      subject,
+      section,
+      date: rawDate,
+      displayDate,
+      timeIn: r.time_in
+        ? formatManilaTime(r.time_in, { hour: "numeric", minute: "2-digit" })
+        : "—",
+      timeOut: r.time_out
+        ? formatManilaTime(r.time_out, { hour: "numeric", minute: "2-digit" })
+        : "—",
+      status: r.status,
+      rawDate,
+    };
+  });
+}
+
 export default function FacilitatorAttendance() {
   const [records, setRecords] = useState<AttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +84,8 @@ export default function FacilitatorAttendance() {
   const [filterSection, setFilterSection] = useState("All");
   const [filterEvent, setFilterEvent] = useState("All");
   const [availableSections, setAvailableSections] = useState<string[]>([]);
-  const [availableEvents, setAvailableEvents] = useState<string[]>([]);
+  const [availableEvents, setAvailableEvents] = useState<{ id: string; name: string }[]>([]);
+  const [eventScopedRows, setEventScopedRows] = useState<AttendanceRow[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Date Range Picker States
@@ -120,73 +171,26 @@ export default function FacilitatorAttendance() {
     else setRefreshing(true);
 
     try {
-      // Join BOTH events (scanner-based) and qr_sessions (self check-in).
-      // The scan API writes event_id; the check_in_student RPC writes session_id.
       const { data, error } = await supabase
         .from("attendance_records")
-        .select(`
-          id,
-          time_in,
-          time_out,
-          status,
-          event_id,
-          session_id,
-          events ( name, date, location ),
-          qr_sessions ( subject, date, section ),
-          users!student_id ( full_name, email, student_profiles ( section ) )
-        `)
+        .select(ATTENDANCE_SELECT)
         // Bound the log to the most recent records so this doesn't seq-scan an
         // ever-growing table on every load / realtime refresh. Backed by
         // idx_attendance_created.
         //
-        // NOTE: the cap must stay well above a single day's roster volume. A
-        // bulk backfill can insert ~1 row per student per event in one burst
-        // (e.g. ~2k rows for one day of orientations); with a 2,000 cap that
-        // burst filled the entire window and pushed the day's real present/late
-        // scans OUT of it, so the log showed "1 present" while the data was
-        // intact in the DB. 20,000 matches the backfill's own ceiling and keeps
-        // a realistic multi-event window visible. (Server-side date paging for
-        // older records is the Phase 2 follow-up.)
+        // NOTE: Supabase/PostgREST also enforces its own hard per-query row
+        // ceiling (1,000) that silently overrides whatever .limit() is
+        // requested here — this fetch is inherently a "most recent N" window,
+        // not a complete picture once total volume passes that ceiling. When
+        // a specific event is selected, the dedicated event-scoped fetch below
+        // (by event_id) is used instead so stats/table for that event are
+        // exact regardless of this cap.
         .order("created_at", { ascending: false })
         .limit(20000);
 
       if (error) throw error;
 
-      const formatted: AttendanceRow[] = (data || []).map((r: any) => {
-        const uData = r.users;
-        const ev = r.events;         // school-wide event (scanner)
-        const sess = r.qr_sessions;  // classroom session (self check-in)
-
-        // Prefer event data when event_id is set; fall back to session data
-        const subject = ev?.name || sess?.subject || "General Event";
-        const studentProfiles = uData?.student_profiles;
-        const studentSection = Array.isArray(studentProfiles) ? studentProfiles[0]?.section : studentProfiles?.section;
-        const section = studentSection || sess?.section || "N/A";
-        const rawDate = ev?.date || sess?.date || "";
-        const displayDate = rawDate
-          ? parseDateLocal(rawDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-          : "—";
-
-        return {
-          id: r.id,
-          name: uData?.full_name || "Unknown Student",
-          email: uData?.email || "",
-          subject,
-          section,
-          date: rawDate,
-          displayDate,
-          timeIn: r.time_in
-            ? formatManilaTime(r.time_in, { hour: "numeric", minute: "2-digit" })
-            : "—",
-          timeOut: r.time_out
-            ? formatManilaTime(r.time_out, { hour: "numeric", minute: "2-digit" })
-            : "—",
-          status: r.status,
-          rawDate,
-        };
-      });
-
-      setRecords(formatted);
+      setRecords(formatAttendanceRows(data || []));
     } catch (err) {
       console.error("Error fetching attendance", err);
     } finally {
@@ -215,13 +219,48 @@ export default function FacilitatorAttendance() {
   const fetchEventNames = useCallback(async () => {
     const { data: eventData } = await supabase
       .from("events")
-      .select("name")
+      .select("id, name")
       .order("date", { ascending: false });
-    const names = Array.from(
-      new Set((eventData || []).map((e: any) => e.name).filter(Boolean))
-    ) as string[];
-    setAvailableEvents(names);
+    setAvailableEvents(
+      (eventData || []).filter((e: any) => e.name) as { id: string; name: string }[]
+    );
   }, []);
+
+  // When a specific event is selected, fetch ITS rows directly by event_id
+  // (indexed, unbounded by student-count-scale limit) instead of relying on
+  // the default log fetch above, which orders by created_at and is capped —
+  // Supabase/PostgREST enforces a hard per-query row ceiling (1,000)
+  // regardless of the .limit() the client requests. Once total attendance
+  // volume crosses that ceiling, an event whose rows were UPDATED (not
+  // re-inserted) — e.g. a reconciliation flipping absent/incomplete to
+  // present — keeps its OLD created_at and can fall outside the "most
+  // recent N" window, silently under-counting that event's stats even
+  // though the underlying data is correct. Querying by event_id sidesteps
+  // the created_at ordering entirely.
+  useEffect(() => {
+    if (filterEvent === "All") {
+      setEventScopedRows(null);
+      return;
+    }
+    const match = availableEvents.find((e) => e.name === filterEvent);
+    if (!match) {
+      setEventScopedRows(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("attendance_records")
+      .select(ATTENDANCE_SELECT)
+      .eq("event_id", match.id)
+      .limit(5000)
+      .then(({ data, error }) => {
+        if (cancelled || error) return;
+        setEventScopedRows(formatAttendanceRows(data || []));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filterEvent, availableEvents]);
 
   // Initial load
   useEffect(() => {
@@ -263,10 +302,15 @@ export default function FacilitatorAttendance() {
   // records-derived set only until it loads — mirrors `sections` above.
   const events =
     availableEvents.length > 0
-      ? availableEvents
+      ? Array.from(new Set(availableEvents.map((e) => e.name)))
       : Array.from(new Set(records.map((r) => r.subject).filter(Boolean))).sort();
 
-  const filtered = records.filter((r) => {
+  // Base row set for filtering/stats: the event-scoped fetch (complete, not
+  // row-cap-truncated) when a specific event is selected, otherwise the
+  // default bounded log fetch.
+  const baseRows = filterEvent !== "All" && eventScopedRows !== null ? eventScopedRows : records;
+
+  const filtered = baseRows.filter((r) => {
     const sMatch = filterStatus === "All" || r.status.toLowerCase() === filterStatus.toLowerCase();
     const secMatch = filterSection === "All" || r.section === filterSection;
     const eventMatch = filterEvent === "All" || r.subject === filterEvent;
