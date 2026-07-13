@@ -2,13 +2,17 @@
  * Backfills the two attendance statuses the scanner can't set in real time:
  *
  *   • Absent     — event check-in window has closed and the student has no
- *                  attendance_record for it.
+ *                  attendance_record for it. Scoped to the event's
+ *                  target_year_levels (a year-specific event only marks its own
+ *                  year(s) absent); a null/empty target means the whole school.
  *   • Incomplete — record has a time_in but no time_out, and the check-out
  *                  deadline has passed (the event's check_out_end if set,
  *                  otherwise 4 hours after that record's own time_in).
- *                  Skipped entirely for events flagged check_in_only — those
- *                  never require a check-out, so their records stay whatever
- *                  check-in status they got.
+ *                  Only applies to events that HAVE a check-out window
+ *                  (check_out_start/check_out_end); events with no check-out
+ *                  window — and events flagged check_in_only — never expected a
+ *                  check-out, so a lone check-in stays whatever status it got
+ *                  (never flipped to incomplete).
  *
  * Designed to be safe and idempotent:
  *   - Only touches events whose check_in_end is strictly in the past.
@@ -42,7 +46,7 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   // 1. Completed events within the lookback window.
   const { data: rawEvents, error: evErr } = await supabase
     .from("events")
-    .select("id, check_in_end, check_out_end, check_in_only, target_year_levels")
+    .select("id, check_in_end, check_out_start, check_out_end, check_in_only, target_year_levels")
     .lt("check_in_end", nowIso)
     .gte("check_in_end", lookbackIso);
   if (evErr) { result.errors.push("events: " + evErr.message); return result; }
@@ -55,18 +59,25 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   const events = rawEvents.filter((ev: any) => !ev.check_out_end || new Date(ev.check_out_end) < new Date(nowIso));
   if (events.length === 0) return result;
 
-  // 2. All approved students (target set for "absent" calculation).
+  // 2. All approved students (target set for "absent" calculation), each with
+  // their year level so absents can be scoped to an event's target_year_levels
+  // (a "1st Year Orientation" must not mark 2nd–4th years absent). current_year
+  // lives on student_profiles, so embed it via the FK.
   // Defensive cap — well above current enrollment, just a circuit breaker
   // against this becoming an unbounded scan as the student body grows.
   const { data: students, error: stuErr } = await supabase
     .from("users")
-    .select("id")
+    .select("id, student_profiles(current_year)")
     .eq("account_type", "student")
     .eq("status", "approved")
     .limit(5000);
   if (stuErr) { result.errors.push("students: " + stuErr.message); return result; }
-  const studentIds = (students ?? []).map((s: any) => s.id as string);
-  if (studentIds.length === 0) return result;
+  const studentList = (students ?? []).map((s: any) => {
+    const sp = s.student_profiles;
+    const year = Array.isArray(sp) ? sp[0]?.current_year : sp?.current_year;
+    return { id: s.id as string, year: (year ?? null) as string | null };
+  });
+  if (studentList.length === 0) return result;
 
   // 3. Fetch ALL existing attendance records for these events in a SINGLE query!
   // Defensive cap for the same reason as above — the 60-day event window
@@ -98,11 +109,21 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
     const existing = recordsByEvent.get(ev.id) ?? [];
     const recorded = new Set(existing.map((r: any) => r.student_id as string));
 
-    // 2b. Collect "absent" rows for any student without a record.
-    const missing = studentIds.filter((sid) => !recorded.has(sid));
-    for (const sid of missing) {
+    // 2b. Collect "absent" rows for any TARGETED student without a record.
+    // Scope to the event's target_year_levels so a year-specific event only marks
+    // its own year(s) absent; a null/empty target means the event is general
+    // (e.g. CPMT) and applies to the whole student body.
+    const targetYears: string[] | null =
+      Array.isArray(ev.target_year_levels) && ev.target_year_levels.length > 0
+        ? (ev.target_year_levels as string[])
+        : null;
+    const eligible = targetYears
+      ? studentList.filter((s) => s.year && targetYears.includes(s.year))
+      : studentList;
+    const missing = eligible.filter((s) => !recorded.has(s.id));
+    for (const s of missing) {
       absentRowsToInsert.push({
-        student_id: sid,
+        student_id: s.id,
         event_id: ev.id,
         status: "absent" as const,
         remarks: "Auto-marked: no scan recorded during the event.",
@@ -110,13 +131,14 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
     }
 
     // 2c. Collect "incomplete" record IDs: time_in present, time_out missing, and the
-    // check-out deadline has passed. If the event defines an explicit check_out_end,
-    // use that; otherwise fall back to 4 hours after this record's own time_in —
-    // mirroring the hard check-out cap the scan API itself enforces ("more than 4
-    // hours since check-in") — so events with no explicit check-out window still
-    // eventually get marked incomplete instead of never. check_in_only events opt
-    // out of this entirely — checkout is never expected, so there's nothing to mark.
-    const incomplete = ev.check_in_only ? [] : existing.filter((r: any) => {
+    // check-out deadline has passed. Only for events that actually HAVE a check-out
+    // window (check_out_start or check_out_end set) — an event with no check-out
+    // window never expected a check-out, so a lone check-in is complete, not
+    // "incomplete". This also protects check-in-only attendees whose check_in_only
+    // flag was toggled off after the fact (they'd otherwise be wrongly flipped to
+    // incomplete). check_in_only events opt out explicitly for the same reason.
+    const hasCheckoutWindow = !!(ev.check_out_start || ev.check_out_end);
+    const incomplete = (ev.check_in_only || !hasCheckoutWindow) ? [] : existing.filter((r: any) => {
       if (!r.time_in || r.time_out || r.status === "incomplete" || r.status === "absent") return false;
       const deadline = ev.check_out_end
         ? new Date(ev.check_out_end)

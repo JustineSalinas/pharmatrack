@@ -163,10 +163,10 @@ describe('backfillEventStatuses — incomplete marking', () => {
     expect(result.absentInserted).toBe(0)
   })
 
-  it('marks incomplete via the 4-hour fallback when the event has no check_out_end', async () => {
+  it('marks incomplete via the 4-hour fallback when a check-out window exists (check_out_start set) but no check_out_end', async () => {
     const timeIn5hAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
     setSelect('events', {
-      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: null, check_in_only: false }],
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_start: pastCheckInEnd, check_out_end: null, check_in_only: false }],
       error: null,
     })
     setSelect('attendance_records', {
@@ -178,10 +178,26 @@ describe('backfillEventStatuses — incomplete marking', () => {
     expect(result.incompleteUpdated).toBe(1)
   })
 
-  it('does not mark incomplete yet when no check_out_end and under 4 hours have passed', async () => {
-    const timeIn1hAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
+  it('does NOT mark incomplete for an event with no check-out window at all, even well past 4h (Issue 4)', async () => {
+    const timeIn5hAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
     setSelect('events', {
-      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_end: null, check_in_only: false }],
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: null, check_in_only: false }],
+      error: null,
+    })
+    setSelect('attendance_records', {
+      data: [{ id: RECORD_ID, student_id: STUDENT_ID, event_id: EVENT_ID, time_in: timeIn5hAgo, time_out: null, status: 'present' }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.incompleteUpdated).toBe(0)
+  })
+
+  it('does not mark incomplete yet when the check_out_end deadline has not passed', async () => {
+    const timeIn1hAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
+    const futureCheckOutEnd = new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1h from now
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_start: pastCheckInEnd, check_out_end: futureCheckOutEnd, check_in_only: false }],
       error: null,
     })
     setSelect('attendance_records', {
@@ -206,6 +222,73 @@ describe('backfillEventStatuses — incomplete marking', () => {
 
     const result = await backfillEventStatuses()
     expect(result.incompleteUpdated).toBe(0)
+  })
+})
+
+describe('backfillEventStatuses — absent scoping by target_year_levels (Issue 0)', () => {
+  const EVENT_ID = 'event-1'
+  const pastCheckInEnd = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+
+  beforeEach(() => {
+    clearMockTables()
+    // No existing attendance records → every eligible student is "missing" → absent.
+    setSelect('attendance_records', { data: [], error: null })
+    setWrite('attendance_records', { data: null, error: null })
+  })
+
+  it('marks absent only for students in the event target year(s), not the whole school', async () => {
+    setSelect('users', {
+      data: [
+        { id: 's1', student_profiles: { current_year: '1st Year' } },
+        { id: 's2', student_profiles: { current_year: '2nd Year' } },
+        { id: 's3', student_profiles: [{ current_year: '1st Year' }] }, // array (to-many) shape
+        { id: 's4', student_profiles: { current_year: '4th Year' } },
+      ],
+      error: null,
+    })
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: null, check_in_only: false, target_year_levels: ['1st Year'] }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(2) // s1 + s3 only
+    expect(result.absentEntries.map((e) => e.studentId).sort()).toEqual(['s1', 's3'])
+  })
+
+  it('marks absent for all years when target_year_levels is null (general event)', async () => {
+    setSelect('users', {
+      data: [
+        { id: 's1', student_profiles: { current_year: '1st Year' } },
+        { id: 's2', student_profiles: { current_year: '2nd Year' } },
+        { id: 's3', student_profiles: { current_year: '3rd Year' } },
+      ],
+      error: null,
+    })
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: null, check_in_only: false, target_year_levels: null }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(3)
+  })
+
+  it('marks absent for all years when target_year_levels is an empty array', async () => {
+    setSelect('users', {
+      data: [
+        { id: 's1', student_profiles: { current_year: '1st Year' } },
+        { id: 's2', student_profiles: { current_year: '2nd Year' } },
+      ],
+      error: null,
+    })
+    setSelect('events', {
+      data: [{ id: EVENT_ID, check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: null, check_in_only: false, target_year_levels: [] }],
+      error: null,
+    })
+
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(2)
   })
 })
 

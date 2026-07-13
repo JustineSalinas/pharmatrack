@@ -304,6 +304,71 @@ describe("POST /api/scan", () => {
     expect(res.status).toBe(400);
   });
 
+  // ── Check-in from a pre-marked "absent" placeholder (Issue 1) ────────────
+
+  it("converts a pre-marked absent placeholder (no time_in) into a check-in instead of 409", async () => {
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = { data: makeOpenEvent(), error: null };
+    // A backfill placeholder: status absent, no time_in / time_out.
+    tableResults["attendance_records"] = {
+      data: {
+        id: "placeholder-1",
+        student_id: STUDENT_ID,
+        event_id: EVENT_ID,
+        status: "absent",
+        time_in: null,
+        time_out: null,
+        remarks: "Auto-marked: no scan recorded during the event.",
+      },
+      error: null,
+    };
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.action).toBe("time_in");
+    expect(json.status).toBe("present");
+    // Converts the existing row in place — updates, never inserts a duplicate.
+    expect(mockUpdateRecord).toHaveBeenCalledWith(
+      "attendance_records",
+      expect.objectContaining({ status: "present", time_in: expect.any(String) }),
+    );
+    expect(mockInsertRecord).not.toHaveBeenCalled();
+  });
+
+  it("converts a placeholder to 'late' when scanned after the late cutoff", async () => {
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = { data: makeLateEvent(), error: null };
+    tableResults["attendance_records"] = {
+      data: { id: "placeholder-1", student_id: STUDENT_ID, event_id: EVENT_ID, status: "absent", time_in: null, time_out: null },
+      error: null,
+    };
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.status).toBe("late");
+    expect(mockUpdateRecord).toHaveBeenCalledWith(
+      "attendance_records",
+      expect.objectContaining({ status: "late" }),
+    );
+  });
+
+  it("leaves a placeholder absent (400) when the check-in window has already closed", async () => {
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = { data: makeClosedEvent(), error: null };
+    tableResults["attendance_records"] = {
+      data: { id: "placeholder-1", student_id: STUDENT_ID, event_id: EVENT_ID, status: "absent", time_in: null, time_out: null },
+      error: null,
+    };
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID }));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toMatch(/window has closed/i);
+    expect(mockUpdateRecord).not.toHaveBeenCalled();
+  });
+
   // ── Check-out: second scan (time out) ──────────────────────────────────
 
   it("returns 409 when student has already checked in and out", async () => {

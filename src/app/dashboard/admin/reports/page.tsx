@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, parseDateLocal } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { getSystemConfig } from "@/lib/systemConfig";
 import { triggerSummaryRefresh } from "@/lib/attendance";
@@ -158,9 +158,15 @@ export default function AdminReports() {
         }
 
         void triggerSummaryRefresh();
-        const [ { data: studentStats, error: sErr }, { data: sessions, error: rErr }, config ] = await Promise.all([
+        // Monthly trend + Total Sessions come from EVENT-based attendance
+        // (attendance_records → events), not the legacy qr_sessions table, which
+        // is empty now that all attendance flows through the scanner/events path.
+        // Explicit high limit so a 6-month window isn't silently truncated by
+        // PostgREST's ~1000-row default (same class as the Issue 2 fix).
+        const cutoffIso = (() => { const d = new Date(); d.setMonth(d.getMonth() - 6); return d.toISOString(); })();
+        const [ { data: studentStats, error: sErr }, { data: eventRecords, error: rErr }, config ] = await Promise.all([
            supabase.rpc("get_student_attendance_summary"),
-           supabase.from("qr_sessions").select(`date, section, attendance_records(status)`).gte("date", (() => { const d = new Date(); d.setMonth(d.getMonth() - 6); return d.toISOString().slice(0, 10); })()),
+           supabase.from("attendance_records").select(`status, event_id, events!inner(date)`).gte("created_at", cutoffIso).limit(20000),
            getSystemConfig().catch(() => null)
         ]);
 
@@ -168,7 +174,7 @@ export default function AdminReports() {
         if (rErr) throw rErr;
 
         const validStats = studentStats || [];
-        const validSessions = sessions || [];
+        const validRecords = eventRecords || [];
 
         const riskThreshold = config ? parseInt(config.minAttendance, 10) || 75 : 75;
         setMinAttendance(riskThreshold);
@@ -220,23 +226,21 @@ export default function AdminReports() {
           count: sectionsMap[sec].count
         })).sort((a,b) => b.rate - a.rate);
 
-        // Monthly Trend
+        // Monthly Trend — bucket each attendance record by the month of its
+        // event's date; rate = attended (present/late) / total per month.
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const monthlyStats: Record<string, { total: number, attended: number }> = {};
-        
-        validSessions.forEach(s => {
-           if (!s.date) return;
-           const date = new Date(s.date);
-           const m = months[date.getMonth()];
+        const distinctEvents = new Set<string>();
+
+        validRecords.forEach((r: any) => {
+           const ev = r.events;
+           const evDate = Array.isArray(ev) ? ev[0]?.date : ev?.date;
+           if (r.event_id) distinctEvents.add(r.event_id);
+           if (!evDate) return;
+           const m = months[parseDateLocal(evDate).getMonth()];
            if (!monthlyStats[m]) monthlyStats[m] = { total: 0, attended: 0 };
-           
-           const records = s.attendance_records as any[];
-           if (records) {
-             records.forEach(r => {
-                monthlyStats[m].total++;
-                if (r.status === "present" || r.status === "late") monthlyStats[m].attended++;
-             });
-           }
+           monthlyStats[m].total++;
+           if (r.status === "present" || r.status === "late") monthlyStats[m].attended++;
         });
 
         const monthKeys = Object.keys(monthlyStats).sort((a,b) => months.indexOf(a) - months.indexOf(b));
@@ -247,7 +251,7 @@ export default function AdminReports() {
 
         setMetrics({
           avgRate,
-          totalSessions: validSessions.length,
+          totalSessions: distinctEvents.size,
           perfectRecords: perfect,
           flaggedStudents: flagged
         });

@@ -193,6 +193,52 @@ export async function POST(req: NextRequest) {
   }
 
   // ────────────────────────────────────────────────────────
+  // CASE 1b: Record exists but has NO time_in — e.g. an auto-marked "absent"
+  //          placeholder the backfill created (before or after the window, or
+  //          for a whole roster). Treat this scan as the student's first
+  //          check-in and convert the row in place, instead of falling through
+  //          to CASE 3 and rejecting it. Without this, a student who was
+  //          pre-marked absent could never check in.
+  // ────────────────────────────────────────────────────────
+  if (!existing.time_in) {
+    if (now > checkInEnd) {
+      console.warn(`[Scan API] Check-in window closed for event ${event_id}; student ${studentId} stays ${existing.status}. Closed at ${checkInEnd.toISOString()}`);
+      return NextResponse.json(
+        { error: "Check-in window has closed. You were not checked in for this event and will be marked absent." },
+        { status: 400 },
+      );
+    }
+
+    const status = now <= checkInLate ? "present" : "late";
+    console.log(`[Scan API] Converting placeholder record ${existing.id} for student ${studentId} to check-in (status ${status})`);
+
+    const { data: record, error: convertErr } = await supabase
+      .from("attendance_records")
+      .update({
+        status,
+        time_in: now.toISOString(),
+        scanned_by: user.id,
+        remarks: null,
+      })
+      .eq("id", existing.id)
+      .select()
+      .single();
+
+    if (convertErr) {
+      console.error(`[Scan API] Error converting placeholder record ${existing.id} for student ${studentId}:`, convertErr);
+      return NextResponse.json({ error: convertErr.message }, { status: 500 });
+    }
+
+    console.log(`[Scan API] Successfully checked in student ${studentId} from placeholder (Status: ${status}, Record ID: ${record.id})`);
+    return NextResponse.json({
+      action: "time_in",
+      status,
+      record,
+      message: `Checked in as ${status}`,
+    });
+  }
+
+  // ────────────────────────────────────────────────────────
   // CASE 2: Record exists with time_in but no time_out →
   //         Second scan = Time Out (within 4 hours)
   // ────────────────────────────────────────────────────────
