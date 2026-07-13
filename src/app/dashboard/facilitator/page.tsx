@@ -68,23 +68,31 @@ export default function FacilitatorOverview() {
         const endOfToday = new Date();
         endOfToday.setHours(23, 59, 59, 999);
 
-        const { data: todayRecords } = await supabase
-          .from("attendance_records")
-          .select("id, status")
-          .gte("created_at", startOfToday.toISOString())
-          .lte("created_at", endOfToday.toISOString()) as any;
+        // Count-based per status, NOT a fetch-then-count-in-JS: an unbounded
+        // select is capped by PostgREST's default row limit (~1000 here), so on
+        // a high-volume day (e.g. a school-wide event with thousands of records)
+        // the JS tally would silently under-report. head:true counts are exact
+        // regardless of volume and don't transfer rows.
+        const [
+          { count: presentLateToday },
+          { count: absentToday },
+        ] = await Promise.all([
+          supabase
+            .from("attendance_records")
+            .select("*", { count: "exact", head: true })
+            .gte("created_at", startOfToday.toISOString())
+            .lte("created_at", endOfToday.toISOString())
+            .in("status", ["present", "late"]),
+          supabase
+            .from("attendance_records")
+            .select("*", { count: "exact", head: true })
+            .gte("created_at", startOfToday.toISOString())
+            .lte("created_at", endOfToday.toISOString())
+            .eq("status", "absent"),
+        ]);
 
-        let todayScans = 0;
-        let todayAbsents = 0;
-        if (todayRecords) {
-          todayRecords.forEach((r: any) => {
-            if (r.status === "present" || r.status === "late") {
-              todayScans++;
-            } else if (r.status === "absent") {
-              todayAbsents++;
-            }
-          });
-        }
+        const todayScans = presentLateToday || 0;
+        const todayAbsents = absentToday || 0;
 
         setStats({
           totalStudents: studentCount || 0,
