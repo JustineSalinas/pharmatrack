@@ -43,6 +43,11 @@ export default function ScannerPage() {
   const [loading, setLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState<any[]>([]);
+  // Exact counts for the stat tiles — NOT derived from recentScans.length/.filter(), which is
+  // capped at 500 for display (see fetchRecentScans) and would silently under-report once a
+  // single busy event's attendance crosses that bound. head:true counts are exact regardless of
+  // event volume and don't transfer rows.
+  const [scanCounts, setScanCounts] = useState({ total: 0, present: 0, late: 0 });
   // Phase-1: student profile fetched on scan, shown for verification before attendance is written
   const [verifiedStudent, setVerifiedStudent] = useState<ScannedStudent | null>(null);
   const offlineSync = useOfflineScanSync();
@@ -135,27 +140,40 @@ export default function ScannerPage() {
 
   const fetchRecentScans = async (eventId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select(`
-          id,
-          time_in,
-          time_out,
-          status,
-          users!student_id (
-            full_name,
-            email,
-            student_profiles (
-              student_id_number,
-              section
+      const [{ data, error }, { count: total }, { count: present }, { count: late }] = await Promise.all([
+        supabase
+          .from("attendance_records")
+          .select(`
+            id,
+            time_in,
+            time_out,
+            status,
+            users!student_id (
+              full_name,
+              email,
+              student_profiles (
+                student_id_number,
+                section
+              )
             )
-          )
-        `)
-        .eq("event_id", eventId)
-        .order("created_at", { ascending: false });
+          `)
+          .eq("event_id", eventId)
+          .order("created_at", { ascending: false })
+          // This is a live "recent activity" feed, not the definitive attendance
+          // log (that's the separate Attendance Log page) — bounding the display
+          // list is both correctness-safe (a single busy event can exceed
+          // Supabase/PostgREST's hard per-query row cap) and better UX for a
+          // "recent" feed. The stat tiles below use exact counts instead, not
+          // this array, so they stay accurate regardless of this cap.
+          .limit(500),
+        supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("event_id", eventId),
+        supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "present"),
+        supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "late"),
+      ]);
 
       if (error) throw error;
-      
+      setScanCounts({ total: total || 0, present: present || 0, late: late || 0 });
+
       const formatted = (data || []).map(r => {
         const u = r.users as any;
         const profile = u?.student_profiles || {};
@@ -369,8 +387,6 @@ export default function ScannerPage() {
     // Silently process failures (standard for html5-qrcode scans)
   }
 
-  const punctualCount = recentScans.filter(r => r.status === "present").length;
-  const lateCount = recentScans.filter(r => r.status === "late").length;
 
   if (loading) {
     return (
@@ -663,17 +679,17 @@ export default function ScannerPage() {
       {/* LIVE METRICS PANEL */}
       <div className="metrics-card" style={{ marginTop: "12px" }}>
         <div className="metric-box">
-          <span className="metric-num-total">{recentScans.length}</span>
+          <span className="metric-num-total">{scanCounts.total}</span>
           <span className="metric-title">Total Logs</span>
         </div>
         <div className="metric-sep" />
         <div className="metric-box">
-          <span className="metric-num-present">{punctualCount}</span>
+          <span className="metric-num-present">{scanCounts.present}</span>
           <span className="metric-title">Punctual</span>
         </div>
         <div className="metric-sep" />
         <div className="metric-box">
-          <span className="metric-num-late">{lateCount}</span>
+          <span className="metric-num-late">{scanCounts.late}</span>
           <span className="metric-title">Tardy / Late</span>
         </div>
       </div>
