@@ -78,18 +78,20 @@ export default function AdminDashboard() {
         supabase.from("users").select("*", { count: "exact", head: true }).neq("account_type", "admin").eq("status", "pending"),
       ]);
 
-      // Attendance Rate — derived from the pre-aggregated summary matview
-      // (via get_student_attendance_summary()) instead of two exact counts
-      // against attendance_records directly, which required Postgres to scan
-      // the highest-traffic table on every dashboard load. Rate is accurate
-      // as of the matview's last refresh (throttled to ~15min), same
-      // tradeoff already accepted on the Reports pages.
-      const { data: summaryRows } = await supabase.rpc("get_student_attendance_summary");
-      const totalLogs = (summaryRows ?? []).reduce((sum: number, s: any) => sum + (s.total_records || 0), 0);
-      const presentLateCount = (summaryRows ?? []).reduce(
-        (sum: number, s: any) => sum + (s.present_count || 0) + (s.late_count || 0),
-        0
-      );
+      // Attendance Rate — derived from the pre-aggregated summary matview via
+      // get_attendance_rate_totals(), which sums SERVER-SIDE into a single
+      // row. Deliberately NOT get_student_attendance_summary() (one row per
+      // student) summed client-side: that's a multi-row RPC response, and
+      // Supabase/PostgREST's per-query row cap silently truncates ANY
+      // multi-row response — table select or RPC alike — once the underlying
+      // set passes it (confirmed at 1,000 rows on this project). The student
+      // roster is under that today, but a single aggregated row can never be
+      // truncated by any row cap, present or future, so this sidesteps the
+      // risk entirely rather than just staying under the current threshold.
+      const { data: totalsRows } = await supabase.rpc("get_attendance_rate_totals");
+      const totals = totalsRows?.[0];
+      const totalLogs = Number(totals?.total_records ?? 0);
+      const presentLateCount = Number(totals?.present_late_count ?? 0);
       const rate = totalLogs > 0
         ? parseFloat(((presentLateCount / totalLogs) * 100).toFixed(1))
         : 0;

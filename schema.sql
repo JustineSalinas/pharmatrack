@@ -407,6 +407,34 @@ $$;
 REVOKE ALL ON FUNCTION public.get_student_attendance_summary() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_student_attendance_summary() TO authenticated;
 
+-- Council-wide totals for the Admin dashboard's Attendance Rate %, aggregated
+-- SERVER-SIDE into a single row instead of the caller summing over every row
+-- returned by get_student_attendance_summary() (one row per student). That
+-- per-student RPC is a SETOF response, and Supabase/PostgREST enforces a hard
+-- per-query row cap (confirmed empirically at 1,000 on this project — see the
+-- 2026-07-14 attendance-log incident) that silently truncates ANY multi-row
+-- response, table select or RPC alike, once the underlying set exceeds it.
+-- The student roster (one row per student in student_attendance_summary_mat)
+-- is currently well under that cap, so this isn't active yet, but it's the
+-- exact same failure mode that broke the attendance log once row volume grew
+-- past 1,000 — this function sidesteps it permanently: a single aggregated
+-- row can never be truncated by any row cap, present or future.
+CREATE OR REPLACE FUNCTION public.get_attendance_rate_totals()
+RETURNS TABLE (total_records BIGINT, present_late_count BIGINT)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT
+    COALESCE(SUM(m.total_records), 0) AS total_records,
+    COALESCE(SUM(m.present_count + m.late_count), 0) AS present_late_count
+  FROM public.student_attendance_summary_mat m
+  WHERE public.is_council();
+$$;
+REVOKE ALL ON FUNCTION public.get_attendance_rate_totals() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_attendance_rate_totals() TO authenticated;
+
 -- Refreshes the matview. SECURITY DEFINER so a throttled server route (service
 -- role) can trigger it. Plain (non-CONCURRENT) REFRESH because CONCURRENTLY
 -- can't run inside the transaction PostgREST/RPC wraps around it; the matview
