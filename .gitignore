@@ -65,3 +65,5 @@ docs/superpowers/
 # student sign-in data / generated attendance imports (contain PII — never commit)
 docs/*.csv
 scripts/import-orientation-attendance*.sql
+scripts/RECONCILE-cpmt*.sql
+scratch/verify-cpmt*.mjs
