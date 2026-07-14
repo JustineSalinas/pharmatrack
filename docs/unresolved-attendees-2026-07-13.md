@@ -14,13 +14,13 @@ registered under a different/formal name.
 | Mia Juliana Cardos | NEEDS ID | No "Cardos/Cardoso" surname in system |
 | Ragne Camingay | NEEDS ID | Zero hits — no "Camingay" / "Ragne" |
 | Zhen Cantomayor | NEEDS ID | Zero hits — no "Cantomayor" / "Zhen" |
-| Leane Castor | NEEDS ID | No "Castor" surname; no "Leane" |
+| ~~Leane Castor~~ | ✅ RESOLVED | Registered as **LEAN CASTOR** (PH 1B, `lcastor@usa.edu.ph`) — marked Present |
 
 ## PH 1D
 | Name (as given) | Status | Notes |
 |---|---|---|
 | Aljo D. Loterano | NEEDS ID | No close match |
-| Lucia Mildred C. Pateño | NEEDS ID | No close match |
+| ~~Lucia Mildred C. Pateño~~ | ✅ RESOLVED | Registered as **Lucia Mildred Pateño** (PH 1D, `lpateno@usa.edu.ph`) — marked Present |
 | Herzon Vinci B. Alemania | NEEDS ID | No close match |
 | Jaslyn T. Italia | NEEDS ID | No close match |
 | John Gabriel Cadornigara | NEEDS ID | No close match |
