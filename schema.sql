@@ -480,6 +480,35 @@ $$;
 REVOKE ALL ON FUNCTION public.get_event_attendance_stats(TIMESTAMPTZ) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_event_attendance_stats(TIMESTAMPTZ) TO authenticated;
 
+-- Single-event total/present/late counts for the scanner pages' live stat
+-- tiles — one grouped-aggregate query instead of three separate
+-- count:"exact",head:true queries. The scanner pages re-run their counts on
+-- every realtime attendance_records change for the selected event (every
+-- scan), so collapsing 3 round-trips into 1 matters for connection/IO
+-- pressure during a busy check-in rush, the same way get_event_attendance_stats
+-- avoids per-record client-side tallying above.
+CREATE OR REPLACE FUNCTION public.get_scanner_event_counts(p_event_id UUID)
+RETURNS TABLE (
+  total BIGINT,
+  present BIGINT,
+  late BIGINT
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT
+    COUNT(*) AS total,
+    COUNT(*) FILTER (WHERE status = 'present') AS present,
+    COUNT(*) FILTER (WHERE status = 'late') AS late
+  FROM public.attendance_records
+  WHERE public.is_council()
+    AND event_id = p_event_id;
+$$;
+REVOKE ALL ON FUNCTION public.get_scanner_event_counts(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_scanner_event_counts(UUID) TO authenticated;
+
 -- Refreshes the matview. SECURITY DEFINER so a throttled server route (service
 -- role) can trigger it. Plain (non-CONCURRENT) REFRESH because CONCURRENTLY
 -- can't run inside the transaction PostgREST/RPC wraps around it; the matview

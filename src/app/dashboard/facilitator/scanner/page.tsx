@@ -136,7 +136,7 @@ export default function FacilitatorScannerPage() {
 
   const fetchRecentScans = async (eventId: string) => {
     try {
-      const [{ data, error }, { count: total }, { count: present }, { count: late }] = await Promise.all([
+      const [{ data, error }, { data: countsRows, error: countsError }] = await Promise.all([
         supabase
           .from("attendance_records")
           .select(`
@@ -162,13 +162,16 @@ export default function FacilitatorScannerPage() {
           // "recent" feed. The stat tiles below use exact counts instead, not
           // this array, so they stay accurate regardless of this cap.
           .limit(500),
-        supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("event_id", eventId),
-        supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "present"),
-        supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "late"),
+        // Single grouped-aggregate RPC instead of 3 separate count queries —
+        // halves the Postgres round-trips fired on every realtime-triggered
+        // refresh (see get_scanner_event_counts in schema.sql).
+        supabase.rpc("get_scanner_event_counts", { p_event_id: eventId }),
       ]);
 
       if (error) throw error;
-      setScanCounts({ total: total || 0, present: present || 0, late: late || 0 });
+      if (countsError) throw countsError;
+      const counts = countsRows?.[0];
+      setScanCounts({ total: counts?.total || 0, present: counts?.present || 0, late: counts?.late || 0 });
 
       const formatted = (data || []).map(r => {
         const u = r.users as any;
