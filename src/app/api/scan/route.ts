@@ -148,39 +148,47 @@ export async function POST(req: NextRequest) {
     const status = now <= checkInLate ? "present" : "late";
     console.log(`[Scan API] Creating check-in for student ${studentId} with status ${status}`);
 
+    // Insert-or-skip. `ignoreDuplicates` compiles to INSERT ... ON CONFLICT
+    // (student_id, event_id) DO NOTHING, so a concurrent / offline-replayed /
+    // double scan is resolved by Postgres WITHOUT raising unique_violation
+    // (23505) — no error is logged — and simply returns zero rows. We then read
+    // back and return the existing record, same as a real check-in race.
     const { data: record, error: insertErr } = await supabase
       .from("attendance_records")
-      .insert({
-        student_id: studentId,
-        event_id,
-        status,
-        time_in: now.toISOString(),
-        scanned_by: user.id,
-      })
+      .upsert(
+        {
+          student_id: studentId,
+          event_id,
+          status,
+          time_in: now.toISOString(),
+          scanned_by: user.id,
+        },
+        { onConflict: "student_id,event_id", ignoreDuplicates: true },
+      )
       .select()
-      .single();
+      .maybeSingle();
 
     if (insertErr) {
-      // 23505 = unique_violation: a concurrent scan for the same student+event
-      // won the race between our SELECT and this INSERT. Treat it as "already
-      // checked in" instead of surfacing a duplicate-record error.
-      if (insertErr.code === "23505") {
-        const { data: raceRecord } = await supabase
-          .from("attendance_records")
-          .select("*")
-          .eq("student_id", studentId)
-          .eq("event_id", event_id)
-          .single();
-        console.warn(`[Scan API] Concurrent check-in race for student ${studentId}, event ${event_id} — returning existing record`);
-        return NextResponse.json({
-          action: "time_in",
-          status: raceRecord?.status ?? status,
-          record: raceRecord,
-          message: `Already checked in as ${raceRecord?.status ?? status}`,
-        });
-      }
       console.error(`[Scan API] Error inserting check-in record for student ${studentId}:`, insertErr);
       return NextResponse.json({ error: insertErr.message }, { status: 500 });
+    }
+
+    if (!record) {
+      // Conflict skipped the insert — the student already has a row for this
+      // event. Return it as "already checked in" (same shape as before).
+      const { data: existingRecord } = await supabase
+        .from("attendance_records")
+        .select("*")
+        .eq("student_id", studentId)
+        .eq("event_id", event_id)
+        .single();
+      console.warn(`[Scan API] Duplicate check-in for student ${studentId}, event ${event_id} — returning existing record`);
+      return NextResponse.json({
+        action: "time_in",
+        status: existingRecord?.status ?? status,
+        record: existingRecord,
+        message: `Already checked in as ${existingRecord?.status ?? status}`,
+      });
     }
 
     console.log(`[Scan API] Successfully checked in student ${studentId} (Status: ${status}, Record ID: ${record.id})`);

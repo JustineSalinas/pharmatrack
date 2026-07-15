@@ -18,7 +18,10 @@ function buildChain(table: string) {
   const result = () => tableResults[table] ?? { data: null, error: null };
 
   const insertChain = {
-    select: () => ({ single: () => Promise.resolve(result()) }),
+    select: () => ({
+      single: () => Promise.resolve(result()),
+      maybeSingle: () => Promise.resolve(result()),
+    }),
   };
   const updateChain = {
     eq: () => updateChain,
@@ -30,6 +33,10 @@ function buildChain(table: string) {
     eq: () => chain,
     single: () => Promise.resolve(result()),
     insert: (payload: unknown) => {
+      mockInsertRecord(table, payload);
+      return insertChain;
+    },
+    upsert: (payload: unknown) => {
       mockInsertRecord(table, payload);
       return insertChain;
     },
@@ -292,6 +299,21 @@ describe("POST /api/scan", () => {
     // returned facilitator data for the student lookup) — either way, 401/403 must not fire.
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(403);
+  });
+
+  it("returns 200 (not 500) when a duplicate scan is skipped by ON CONFLICT", async () => {
+    // No existing row on the initial lookup → CASE 1, but the upsert returns zero
+    // rows (ON CONFLICT DO NOTHING) because a concurrent/offline-replayed scan
+    // already inserted it. Must resolve to a friendly 200, never a 500.
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = { data: makeOpenEvent(), error: null };
+    tableResults["attendance_records"] = { data: null, error: null };
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.action).toBe("time_in");
+    expect(json.message).toMatch(/already checked in/i);
   });
 
   it("returns 400 when check-in window is closed (first scan)", async () => {
