@@ -166,8 +166,11 @@ export async function logoutUser() {
  */
 export async function sendPasswordReset(email: string) {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
-  // /reset-password exchanges the ?code= itself (client-side), so point
-  // Supabase straight there. This must be in Supabase's redirect allow list.
+  // NOTE: redirectTo is currently ignored — the recovery email template
+  // (scripts/apply-email-templates.mjs) hardcodes its own link through
+  // /auth/callback?token_hash=…&type=recovery, so Supabase never applies
+  // this. Kept because it is correct if the template ever changes back to
+  // {{ .ConfirmationURL }}. It must stay in Supabase's redirect allow list.
   const redirectTo = `${base}/reset-password`;
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) throw new Error(error.message);

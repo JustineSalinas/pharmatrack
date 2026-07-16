@@ -79,6 +79,35 @@ Two Supabase client entry points, used in different contexts — don't mix them 
 
 Registration is always server-side (`/api/auth/register`) rather than calling Supabase `signUp()` directly from the browser, so GoTrue rate-limits by the Vercel server IP instead of shared campus WiFi, and so orphaned auth users get cleaned up on failure.
 
+#### Server and browser clients use *different* auth cookie names
+
+The browser client is built against a proxied URL (`${window.location.origin}/supabase-api`, rewritten
+to Supabase in `next.config.js`), while every server client uses the real `NEXT_PUBLIC_SUPABASE_URL`.
+Supabase derives its auth cookie name from the URL's first hostname label, so the two disagree:
+
+| Client | Cookie |
+|---|---|
+| Browser (`src/lib/supabase.ts`) | `sb-lsgph-pharmatrack-auth-token` (varies per host — `sb-localhost-auth-token` in dev) |
+| Server (`src/lib/server.ts`, `src/app/auth/callback/route.ts`) | `sb-jnklgyibjsxgotilvzyb-auth-token` |
+
+**A session created server-side is therefore invisible to the browser client.** This is survivable
+only because nothing depends on that handoff: there is no OAuth (password login only, and
+`signInWithPassword` runs in the browser), and signup just needs confirmation before a normal login.
+API routes are unaffected — they read the separate httpOnly `pharmatrack_token` cookie via
+`getBackendUser`.
+
+This already caused one production incident: password reset verified the token server-side in
+`/auth/callback`, and `/reset-password` then couldn't see the session and told users their link had
+expired — for a token that had just verified successfully. Clicking "Request a New Link" looped
+forever. Fixed by verifying recovery tokens **in the browser** on `/reset-password` instead.
+
+**Before adding any flow that creates a session server-side and expects the browser to be logged in,
+this must be fixed first** — pin an explicit `cookieOptions: { name }` on all four construction sites
+(`src/lib/supabase.ts`, `src/lib/server.ts`, and both clients in `src/app/auth/callback/route.ts`).
+Be aware that doing so renames the cookie every logged-in user holds: everyone is logged out at once
+and re-authenticates in a burst, which is the auth session churn behind the recurring disk-IO issue.
+Land it in a low-traffic window.
+
 ### Attendance state machine
 
 The core business logic lives in `src/app/api/scan/route.ts` and `src/lib/attendance.ts`:
