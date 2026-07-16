@@ -171,38 +171,25 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
     }
   }
 
-  // 5. Insert the absent rows with DO-NOTHING-on-conflict semantics.
-  //
-  // The only (student_id, event_id) uniqueness guard is a PARTIAL unique index
-  // (`... WHERE event_id IS NOT NULL`, schema.sql), which PostgREST's upsert
-  // can't target — so we can't lean on `.upsert({ ignoreDuplicates: true })`.
-  // A plain `.insert()` of a 500-row batch is also unsafe: one conflicting row
-  // (a concurrent scan/manual entry, or the documented double-claim backfill
-  // race) fails the *entire* statement, dropping up to 499 valid absents.
-  //
-  // Instead we insert in batches and, on a unique violation (23505), binary-
-  // split the batch and retry each half — isolating and skipping only the rows
-  // that already exist. Crucially this NEVER updates an existing row, so a real
-  // `present`/`late` record can never be clobbered back to `absent`.
+  // 5. Insert the absent rows via insert_absent_records_batch (schema.sql), an
+  // RPC that does ON CONFLICT (student_id, event_id) WHERE event_id IS NOT NULL
+  // DO NOTHING in one statement — the exact predicate the partial unique index
+  // requires, which PostgREST's own insert/upsert can't express. Postgres
+  // resolves each row's conflict independently within the single INSERT, so a
+  // concurrent scan/manual entry (or the documented double-claim backfill race)
+  // never fails the batch or raises 23505. Never updates an existing row, so a
+  // real `present`/`late` record can never be clobbered back to `absent`.
   const insertAbsentBatch = async (rows: typeof absentRowsToInsert): Promise<void> => {
     if (rows.length === 0) return;
-    const { error: insErr } = await supabase.from("attendance_records").insert(rows);
-    if (!insErr) {
-      result.absentInserted += rows.length;
-      result.absentEntries.push(
-        ...rows.map((r) => ({ studentId: r.student_id as string, eventId: r.event_id as string }))
-      );
+    const { data, error: insErr } = await supabase.rpc("insert_absent_records_batch", { p_rows: rows });
+    if (insErr) {
+      result.errors.push("absent insert failed: " + insErr.message);
       return;
     }
-    if (insErr.code === "23505") {
-      // A single row that still conflicts already exists → treat as DO NOTHING.
-      if (rows.length === 1) return;
-      const mid = Math.floor(rows.length / 2);
-      await insertAbsentBatch(rows.slice(0, mid));
-      await insertAbsentBatch(rows.slice(mid));
-      return;
-    }
-    result.errors.push("absent insert failed: " + insErr.message);
+    result.absentInserted += data?.length ?? 0;
+    result.absentEntries.push(
+      ...(data ?? []).map((r: any) => ({ studentId: r.student_id as string, eventId: r.event_id as string }))
+    );
   };
   for (let i = 0; i < absentRowsToInsert.length; i += 500) {
     await insertAbsentBatch(absentRowsToInsert.slice(i, i + 500));

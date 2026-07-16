@@ -12,6 +12,7 @@ type WriteResolver = WriteResult | ((rows: unknown) => WriteResult)
 
 const selectResults: Record<string, { data: unknown; error: unknown }> = {}
 const writeResults: Record<string, WriteResolver> = {}
+const rpcResults: Record<string, WriteResolver> = {}
 
 function setSelect(table: string, value: { data: unknown; error: unknown }) {
   selectResults[table] = value
@@ -19,9 +20,23 @@ function setSelect(table: string, value: { data: unknown; error: unknown }) {
 function setWrite(table: string, value: WriteResolver) {
   writeResults[table] = value
 }
+// insert_absent_records_batch (the RPC insertAbsentBatch calls) defaults to
+// echoing back the rows it was asked to insert, as `data` — i.e. "everything
+// inserted cleanly, nothing conflicted" — so tests that don't care about
+// conflict behavior don't need to configure this explicitly.
+function setRpc(fn: string, value: WriteResolver) {
+  rpcResults[fn] = value
+}
+function rpcDefault(fn: string, params: unknown): { data: unknown; error: unknown } {
+  if (fn === 'insert_absent_records_batch') {
+    return { data: (params as { p_rows: unknown[] }).p_rows, error: null }
+  }
+  return { data: null, error: null }
+}
 function clearMockTables() {
   for (const k of Object.keys(selectResults)) delete selectResults[k]
   for (const k of Object.keys(writeResults)) delete writeResults[k]
+  for (const k of Object.keys(rpcResults)) delete rpcResults[k]
 }
 
 const mockGetSession = vi.fn()
@@ -56,6 +71,11 @@ vi.mock('../supabase', () => {
     supabase: {
       from: (table: string) => buildChain(table),
       auth: { getSession: () => mockGetSession() },
+      rpc: (fn: string, params: unknown) => {
+        const r = rpcResults[fn]
+        const value = typeof r === 'function' ? (r as (p: unknown) => WriteResult)(params) : (r ?? rpcDefault(fn, params))
+        return Promise.resolve(value)
+      },
     },
   }
 })
@@ -360,16 +380,14 @@ describe('backfillEventStatuses — conflict-tolerant absent insert (DO-NOTHING 
       error: null,
     })
     // Simulate a real partial unique violation: s1 already has a row (a concurrent
-    // scan/manual entry, or the documented double-claim backfill race). Any insert
-    // batch containing s1 gets a 23505; batches without it succeed.
-    const existing = new Set<string>(['s1|event-1'])
-    setWrite('attendance_records', (rows) => {
-      const arr = rows as Array<{ student_id: string; event_id: string }>
-      if (arr.some((r) => existing.has(`${r.student_id}|${r.event_id}`))) {
-        return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } }
-      }
-      for (const r of arr) existing.add(`${r.student_id}|${r.event_id}`)
-      return { data: null, error: null }
+    // scan/manual entry, or the documented double-claim backfill race).
+    // insert_absent_records_batch resolves this server-side via ON CONFLICT DO
+    // NOTHING within a single statement — no error, and the conflicting row is
+    // simply absent from the returned (inserted) rows.
+    setRpc('insert_absent_records_batch', (params) => {
+      const rows = (params as { p_rows: Array<{ student_id: string; event_id: string }> }).p_rows
+      const inserted = rows.filter((r) => r.student_id !== 's1')
+      return { data: inserted, error: null }
     })
 
     const result = await backfillEventStatuses()
@@ -380,7 +398,7 @@ describe('backfillEventStatuses — conflict-tolerant absent insert (DO-NOTHING 
 
   it('still surfaces a genuine (non-conflict) insert error', async () => {
     setSelect('users', { data: [{ id: 's1', student_profiles: { current_year: '1st Year' } }], error: null })
-    setWrite('attendance_records', { data: null, error: { code: '42501', message: 'permission denied' } })
+    setRpc('insert_absent_records_batch', { data: null, error: { code: '42501', message: 'permission denied' } })
 
     const result = await backfillEventStatuses()
     expect(result.absentInserted).toBe(0)

@@ -7,12 +7,17 @@ vi.mock("@/lib/auth", () => ({
   getBackendUser: vi.fn(),
 }));
 
-const mockInsertRecord = vi.fn();
+const mockRpc = vi.fn();
 
 // Per-table QUEUE of results, consumed in order by successive .single() calls
 // on that table — needed because this route queries "users" twice (caller
 // profile, then student profile) with different expected shapes.
 let tableQueues: Record<string, Array<{ data: unknown; error: unknown }>> = {};
+
+// Result for the insert_attendance_record_safe RPC. `data` is an array of rows
+// (SETOF), matching what supabase-js returns for a Postgres function call —
+// an empty array means ON CONFLICT DO NOTHING skipped the insert (duplicate).
+let rpcResult: { data: unknown; error: unknown } = { data: [], error: null };
 
 function nextResult(table: string) {
   const queue = tableQueues[table];
@@ -21,18 +26,11 @@ function nextResult(table: string) {
 }
 
 function buildChain(table: string) {
-  const insertChain = {
-    select: () => ({ single: () => Promise.resolve(nextResult(table)) }),
-  };
   const chain: Record<string, unknown> = {
     select: () => chain,
     eq: () => chain,
     order: () => chain,
     single: () => Promise.resolve(nextResult(table)),
-    insert: (payload: unknown) => {
-      mockInsertRecord(table, payload);
-      return insertChain;
-    },
   };
   return chain;
 }
@@ -40,6 +38,10 @@ function buildChain(table: string) {
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => ({
     from: (table: string) => buildChain(table),
+    rpc: (fn: string, params: unknown) => {
+      mockRpc(fn, params);
+      return Promise.resolve(rpcResult);
+    },
   })),
 }));
 
@@ -80,6 +82,7 @@ describe("POST /api/admin/attendance/manual", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     tableQueues = {};
+    rpcResult = { data: [], error: null };
     mockGetBackendUser.mockResolvedValue(null);
   });
 
@@ -128,7 +131,9 @@ describe("POST /api/admin/attendance/manual", () => {
     setupApprovedAdmin();
     tableQueues["users"].push({ data: { id: STUDENT_ID, account_type: "student" }, error: null });
     tableQueues["events"] = [{ data: pastEvent, error: null }];
-    tableQueues["attendance_records"] = [{ data: null, error: { code: "23505" } }];
+    // insert_attendance_record_safe returns zero rows when ON CONFLICT DO
+    // NOTHING skips the insert — no 23505 is ever raised.
+    rpcResult = { data: [], error: null };
     const res = await POST(makeReq(validBody));
     expect(res.status).toBe(409);
     const json = await res.json();
@@ -139,16 +144,17 @@ describe("POST /api/admin/attendance/manual", () => {
     setupApprovedAdmin();
     tableQueues["users"].push({ data: { id: STUDENT_ID, account_type: "student" }, error: null });
     tableQueues["events"] = [{ data: pastEvent, error: null }];
-    tableQueues["attendance_records"] = [
-      { data: { id: "record-uuid", student_id: STUDENT_ID, event_id: EVENT_ID, status: "present" }, error: null },
-    ];
+    rpcResult = {
+      data: [{ id: "record-uuid", student_id: STUDENT_ID, event_id: EVENT_ID, status: "present" }],
+      error: null,
+    };
     const res = await POST(makeReq(validBody));
     expect(res.status).toBe(201);
     const json = await res.json();
     expect(json.record.id).toBe("record-uuid");
-    expect(mockInsertRecord).toHaveBeenCalledWith(
-      "attendance_records",
-      expect.objectContaining({ student_id: STUDENT_ID, event_id: EVENT_ID, status: "present", scanned_by: ADMIN_ID })
+    expect(mockRpc).toHaveBeenCalledWith(
+      "insert_attendance_record_safe",
+      expect.objectContaining({ p_student_id: STUDENT_ID, p_event_id: EVENT_ID, p_status: "present", p_scanned_by: ADMIN_ID })
     );
   });
 
@@ -156,11 +162,9 @@ describe("POST /api/admin/attendance/manual", () => {
     setupApprovedAdmin();
     tableQueues["users"].push({ data: { id: STUDENT_ID, account_type: "student" }, error: null });
     tableQueues["events"] = [{ data: pastEvent, error: null }];
-    tableQueues["attendance_records"] = [
-      { data: { id: "record-uuid", status: "present" }, error: null },
-    ];
+    rpcResult = { data: [{ id: "record-uuid", status: "present" }], error: null };
     await POST(makeReq(validBody));
-    const [, payload] = mockInsertRecord.mock.calls[0];
-    expect(payload.remarks).toMatch(/manually reconciled/i);
+    const [, payload] = mockRpc.mock.calls[0];
+    expect(payload.p_remarks).toMatch(/manually reconciled/i);
   });
 });

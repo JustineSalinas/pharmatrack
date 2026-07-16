@@ -10,19 +10,19 @@ vi.mock("@/lib/auth", () => ({
 // Track calls per table for assertion
 const mockInsertRecord = vi.fn();
 const mockUpdateRecord = vi.fn();
+const mockRpc = vi.fn();
 
 // Per-test table → result configuration
 let tableResults: Record<string, { data: unknown; error: unknown }> = {};
 
+// Result for the insert_attendance_record_safe RPC (CASE 1's insert-or-skip).
+// `data` is an array of rows (SETOF) — empty means ON CONFLICT DO NOTHING
+// skipped the insert because the row already existed (a race/duplicate scan).
+let rpcResult: { data: unknown; error: unknown } = { data: [], error: null };
+
 function buildChain(table: string) {
   const result = () => tableResults[table] ?? { data: null, error: null };
 
-  const insertChain = {
-    select: () => ({
-      single: () => Promise.resolve(result()),
-      maybeSingle: () => Promise.resolve(result()),
-    }),
-  };
   const updateChain = {
     eq: () => updateChain,
     select: () => ({ single: () => Promise.resolve(result()) }),
@@ -34,11 +34,7 @@ function buildChain(table: string) {
     single: () => Promise.resolve(result()),
     insert: (payload: unknown) => {
       mockInsertRecord(table, payload);
-      return insertChain;
-    },
-    upsert: (payload: unknown) => {
-      mockInsertRecord(table, payload);
-      return insertChain;
+      return { select: () => ({ single: () => Promise.resolve(result()) }) };
     },
     update: (payload: unknown) => {
       mockUpdateRecord(table, payload);
@@ -51,6 +47,10 @@ function buildChain(table: string) {
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => ({
     from: (table: string) => buildChain(table),
+    rpc: (fn: string, params: unknown) => {
+      mockRpc(fn, params);
+      return Promise.resolve(rpcResult);
+    },
   })),
 }));
 
@@ -163,6 +163,7 @@ describe("POST /api/scan", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     tableResults = {};
+    rpcResult = { data: [], error: null };
     mockGetBackendUser.mockResolvedValue(null);
   });
 
@@ -287,8 +288,10 @@ describe("POST /api/scan", () => {
     setupApprovedFacilitator();
     tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
     tableResults["events"] = { data: makeOpenEvent(), error: null };
-    tableResults["attendance_records"] = {
-      data: { id: "record-1", student_id: STUDENT_ID, event_id: EVENT_ID, status: "present", time_in: new Date().toISOString(), time_out: null },
+    // No existing row on the initial lookup → CASE 1.
+    tableResults["attendance_records"] = { data: null, error: { code: "PGRST116" } };
+    rpcResult = {
+      data: [{ id: "record-1", student_id: STUDENT_ID, event_id: EVENT_ID, status: "present", time_in: new Date().toISOString(), time_out: null }],
       error: null,
     };
     // Scanner lookup is first; student approval is second — configure "users" for both.
@@ -302,13 +305,17 @@ describe("POST /api/scan", () => {
   });
 
   it("returns 200 (not 500) when a duplicate scan is skipped by ON CONFLICT", async () => {
-    // No existing row on the initial lookup → CASE 1, but the upsert returns zero
-    // rows (ON CONFLICT DO NOTHING) because a concurrent/offline-replayed scan
-    // already inserted it. Must resolve to a friendly 200, never a 500.
+    // No existing row on the initial lookup → CASE 1, but the RPC insert returns
+    // zero rows (ON CONFLICT DO NOTHING) because a concurrent/offline-replayed
+    // scan already inserted it. Must resolve to a friendly 200, never a 500.
+    // (The route re-fetches "attendance_records" afterward; our mock returns the
+    // same static null for that call too, which the route already handles via
+    // `existingRecord?.status ?? status`.)
     setupApprovedFacilitator();
     tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
     tableResults["events"] = { data: makeOpenEvent(), error: null };
     tableResults["attendance_records"] = { data: null, error: null };
+    rpcResult = { data: [], error: null };
     const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID }));
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -503,9 +510,9 @@ describe("POST /api/scan", () => {
     // 45 min ago — inside the open window and before the (future) late cutoff.
     const scannedAt = new Date(Date.now() - 45 * 60 * 1000).toISOString();
     await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID, scanned_at: scannedAt }));
-    expect(mockInsertRecord).toHaveBeenCalledWith(
-      "attendance_records",
-      expect.objectContaining({ time_in: scannedAt, status: "present" }),
+    expect(mockRpc).toHaveBeenCalledWith(
+      "insert_attendance_record_safe",
+      expect.objectContaining({ p_time_in: scannedAt, p_status: "present" }),
     );
   });
 

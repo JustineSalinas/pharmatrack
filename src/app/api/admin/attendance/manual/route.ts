@@ -82,31 +82,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data: record, error: insertErr } = await adminClient
-      .from("attendance_records")
-      .insert({
-        student_id,
-        event_id,
-        status,
-        time_in: time_in ?? null,
-        time_out: time_out ?? null,
-        scanned_by: caller.id,
-        remarks:
-          remarks?.trim() ||
-          `Manually reconciled by ${callerProfile.email ?? "admin"} — no account at time of event`,
-      })
-      .select()
-      .single();
+    // Insert-or-skip via RPC — uq_attendance_student_event is a PARTIAL unique
+    // index (WHERE event_id IS NOT NULL) that PostgREST's .insert()/.upsert()
+    // can't safely target, so a plain .insert() here would raise a real 23505
+    // (logged at the DB level) on every duplicate before we could catch it.
+    // insert_attendance_record_safe (schema.sql) resolves the conflict inside
+    // Postgres with no error raised; an empty result means the row already
+    // existed.
+    const { data: rows, error: insertErr } = await adminClient.rpc("insert_attendance_record_safe", {
+      p_student_id: student_id,
+      p_event_id: event_id,
+      p_status: status,
+      p_time_in: time_in ?? null,
+      p_time_out: time_out ?? null,
+      p_scanned_by: caller.id,
+      p_remarks:
+        remarks?.trim() ||
+        `Manually reconciled by ${callerProfile.email ?? "admin"} — no account at time of event`,
+    });
 
     if (insertErr) {
-      if (insertErr.code === "23505") {
-        return NextResponse.json(
-          { error: "This student already has an attendance record for this event" },
-          { status: 409 }
-        );
-      }
       console.error("[Manual Attendance API] Insert error:", insertErr);
       return NextResponse.json({ error: insertErr.message }, { status: 500 });
+    }
+
+    const record = rows?.[0] ?? null;
+    if (!record) {
+      return NextResponse.json(
+        { error: "This student already has an attendance record for this event" },
+        { status: 409 }
+      );
     }
 
     return NextResponse.json({ record }, { status: 201 });

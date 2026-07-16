@@ -148,25 +148,23 @@ export async function POST(req: NextRequest) {
     const status = now <= checkInLate ? "present" : "late";
     console.log(`[Scan API] Creating check-in for student ${studentId} with status ${status}`);
 
-    // Insert-or-skip. `ignoreDuplicates` compiles to INSERT ... ON CONFLICT
-    // (student_id, event_id) DO NOTHING, so a concurrent / offline-replayed /
-    // double scan is resolved by Postgres WITHOUT raising unique_violation
-    // (23505) — no error is logged — and simply returns zero rows. We then read
-    // back and return the existing record, same as a real check-in race.
-    const { data: record, error: insertErr } = await supabase
-      .from("attendance_records")
-      .upsert(
-        {
-          student_id: studentId,
-          event_id,
-          status,
-          time_in: now.toISOString(),
-          scanned_by: user.id,
-        },
-        { onConflict: "student_id,event_id", ignoreDuplicates: true },
-      )
-      .select()
-      .maybeSingle();
+    // Insert-or-skip via RPC rather than .upsert() — uq_attendance_student_event
+    // is a PARTIAL unique index (WHERE event_id IS NOT NULL), and PostgREST's
+    // .upsert()/onConflict has no way to express that predicate, so it can't
+    // reliably target this index. insert_attendance_record_safe (schema.sql)
+    // repeats the exact predicate in its own ON CONFLICT clause, so a
+    // concurrent / offline-replayed / double scan is resolved by Postgres
+    // WITHOUT raising unique_violation (23505) — no error is logged — and
+    // simply returns zero rows. We then read back and return the existing
+    // record, same as a real check-in race.
+    const { data: rows, error: insertErr } = await supabase.rpc("insert_attendance_record_safe", {
+      p_student_id: studentId,
+      p_event_id: event_id,
+      p_status: status,
+      p_time_in: now.toISOString(),
+      p_scanned_by: user.id,
+    });
+    const record = rows?.[0] ?? null;
 
     if (insertErr) {
       console.error(`[Scan API] Error inserting check-in record for student ${studentId}:`, insertErr);
