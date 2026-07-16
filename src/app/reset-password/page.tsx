@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
@@ -18,51 +18,53 @@ function ResetPasswordForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const verifyStarted = useRef(false);
 
   // Establish the recovery session from the email link.
+  //
+  // The token is verified *here*, in the browser, rather than server-side in
+  // /auth/callback. The browser client talks to Supabase through the
+  // /supabase-api proxy (src/lib/supabase.ts), so it derives a different auth
+  // cookie name than a server client does — a session created server-side is
+  // invisible to this page. Verifying here puts the recovery session in the
+  // cookie this client actually reads, which is what updatePassword() needs.
+  //
+  // Only an explicit credential in the URL can unlock the form: a pre-existing
+  // unrelated session must never be mistaken for a password-recovery session.
   useEffect(() => {
-    let active = true;
+    // Run exactly once per mount. The token is single-use, so a second
+    // verifyOtp spends it and fails, flipping a working form to "invalid".
+    // Two things would otherwise do that: React StrictMode double-invokes
+    // effects in dev, and any re-render giving searchParams a new identity
+    // re-runs this effect. A ref survives both.
+    if (verifyStarted.current) return;
+    verifyStarted.current = true;
 
     async function init() {
+      const tokenHash = searchParams.get("token_hash");
+      const type = searchParams.get("type");
       const code = searchParams.get("code");
+
       try {
-        if (code) {
+        if (tokenHash && type === "recovery") {
+          const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+          if (error) throw error;
+        } else if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
-        }
-        // Hash-based recovery tokens are auto-detected by the client on load.
-        // getUser() (not getSession()) — it validates against Supabase's
-        // server instead of trusting a possibly-stale local/cached session,
-        // which matters here: a leftover unrelated session must never be
-        // mistaken for a freshly-verified password-recovery session.
-        const { data, error: userErr } = await supabase.auth.getUser();
-        if (active && data.user && !userErr) {
-          setPhase("ready");
+        } else {
+          // Reached without a recovery credential — nothing to verify.
+          setPhase("invalid");
           return;
         }
+        setPhase("ready");
       } catch {
-        /* fall through to listener / invalid */
+        // A genuinely dead link: expired, or already spent by an earlier click.
+        setPhase("invalid");
       }
     }
 
     init();
-
-    // Catches the PASSWORD_RECOVERY event when the session is parsed from the URL hash.
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!active) return;
-      if (event === "PASSWORD_RECOVERY" || session) setPhase("ready");
-    });
-
-    // If nothing established a session in time, treat the link as invalid/expired.
-    const timer = setTimeout(() => {
-      if (active) setPhase((p) => (p === "verifying" ? "invalid" : p));
-    }, 4000);
-
-    return () => {
-      active = false;
-      sub.subscription.unsubscribe();
-      clearTimeout(timer);
-    };
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {

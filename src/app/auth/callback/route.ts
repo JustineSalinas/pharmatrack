@@ -4,10 +4,12 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 /**
- * Auth callback. Handles two cases:
- *  1. Email verification links (token_hash + type) — verify the OTP, then
+ * Auth callback. Handles three cases:
+ *  1. Recovery links (token_hash + type=recovery) — forwarded to /reset-password
+ *     *unverified*; the browser verifies them itself. See the block below.
+ *  2. Email verification links (token_hash + type) — verify the OTP, then
  *     bounce to /login so the user signs in.
- *  2. OAuth / PKCE links (code) — exchange the code for a *cookie-backed*
+ *  3. OAuth / PKCE links (code) — exchange the code for a *cookie-backed*
  *     session so the browser stays signed in, then send them to /dashboard
  *     (which routes to the correct role-specific dashboard).
  */
@@ -39,7 +41,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errUrl);
   }
 
-  // ── Case 1: email verification (token_hash) ──────────────────────────
+  // ── Case 1: password recovery — forward, don't verify ─────────────────
+  // Verifying here would consume the one-time token and put the resulting
+  // session in a cookie the browser client cannot read: it is built against
+  // the /supabase-api proxy (src/lib/supabase.ts), so it derives a different
+  // auth cookie name than the server client below. The reset page would then
+  // find no session and report the link as expired — for a token that had
+  // just verified successfully. Let the browser verify it instead, so the
+  // session is created by the same client that reads it.
+  //
+  // This also makes recovery links survive email scanners (Gmail, Outlook),
+  // which prefetch links and would otherwise burn the token: a prefetch now
+  // gets only a redirect, and the token is spent when a real browser runs JS.
+  if (token_hash && type === "recovery") {
+    const resetUrl = new URL("/reset-password", origin);
+    resetUrl.searchParams.set("token_hash", token_hash);
+    resetUrl.searchParams.set("type", "recovery");
+    return NextResponse.redirect(resetUrl);
+  }
+
+  // ── Case 2: email verification (token_hash) ──────────────────────────
   if (token_hash && type) {
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -62,12 +83,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.verifyOtp({ token_hash, type: type as any });
 
     if (!error) {
-      // Recovery links should land on the reset form, not the login screen.
-      const targetUrl = type === "recovery"
-        ? new URL("/reset-password", origin)
-        : new URL("/login?verified=true", origin);
-
-      const response = NextResponse.redirect(targetUrl);
+      const response = NextResponse.redirect(new URL("/login?verified=true", origin));
       if (data.session) {
         response.cookies.set("pharmatrack_token", data.session.access_token, {
           httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7,
@@ -77,34 +93,22 @@ export async function GET(request: NextRequest) {
     }
     // Email scanners (Gmail, Outlook) auto-follow links and consume the one-time
     // token before the user clicks it. For signup this is actually a success
-    // (the email IS confirmed) — guide them to log in. For a password reset,
-    // being consumed just means the link is dead; send them to request a new
-    // one instead of the signup-flavored "you're already verified" message.
-    const code = (error as { code?: string }).code;
+    // (the email IS confirmed) — guide them to log in.
+    const errCode = (error as { code?: string }).code;
     const msg = error.message.toLowerCase();
-    if (code === "otp_expired" || msg.includes("expired") || msg.includes("invalid")) {
-      if (type === "recovery") {
-        const expiredUrl = new URL("/forgot-password", origin);
-        expiredUrl.searchParams.set("expired", "true");
-        return NextResponse.redirect(expiredUrl);
-      }
+    if (errCode === "otp_expired" || msg.includes("expired") || msg.includes("invalid")) {
       const linkUsedUrl = new URL("/login", origin);
       linkUsedUrl.searchParams.set("error", "link_already_used");
       return NextResponse.redirect(linkUsedUrl);
     }
 
     console.error("Email verification failed:", error.message);
-    if (type === "recovery") {
-      const expiredUrl = new URL("/forgot-password", origin);
-      expiredUrl.searchParams.set("expired", "true");
-      return NextResponse.redirect(expiredUrl);
-    }
     const errUrl = new URL("/login", origin);
     errUrl.searchParams.set("error", `verification_failed:${error.message}`);
     return NextResponse.redirect(errUrl);
   }
 
-  // ── Case 2: OAuth / PKCE code exchange (cookie-backed session) ────────
+  // ── Case 3: OAuth / PKCE code exchange (cookie-backed session) ────────
   if (code) {
     const cookieStore = await cookies();
     const supabase = createServerClient(
