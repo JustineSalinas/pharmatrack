@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase, parseDateLocal, formatManilaTime } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
-import { debounce } from "@/lib/debounce";
 import { useRouter } from "next/navigation";
 import {
   Loader2, Download, Search, Calendar, FileSpreadsheet,
@@ -100,6 +99,7 @@ export default function FacilitatorAttendance() {
   const [datePreset, setDatePreset] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [globalCounts, setGlobalCounts] = useState({ present: 0, late: 0, absent: 0 });
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -233,6 +233,17 @@ export default function FacilitatorAttendance() {
     );
   }, []);
 
+  // Exact status totals for the "All Events / no filter" stat tiles — head:true
+  // transfers zero rows and bypasses the PostgREST row cap entirely.
+  const fetchGlobalCounts = useCallback(async () => {
+    const [{ count: p }, { count: l }, { count: a }] = await Promise.all([
+      supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("status", "present"),
+      supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("status", "late"),
+      supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("status", "absent"),
+    ]);
+    setGlobalCounts({ present: p ?? 0, late: l ?? 0, absent: a ?? 0 });
+  }, []);
+
   // When a specific event is selected, fetch ITS rows directly by event_id
   // (indexed, unbounded by student-count-scale limit) instead of relying on
   // the default log fetch above, which orders by created_at and is capped —
@@ -280,28 +291,30 @@ export default function FacilitatorAttendance() {
       fetchAttendance();
       fetchSections();
       fetchEventNames();
+      fetchGlobalCounts();
     }
     init();
-  }, [fetchAttendance, fetchSections, fetchEventNames]);
+  }, [fetchAttendance, fetchSections, fetchEventNames, fetchGlobalCounts]);
 
-  // ── Real-time subscription ──────────────────────────────────────────────────
-  // Intentionally unfiltered — client-side filters default to "All" over an
-  // unbounded fetch, and attendance_records has no facilitator_id column to
-  // scope a postgres_changes filter to.
+  // Poll every 30 s (visible tabs only) — replaces the unfiltered
+  // postgres_changes subscription that fired a fat JOIN read on every scan.
   useEffect(() => {
-    const channel = supabase
-      .channel("facilitator-attendance-log-rt")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "attendance_records" },
-        debounce(() => fetchAttendance(true), 1500) // silent refresh — no full-page loader
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    const poll = () => {
+      if (document.visibilityState === "visible") {
+        fetchAttendance(true);
+        fetchGlobalCounts();
+      }
     };
-  }, [fetchAttendance]);
+    const id = setInterval(poll, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        fetchAttendance(true);
+        fetchGlobalCounts();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
+  }, [fetchAttendance, fetchGlobalCounts]);
 
   const sections =
     availableSections.length > 0
@@ -347,9 +360,12 @@ export default function FacilitatorAttendance() {
     return sMatch && secMatch && eventMatch && dateMatch && searchMatch;
   });
 
-  const present = filtered.filter((r) => r.status === "present").length;
-  const late = filtered.filter((r) => r.status === "late").length;
-  const absent = filtered.filter((r) => r.status === "absent").length;
+  // Use server-side exact counts when the view is fully unfiltered — prevents
+  // the "1 present" symptom from a bulk-absent burst filling the row-capped array.
+  const useGlobalCounts = filterEvent === "All" && filterSection === "All" && !searchQuery && !startDate && !endDate;
+  const present = useGlobalCounts ? globalCounts.present : filtered.filter((r) => r.status === "present").length;
+  const late    = useGlobalCounts ? globalCounts.late    : filtered.filter((r) => r.status === "late").length;
+  const absent  = useGlobalCounts ? globalCounts.absent  : filtered.filter((r) => r.status === "absent").length;
 
   if (loading) {
     return (

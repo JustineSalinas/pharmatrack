@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { triggerSummaryRefresh } from "@/lib/attendance";
-import { debounce } from "@/lib/debounce";
 import {
   Search, Users, CheckCircle, XCircle, Clock, ChevronRight, X,
   TrendingUp, AlertTriangle, FileText, Loader2, Calendar, MapPin,
@@ -87,7 +86,8 @@ export default function StudentsPage() {
         .from("attendance_records")
         .select("student_id, status")
         .gte("created_at", todayStart.toISOString())
-        .lte("created_at", todayEnd.toISOString());
+        .lte("created_at", todayEnd.toISOString())
+        .limit(5000);
       if (tErr) throw tErr;
 
       // Map student_id → latest status today
@@ -127,28 +127,16 @@ export default function StudentsPage() {
     fetchStudents(true);
   }, [fetchStudents]);
 
-  // Real-time updates: refresh list when student attendance changes.
-  // Note: `users` and `student_profiles` are not in the supabase_realtime
-  // publication (see schema.sql), so subscribing to them here would never
-  // fire — removed rather than left as dead code that invites someone to
-  // "fix" it by re-adding those tables to the publication.
-  // Intentionally unfiltered on attendance_records — this page has no fixed
-  // per-facilitator scope to filter on (see facilitator/page.tsx for the
-  // same reasoning).
+  // Poll for attendance updates every 60 s (visible tabs only). Replaces the
+  // previous unfiltered postgres_changes subscription, which fired a full
+  // get_student_attendance_summary() RPC + today-records fetch on every scan
+  // school-wide — up to N-scans × queries/minute during a busy event.
   useEffect(() => {
-    const debouncedFetchStudents = debounce(() => fetchStudents(), 1500);
-    const channel = supabase
-      .channel("student-management-rt")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "attendance_records" },
-        debouncedFetchStudents
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const poll = () => { if (document.visibilityState === "visible") fetchStudents(); };
+    const id = setInterval(poll, 60_000);
+    const onVisible = () => { if (document.visibilityState === "visible") fetchStudents(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
   }, [fetchStudents]);
 
   // Fetch individual student's recent attendance records when they click View
@@ -438,7 +426,7 @@ export default function StudentsPage() {
                   <div
                     className="rate-bar-fill"
                     style={{
-                      width: `${detailStudent.rate}%`,
+                      transform: `scaleX(${detailStudent.rate / 100})`,
                       background: getRateColor(detailStudent.rate).color,
                     }}
                   />
@@ -709,7 +697,7 @@ export default function StudentsPage() {
           background: #f3f4f6; border-radius: 99px; height: 7px; overflow: hidden;
         }
         .students-page .rate-bar-fill {
-          height: 100%; border-radius: 99px; transition: width 0.5s ease;
+          height: 100%; width: 100%; border-radius: 99px; transform-origin: left; transition: transform 0.5s ease;
         }
         .students-page .risk-alert {
           margin-top: 10px; padding: 9px 12px;

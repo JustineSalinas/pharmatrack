@@ -57,7 +57,7 @@ export default function AdminDashboard() {
       // Silently auto-mark Absent / Incomplete for past events (throttled
       // to once per hour per browser so it doesn't run on every page load).
       if (!silent) {
-        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatusesShared)
+        runIfDue("absentBackfill", 2 * 60 * 60_000, backfillEventStatusesShared)
           .then((r) => r && notifyAbsences(r.absentEntries))
           .catch(() => {});
         runIfDue("weeklyReport", 7 * 24 * 60 * 60_000, triggerWeeklyReport).catch(() => {});
@@ -254,10 +254,12 @@ export default function AdminDashboard() {
                 <div
                   style={{
                     height: "100%",
-                    width: `${Math.min(Number(stats.attendanceRate), 100)}%`,
+                    width: "100%",
                     background: "var(--gold)",
                     borderRadius: 2,
-                    transition: "width 0.8s ease",
+                    transform: `scaleX(${Math.min(Number(stats.attendanceRate), 100) / 100})`,
+                    transformOrigin: "left",
+                    transition: "transform 0.8s ease",
                   }}
                 />
               </div>
@@ -298,10 +300,12 @@ export default function AdminDashboard() {
                   <div
                     style={{
                       height: "100%",
-                      width: `${Math.min(emailUsage.percent, 100)}%`,
+                      width: "100%",
                       background: emailUsage.percent >= 90 ? "var(--danger)" : emailUsage.percent >= 70 ? "#d97706" : "var(--gold)",
                       borderRadius: 2,
-                      transition: "width 0.8s ease",
+                      transform: `scaleX(${Math.min(emailUsage.percent, 100) / 100})`,
+                      transformOrigin: "left",
+                      transition: "transform 0.8s ease",
                     }}
                   />
                 </div>

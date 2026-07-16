@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
-import { debounce } from "@/lib/debounce";
 import { useRouter } from "next/navigation";
 import { Loader2, Download, Search, Calendar, RefreshCw, Plus } from "lucide-react";
 
@@ -117,6 +116,7 @@ export default function AdminAttendance() {
   const [eventScopedFor, setEventScopedFor] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [globalCounts, setGlobalCounts] = useState({ present: 0, late: 0, absent: 0 });
 
   // ── Manual reconciliation modal ──────────────────────────────────────
   const [showManualModal, setShowManualModal] = useState(false);
@@ -305,6 +305,18 @@ export default function AdminAttendance() {
     );
   }, []);
 
+  // Exact status totals for the "All Events / no filter" stat tiles — uses
+  // head:true so zero rows are transferred and the PostgREST row cap never
+  // applies, preventing the "1 present" truncation from a bulk-absent burst.
+  const fetchGlobalCounts = useCallback(async () => {
+    const [{ count: p }, { count: l }, { count: a }] = await Promise.all([
+      supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("status", "present"),
+      supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("status", "late"),
+      supabase.from("attendance_records").select("*", { count: "exact", head: true }).eq("status", "absent"),
+    ]);
+    setGlobalCounts({ present: p ?? 0, late: l ?? 0, absent: a ?? 0 });
+  }, []);
+
   // When a specific event is selected, fetch ITS rows directly by event_id
   // (indexed, unbounded by student-count-scale limit) instead of relying on
   // the default log fetch below, which orders by created_at and is capped —
@@ -356,29 +368,33 @@ export default function AdminAttendance() {
     fetchAttendance();
     fetchSections();
     fetchEventNames();
-  }, [router, fetchAttendance, fetchSections, fetchEventNames, currentUser]);
+    fetchGlobalCounts();
+  }, [router, fetchAttendance, fetchSections, fetchEventNames, fetchGlobalCounts, currentUser]);
 
-  // ── Real-time subscription: refresh log whenever attendance_records changes ──
-  // Intentionally unfiltered on the subscription itself — any change re-runs
-  // fetchAttendance, which already re-scopes its own query to selectedDate
-  // when one is set. filterStatus/filterSection/filterEvent/search stay
-  // client-side on top of whatever fetchAttendance returns and default to
-  // "All"; binding the subscription itself to those would silently stop
-  // live-updating the default view.
+  // Poll every 30 s (visible tabs only) instead of a postgres_changes
+  // subscription. The old unfiltered subscription fired fetchAttendance on
+  // every scan school-wide, causing up to N-scans × fat-JOIN reads per minute
+  // during a busy event. Polling caps that to 2 reads/min per page regardless
+  // of scan volume. Global counts are refreshed on the same cadence so stat
+  // tiles stay accurate without re-deriving from the capped row array.
   useEffect(() => {
-    const channel = supabase
-      .channel("admin-attendance-log-rt")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "attendance_records" },
-        debounce(() => fetchAttendance(true), 1500) // silent refresh — no full-page loader
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    if (!currentUser) return;
+    const poll = () => {
+      if (document.visibilityState === "visible") {
+        fetchAttendance(true);
+        fetchGlobalCounts();
+      }
     };
-  }, [fetchAttendance]);
+    const id = setInterval(poll, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        fetchAttendance(true);
+        fetchGlobalCounts();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
+  }, [fetchAttendance, fetchGlobalCounts, currentUser]);
 
   const sections =
     availableSections.length > 0
@@ -414,9 +430,13 @@ export default function AdminAttendance() {
     return sMatch && secMatch && eventMatch && dateMatch && searchMatch;
   });
 
-  const present = filtered.filter((r) => r.status === "present").length;
-  const late = filtered.filter((r) => r.status === "late").length;
-  const absent = filtered.filter((r) => r.status === "absent").length;
+  // Use server-side exact counts (head:true, no row cap) when the view is
+  // completely unfiltered — prevents the "1 present" symptom where a bulk
+  // absent burst fills the row-capped `records` array and hides real scans.
+  const useGlobalCounts = filterEvent === "All" && filterSection === "All" && !searchQuery && !selectedDate;
+  const present = useGlobalCounts ? globalCounts.present : filtered.filter((r) => r.status === "present").length;
+  const late    = useGlobalCounts ? globalCounts.late    : filtered.filter((r) => r.status === "late").length;
+  const absent  = useGlobalCounts ? globalCounts.absent  : filtered.filter((r) => r.status === "absent").length;
 
   if (loading) {
     return (

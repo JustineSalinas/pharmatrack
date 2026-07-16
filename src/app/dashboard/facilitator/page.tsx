@@ -42,7 +42,7 @@ export default function FacilitatorOverview() {
 
         // Silently auto-mark Absent / Incomplete for past events (throttled
         // to once per hour per browser so it doesn't run on every page load).
-        runIfDue("absentBackfill", 60 * 60_000, backfillEventStatusesShared)
+        runIfDue("absentBackfill", 2 * 60 * 60_000, backfillEventStatusesShared)
           .then((r) => r && notifyAbsences(r.absentEntries))
           .catch(() => {});
         runIfDue("weeklyReport", 7 * 24 * 60 * 60_000, triggerWeeklyReport).catch(() => {});
