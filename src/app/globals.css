@@ -6371,16 +6371,22 @@ input[type="password"]::-ms-clear {
 }
 
 @media (max-width: 639px) {
-  .sd-root {
+  .month-calendar-view.sd-root {
     display: flex;
     flex-direction: column;
     min-height: calc(100vh - 140px);
   }
-  .cal-grid-panel {
-    padding: 10px 8px;
+  .month-calendar-view .cal-grid-panel {
     display: flex;
     flex-direction: column;
     flex: 1;
+  }
+  .month-calendar-view .cal-grid {
+    flex: 1;
+    grid-template-rows: repeat(6, minmax(0, 1fr));
+  }
+  .cal-grid-panel {
+    padding: 10px 8px;
   }
   .cal-weekday-row {
     display: grid;
@@ -6394,11 +6400,9 @@ input[type="password"]::-ms-clear {
   .cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(6, minmax(0, 1fr));
     gap: 2px;
     overflow-x: unset;
     scroll-snap-type: unset;
-    flex: 1;
   }
   .cal-cell {
     min-width: 0;
@@ -6821,6 +6825,8 @@ input[type="password"]::-ms-clear {
   /* ── Calendar: compact cells, hide event pills ── */
   .cal-grid-panel {
     padding: 14px 12px !important;
+  }
+  .month-calendar-view .cal-grid-panel {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 !important;
@@ -6830,6 +6836,8 @@ input[type="password"]::-ms-clear {
   }
   .cal-grid {
     gap: 6px !important;
+  }
+  .month-calendar-view .cal-grid {
     flex: 1 !important;
     grid-template-rows: repeat(6, minmax(0, 1fr)) !important;
   }

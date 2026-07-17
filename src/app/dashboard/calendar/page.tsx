@@ -106,7 +106,7 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="fade-in sd-root">
+    <div className="fade-in sd-root month-calendar-view">
       <header className="sd-header">
         <div>
           <p className="sd-header-eyebrow">Student · Calendar</p>
