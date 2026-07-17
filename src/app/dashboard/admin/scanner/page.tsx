@@ -32,6 +32,8 @@ type ScannedStudent = {
   currentYear: string;
   section: string;
   qrCodeId: string;
+  /** ISO timestamp captured at scan time (Phase 1), not confirm-click time. */
+  scannedAt: string;
 };
 
 export default function ScannerPage() {
@@ -200,6 +202,24 @@ export default function ScannerPage() {
     }
   };
 
+  // Tailored guidance per browser MediaStream error name — the raw
+  // DOMException message is often cryptic (e.g. "Could not start video
+  // source") and gives the facilitator no actionable next step.
+  function cameraErrorMessage(err: any): string {
+    switch (err?.name) {
+      case "NotAllowedError":
+        return "Camera access was denied. Enable camera permissions for this site in your browser settings, then tap Retry.";
+      case "NotReadableError":
+        return "Couldn't access the camera — it may be in use by another app or browser tab. Close it and tap Retry.";
+      case "NotFoundError":
+        return "No camera was found on this device.";
+      case "OverconstrainedError":
+        return "This device's camera doesn't support the requested settings. Try a different device.";
+      default:
+        return err?.message || "Camera permissions denied.";
+    }
+  }
+
   const startCamera = async () => {
     if (!selectedEventId) return;
     setScanResult(null);
@@ -222,10 +242,30 @@ export default function ScannerPage() {
           onScanSuccess,
           onScanFailure
         );
+        // Detect the camera dying mid-session (unplugged, permission revoked,
+        // OS reclaims the device) — without this, isScanning stays true
+        // forever and the viewfinder just freezes with no error shown.
+        // html5-qrcode has no public API for the underlying MediaStreamTrack,
+        // so read it off the <video> element it renders into #reader.
+        const videoEl = document.querySelector<HTMLVideoElement>("#reader video");
+        const videoTrack = (videoEl?.srcObject as MediaStream | null)?.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.addEventListener("ended", () => {
+            if (scannerRef.current !== qrScanner) return; // a newer session already replaced this one
+            console.warn("Camera stream ended unexpectedly");
+            setIsScanning(false);
+            scannerRef.current = null;
+            setScanResult({
+              success: false,
+              message: "Camera Disconnected",
+              submessage: "The camera feed was lost (unplugged, permission revoked, or reclaimed by another app). Tap Resume Scanning to restart it.",
+            });
+          }, { once: true });
+        }
       } catch (err: any) {
         console.error("Camera start error", err);
         setIsScanning(false);
-        setScanResult({ success: false, message: "Camera Error", submessage: err.message || "Camera permissions denied." });
+        setScanResult({ success: false, message: "Camera Error", submessage: cameraErrorMessage(err) });
       }
     }));
   };
@@ -247,12 +287,25 @@ export default function ScannerPage() {
   // ── PHASE 1: Lookup — fetch student profile, show verification card ──
   // Captures a scan into the offline queue and shows the "Saved Offline"
   // confirmation, skipping the live verify card (which needs the backend).
+  // Has its own try/catch: `enqueue` throws when IndexedDB is unavailable
+  // (private browsing, disabled storage), and that must surface as a real
+  // failure — never a false-positive "Saved Offline" for a scan that was
+  // never actually stored anywhere.
   async function queueOffline(decodedText: string, submessage: string) {
-    await enqueue({ qrCodeId: decodedText, eventId: selectedEventId, scannedAt: new Date().toISOString() });
-    await offlineSync.refresh();
-    setVerifyingStudent(false);
-    setVerifiedStudent(null);
-    setScanResult({ success: true, message: "Saved Offline", submessage });
+    try {
+      await enqueue({ qrCodeId: decodedText, eventId: selectedEventId, scannedAt: new Date().toISOString() });
+      await offlineSync.refresh();
+      setVerifiedStudent(null);
+      setScanResult({ success: true, message: "Saved Offline", submessage });
+    } catch (err) {
+      console.error("Failed to queue scan offline", err);
+      setVerifiedStudent(null);
+      setScanResult({
+        success: false,
+        message: "Scan Not Saved",
+        submessage: "Couldn't save this scan — local storage is unavailable on this device. Please retry on a stable connection, or record this student manually via Attendance → Add Manual Record.",
+      });
+    }
   }
 
   async function onScanSuccess(decodedText: string) {
@@ -271,6 +324,10 @@ export default function ScannerPage() {
     setVerifiedStudent(null);
     setScanResult(null);
 
+    // try/finally guarantees the "Retrieving student profile…" spinner always
+    // clears, even if queueOffline itself throws below (e.g. IndexedDB
+    // unavailable) — without this, the camera is already stopped and the
+    // facilitator is stuck with no way forward but a reload.
     try {
       const { data: student, error: studentErr } = await supabase
         .from("student_profiles")
@@ -287,7 +344,6 @@ export default function ScannerPage() {
       }
 
       if (!student) {
-        setVerifyingStudent(false);
         setScanResult({
           success: false,
           message: "Invalid QR Code",
@@ -296,7 +352,6 @@ export default function ScannerPage() {
         return;
       }
 
-      setVerifyingStudent(false);
       setVerifiedStudent({
         userId: student.user_id,
         fullName: (student.users as any)?.full_name ?? "Unknown Student",
@@ -305,23 +360,56 @@ export default function ScannerPage() {
         section: student.section,
         qrCodeId: student.qr_code_id,
         avatarUrl: (student.users as any)?.avatar_url ?? null,
+        scannedAt: new Date().toISOString(),
       } as any);
     } catch {
       // Network throw during lookup → queue rather than lose the scan.
       await queueOffline(decodedText, "Couldn't reach the server — queued and will sync automatically.");
+    } finally {
+      setVerifyingStudent(false);
     }
   }
 
   // ── PHASE 2: Confirm — admin clicks Confirm Check-In, calls /api/scan ──
   async function confirmCheckIn() {
+    // Re-entrancy guard: the render-gate on the Confirm button (verifiedStudent
+    // && !confirmLoading) only takes effect after a commit, so a fast
+    // double-tap can otherwise fire this twice before the button unmounts.
+    if (confirmLoading) return;
     if (!verifiedStudent || !selectedEventId || !admin) return;
     setConfirmLoading(true);
 
     try {
+      // Resolved outside submitScanOrQueue's own try/catch, so a session-
+      // refresh failure here (a network call, just like the scan POST itself)
+      // gets the same "capture offline rather than lose the scan" treatment
+      // instead of falling into a dead-end "Confirmation Failed".
+      let authHeader: Record<string, string>;
+      try {
+        authHeader = (await getAuthHeader()) as Record<string, string>;
+      } catch (err) {
+        console.error("Failed to refresh session before confirming scan", err);
+        try {
+          await enqueue({ qrCodeId: verifiedStudent.qrCodeId, eventId: selectedEventId, scannedAt: verifiedStudent.scannedAt });
+          await offlineSync.refresh();
+          setScanResult({ success: true, message: "Saved Offline", submessage: `${verifiedStudent.fullName}'s scan was queued and will sync automatically.` });
+          setVerifiedStudent(null);
+        } catch (enqueueErr) {
+          console.error("Failed to queue scan offline after auth failure", enqueueErr);
+          setScanResult({
+            success: false,
+            message: "Scan Not Saved",
+            submessage: "Couldn't reach the server or save this scan locally. Please retry on a stable connection, or record this student manually via Attendance → Add Manual Record.",
+          });
+        }
+        return;
+      }
+
       const outcome = await submitScanOrQueue({
         qrCodeId: verifiedStudent.qrCodeId,
         eventId: selectedEventId,
-        authHeader: (await getAuthHeader()) as Record<string, string>,
+        authHeader,
+        scannedAt: verifiedStudent.scannedAt,
       });
 
       // Backend was unreachable — the scan was captured offline instead of lost.
@@ -336,6 +424,13 @@ export default function ScannerPage() {
 
       if (!outcome.ok) {
         setScanResult({ success: false, message: "Scan Failed", submessage: json.error || "An error occurred." });
+        // Every status reaching here is a deterministic rejection from the
+        // server (5xx/network is already diverted into the offline queue
+        // above) EXCEPT 429 (rate-limited — genuinely worth retrying after a
+        // moment). For everything else, retrying will fail identically, so
+        // don't keep verifiedStudent around to offer a Retry that can never
+        // succeed — that's exactly what makes the button look "bugged".
+        if (outcome.status !== 429) setVerifiedStudent(null);
         return;
       }
 
@@ -563,8 +658,10 @@ export default function ScannerPage() {
             </div>
           )}
 
-          {/* PHASE 1: Student Verification Card — shown before attendance is written */}
-          {verifiedStudent && !confirmLoading && (
+          {/* PHASE 1: Student Verification Card — shown before attendance is written.
+              Hidden once scanResult is set so a failed confirm doesn't render this
+              card stacked on top of the "Scan Failed" card below. */}
+          {verifiedStudent && !confirmLoading && !scanResult && (
             <div className="viewport-result">
               <div className="verify-card">
                 {/* Header badge */}
@@ -613,6 +710,7 @@ export default function ScannerPage() {
                   <button
                     className="btn-confirm-checkin"
                     onClick={confirmCheckIn}
+                    disabled={confirmLoading}
                   >
                     <CheckCircle2 size={16} />
                     <span>Confirm Check-In</span>

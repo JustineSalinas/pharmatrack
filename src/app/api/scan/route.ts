@@ -14,6 +14,17 @@ const getSupabase = () => {
   return createClient(url, key);
 };
 
+// This route runs server-side (Vercel functions default to UTC) but window
+// messages must read in Manila wall-clock time — same fix as email.ts.
+function formatManilaDateTime(d: Date): string {
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" });
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" });
+  return `${time} on ${date}`;
+}
+
+/** Generic, actionable message for an unexpected DB failure — the real error stays in server logs only. */
+const SERVER_ERROR_MESSAGE = "A server error occurred while recording attendance. Please try again — if it persists, contact an administrator.";
+
 export async function POST(req: NextRequest) {
   console.log("[Scan API] POST request received");
   const supabase = getSupabase();
@@ -104,12 +115,18 @@ export async function POST(req: NextRequest) {
     const parsed = new Date(scanned_at);
     if (isNaN(parsed.getTime())) {
       console.warn(`[Scan API] Invalid scanned_at value: ${scanned_at}`);
-      return NextResponse.json({ error: "Invalid scanned_at timestamp" }, { status: 400 });
+      return NextResponse.json(
+        { error: "This scan's timestamp couldn't be read. Please retry — if it keeps happening, check this device's clock/date settings." },
+        { status: 400 },
+      );
     }
     const SKEW_TOLERANCE_MS = 5 * 60 * 1000;
     if (parsed.getTime() > serverNow.getTime() + SKEW_TOLERANCE_MS) {
       console.warn(`[Scan API] Rejected future scanned_at: ${scanned_at}`);
-      return NextResponse.json({ error: "scanned_at cannot be in the future" }, { status: 400 });
+      return NextResponse.json(
+        { error: "This device's clock appears to be set ahead of the correct time. Please fix the device's date/time settings and try again." },
+        { status: 400 },
+      );
     }
     now = parsed;
     console.log(`[Scan API] Offline replay — using captured scan time ${parsed.toISOString()}`);
@@ -122,13 +139,9 @@ export async function POST(req: NextRequest) {
 
   // Prevent scanning before the event has started
   if (now < checkInStart) {
-    // This route runs server-side (Vercel functions default to UTC) but the
-    // message must read in Manila wall-clock time — same fix as email.ts.
-    const localTimeStr = checkInStart.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" });
-    const localDateStr = checkInStart.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" });
     console.warn(`[Scan API] Scan attempted before event start. Event check-in opens at ${checkInStart.toISOString()}`);
     return NextResponse.json(
-      { error: `Event has not started yet. Check-in opens at ${localTimeStr} on ${localDateStr}.` },
+      { error: `Event has not started yet. Check-in opens at ${formatManilaDateTime(checkInStart)}.` },
       { status: 400 },
     );
   }
@@ -168,7 +181,7 @@ export async function POST(req: NextRequest) {
 
     if (insertErr) {
       console.error(`[Scan API] Error inserting check-in record for student ${studentId}:`, insertErr);
-      return NextResponse.json({ error: insertErr.message }, { status: 500 });
+      return NextResponse.json({ error: SERVER_ERROR_MESSAGE }, { status: 500 });
     }
 
     if (!record) {
@@ -232,7 +245,7 @@ export async function POST(req: NextRequest) {
 
     if (convertErr) {
       console.error(`[Scan API] Error converting placeholder record ${existing.id} for student ${studentId}:`, convertErr);
-      return NextResponse.json({ error: convertErr.message }, { status: 500 });
+      return NextResponse.json({ error: SERVER_ERROR_MESSAGE }, { status: 500 });
     }
 
     console.log(`[Scan API] Successfully checked in student ${studentId} from placeholder (Status: ${status}, Record ID: ${record.id})`);
@@ -275,14 +288,14 @@ export async function POST(req: NextRequest) {
     if (checkOutStart && now < checkOutStart) {
       console.warn(`[Scan API] Check-out failed: Check-out window not open. Opens at ${checkOutStart.toISOString()}`);
       return NextResponse.json(
-        { error: "Check-out window has not opened yet" },
+        { error: `Check-out window has not opened yet. It opens at ${formatManilaDateTime(checkOutStart)}.` },
         { status: 400 },
       );
     }
     if (checkOutEnd && now > checkOutEnd) {
       console.warn(`[Scan API] Check-out failed: Check-out window closed. Closed at ${checkOutEnd.toISOString()}`);
       return NextResponse.json(
-        { error: "Check-out window has closed" },
+        { error: `Check-out window closed at ${formatManilaDateTime(checkOutEnd)}.` },
         { status: 400 },
       );
     }
@@ -298,7 +311,7 @@ export async function POST(req: NextRequest) {
 
     if (updateErr) {
       console.error(`[Scan API] Error updating check-out record ${existing.id} for student ${studentId}:`, updateErr);
-      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+      return NextResponse.json({ error: SERVER_ERROR_MESSAGE }, { status: 500 });
     }
 
     console.log(`[Scan API] Successfully checked out student ${studentId} (Record ID: ${record.id})`);

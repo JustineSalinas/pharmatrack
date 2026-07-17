@@ -1,7 +1,8 @@
 "use client";
 
-import { Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle, X } from "lucide-react";
+import { Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle, AlertOctagon, X } from "lucide-react";
 import type { OfflineSyncState } from "@/lib/useOfflineScanSync";
+import { formatManilaTime } from "@/lib/supabase";
 import { useState } from "react";
 
 function formatOffset(ms: number): string {
@@ -20,7 +21,10 @@ function formatOffset(ms: number): string {
  * passes it in, so the same queue count/refresh is shared with the scan handler.
  */
 export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
-  const { online, pending, syncing, lastReport, clockWarning, syncNow, confirmClockCorrection, dismissClockWarning } = state;
+  const {
+    online, pending, syncing, lastReport, unmatchedScans, clockWarning,
+    syncNow, confirmClockCorrection, dismissClockWarning, clearUnmatched,
+  } = state;
   const [reportDismissed, setReportDismissed] = useState(false);
 
   const offline = !online;
@@ -78,8 +82,7 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
             </div>
             {lastReport!.unmatched.length > 0 && (
               <div style={{ color: "var(--dimmed)", marginTop: "4px", fontSize: "12px" }}>
-                Couldn&apos;t match {lastReport!.unmatched.length} scan{lastReport!.unmatched.length === 1 ? "" : "s"} —
-                {" "}add these manually via Attendance → Add Manual Record.
+                See the list below for which students and why.
               </div>
             )}
           </div>
@@ -90,6 +93,55 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
           >
             <X size={15} />
           </button>
+        </div>
+      )}
+
+      {/* Persisted unmatched scans — survives a dismissed report/page reload, unlike lastReport */}
+      {unmatchedScans.length > 0 && (
+        <div
+          style={{
+            marginTop: "8px", padding: "10px 12px", borderRadius: "10px",
+            background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.2)",
+            fontSize: "13px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+            <AlertOctagon size={15} color="var(--danger)" style={{ marginTop: "2px", flexShrink: 0 }} />
+            <div style={{ color: "var(--white)", fontWeight: 600 }}>
+              {unmatchedScans.length} scan{unmatchedScans.length === 1 ? "" : "s"} need manual reconciliation
+            </div>
+          </div>
+          <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
+            {unmatchedScans.map((u) => (
+              <div
+                key={u.id}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px",
+                  padding: "6px 8px", borderRadius: "8px", background: "var(--surface2)",
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: "var(--white)", fontWeight: 600, fontSize: "12px" }}>
+                    QR {u.qrCodeId} — {formatManilaTime(u.scannedAt, { hour: "numeric", minute: "2-digit", month: "short", day: "numeric" })}
+                  </div>
+                  <div style={{ color: "var(--dimmed)", fontSize: "12px", marginTop: "2px" }}>{u.reason}</div>
+                </div>
+                <button
+                  onClick={() => void clearUnmatched(u.id)}
+                  title="Mark reconciled (after adding via Attendance → Add Manual Record)"
+                  style={{
+                    flexShrink: 0, padding: "4px 10px", borderRadius: "6px", border: "1px solid var(--border)",
+                    background: "var(--surface)", color: "var(--white)", cursor: "pointer", fontSize: "11px", fontWeight: 600,
+                  }}
+                >
+                  Reconciled
+                </button>
+              </div>
+            ))}
+          </div>
+          <div style={{ color: "var(--dimmed)", marginTop: "8px", fontSize: "12px" }}>
+            Add these manually via Attendance → Add Manual Record, then mark each reconciled.
+          </div>
         </div>
       )}
 

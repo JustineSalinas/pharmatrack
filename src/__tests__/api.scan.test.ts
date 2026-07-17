@@ -524,7 +524,7 @@ describe("POST /api/scan", () => {
     const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID, scanned_at: "not-a-date" }));
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toMatch(/invalid scanned_at/i);
+    expect(json.error).toMatch(/timestamp|clock/i);
   });
 
   it("returns 400 when scanned_at is in the future beyond tolerance", async () => {
@@ -536,6 +536,6 @@ describe("POST /api/scan", () => {
     const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID, scanned_at: future }));
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toMatch(/future/i);
+    expect(json.error).toMatch(/clock|ahead/i);
   });
 });

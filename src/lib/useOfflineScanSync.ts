@@ -6,7 +6,10 @@ import {
   syncQueue,
   getClockSkewMs,
   applyClockCorrection,
+  allUnmatched,
+  clearUnmatched as clearUnmatchedScan,
   type SyncReport,
+  type UnmatchedScan,
 } from "@/lib/offlineScanQueue";
 import { getAuthHeader } from "@/lib/auth-client";
 
@@ -24,6 +27,12 @@ export interface OfflineSyncState {
   syncing: boolean;
   /** The most recent sync report, for surfacing "N synced / M unmatched" to the operator. */
   lastReport: SyncReport | null;
+  /**
+   * Permanently-rejected scans awaiting manual reconciliation, persisted in
+   * IndexedDB — unlike `lastReport`, this survives a dismissed toast or a
+   * page reload, so a rejection is never silently lost from view.
+   */
+  unmatchedScans: UnmatchedScan[];
   /** Set when a wrong device clock is detected before a sync; the UI prompts the operator. */
   clockWarning: { offsetMs: number } | null;
   /** Re-read the queue count (call after enqueuing a scan). */
@@ -34,6 +43,8 @@ export interface OfflineSyncState {
   confirmClockCorrection: () => Promise<void>;
   /** Operator says the clock is fine: dismiss the warning and sync as-is. */
   dismissClockWarning: () => Promise<void>;
+  /** Mark an unmatched scan as reconciled (e.g. after adding it via Attendance → Add Manual Record) and remove it from the list. */
+  clearUnmatched: (id: string) => Promise<void>;
 }
 
 export function useOfflineScanSync(): OfflineSyncState {
@@ -41,12 +52,22 @@ export function useOfflineScanSync(): OfflineSyncState {
   const [pending, setPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [lastReport, setLastReport] = useState<SyncReport | null>(null);
+  const [unmatchedScans, setUnmatchedScans] = useState<UnmatchedScan[]>([]);
   const [clockWarning, setClockWarning] = useState<{ offsetMs: number } | null>(null);
   const syncingRef = useRef(false);
 
   const refresh = useCallback(async () => {
     setPending(await queueCount());
   }, []);
+
+  const refreshUnmatched = useCallback(async () => {
+    setUnmatchedScans(await allUnmatched());
+  }, []);
+
+  const clearUnmatched = useCallback(async (id: string) => {
+    await clearUnmatchedScan(id);
+    await refreshUnmatched();
+  }, [refreshUnmatched]);
 
   const runSync = useCallback(async () => {
     if (syncingRef.current) return;
@@ -64,6 +85,7 @@ export function useOfflineScanSync(): OfflineSyncState {
       const authHeader = await getAuthHeader();
       const report = await syncQueue(authHeader as Record<string, string>);
       setLastReport(report);
+      if (report.unmatched.length > 0) await refreshUnmatched();
     } catch (err) {
       console.warn("[offline-sync] sync attempt failed; scans stay queued for retry", err);
     } finally {
@@ -71,7 +93,7 @@ export function useOfflineScanSync(): OfflineSyncState {
       setSyncing(false);
       await refresh();
     }
-  }, [refresh]);
+  }, [refresh, refreshUnmatched]);
 
   // Public sync entry point: check the device clock first, and if it looks
   // wrong, surface a warning instead of silently syncing bad timestamps.
@@ -131,21 +153,24 @@ export function useOfflineScanSync(): OfflineSyncState {
   // network never technically dropped).
   useEffect(() => {
     void refresh().catch(() => {});
+    void refreshUnmatched().catch(() => {});
     const id = setInterval(() => {
       if (typeof navigator !== "undefined" && navigator.onLine) void syncNow().catch(() => {});
     }, POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [refresh, syncNow]);
+  }, [refresh, refreshUnmatched, syncNow]);
 
   return {
     online,
     pending,
     syncing,
     lastReport,
+    unmatchedScans,
     clockWarning,
     refresh,
     syncNow,
     confirmClockCorrection,
     dismissClockWarning,
+    clearUnmatched,
   };
 }

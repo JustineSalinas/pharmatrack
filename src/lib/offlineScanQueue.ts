@@ -30,16 +30,31 @@ export interface SyncReport {
   backendDown: boolean;
 }
 
+/**
+ * A scan that was permanently rejected on sync (unknown QR, window closed, not
+ * approved, etc.) — persisted so it survives a dismissed report/page reload
+ * instead of vanishing once the in-memory `SyncReport` is gone.
+ */
+export interface UnmatchedScan {
+  id: string;
+  qrCodeId: string;
+  eventId: string;
+  scannedAt: string;
+  reason: string;
+  recordedAt: string;
+}
+
 export type SubmitOutcome =
   | { queued: true }
   | { queued: false; ok: boolean; status: number; data: any };
 
 const DB_NAME = "pharmatrack-offline";
 const STORE = "scan-queue";
-const DB_VERSION = 1;
+const UNMATCHED_STORE = "unmatched-scans";
+const DB_VERSION = 2;
 const SUBMIT_TIMEOUT_MS = 12_000;
 
-function hasIDB(): boolean {
+export function hasIDB(): boolean {
   return typeof indexedDB !== "undefined";
 }
 
@@ -51,18 +66,21 @@ function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE)) {
         db.createObjectStore(STORE, { keyPath: "localId" });
       }
+      if (!db.objectStoreNames.contains(UNMATCHED_STORE)) {
+        db.createObjectStore(UNMATCHED_STORE, { keyPath: "id" });
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
-function tx<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+function tx<T>(storeName: string, mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   return openDB().then(
     (db) =>
       new Promise<T>((resolve, reject) => {
-        const t = db.transaction(STORE, mode);
-        const store = t.objectStore(STORE);
+        const t = db.transaction(storeName, mode);
+        const store = t.objectStore(storeName);
         const request = fn(store);
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
@@ -78,8 +96,15 @@ function genId(): string {
 
 // ── Queue CRUD ────────────────────────────────────────────────────────────
 
+/**
+ * Persists a scan to the offline queue. Throws if IndexedDB isn't available
+ * on this device/browser (private-browsing storage restrictions, quota,
+ * corruption) — callers MUST treat that as a genuine capture failure, not a
+ * silent success, otherwise the UI can end up claiming "Saved Offline" for a
+ * scan that was never actually stored anywhere.
+ */
 export async function enqueue(scan: { qrCodeId: string; eventId: string; scannedAt: string }): Promise<void> {
-  if (!hasIDB()) return;
+  if (!hasIDB()) throw new Error("IndexedDB is not available on this device/browser.");
   const record: QueuedScan = {
     localId: genId(),
     qrCodeId: scan.qrCodeId,
@@ -88,28 +113,52 @@ export async function enqueue(scan: { qrCodeId: string; eventId: string; scanned
     createdAt: new Date().toISOString(),
     attempts: 0,
   };
-  await tx("readwrite", (store) => store.add(record));
+  await tx(STORE, "readwrite", (store) => store.add(record));
 }
 
 export async function allQueued(): Promise<QueuedScan[]> {
   if (!hasIDB()) return [];
-  const result = await tx<QueuedScan[]>("readonly", (store) => store.getAll() as IDBRequest<QueuedScan[]>);
+  const result = await tx<QueuedScan[]>(STORE, "readonly", (store) => store.getAll() as IDBRequest<QueuedScan[]>);
   return (result || []).sort((a, b) => a.scannedAt.localeCompare(b.scannedAt));
 }
 
 export async function queueCount(): Promise<number> {
   if (!hasIDB()) return 0;
-  return tx<number>("readonly", (store) => store.count());
+  return tx<number>(STORE, "readonly", (store) => store.count());
 }
 
 async function removeQueued(localId: string): Promise<void> {
   if (!hasIDB()) return;
-  await tx("readwrite", (store) => store.delete(localId));
+  await tx(STORE, "readwrite", (store) => store.delete(localId));
 }
 
 async function putQueued(record: QueuedScan): Promise<void> {
   if (!hasIDB()) return;
-  await tx("readwrite", (store) => store.put(record));
+  await tx(STORE, "readwrite", (store) => store.put(record));
+}
+
+// ── Unmatched (permanently-rejected) scan log ───────────────────────────────
+// Kept in its own store, separate from the live queue, so a rejected scan's
+// detail survives a dismissed sync-report toast or a page reload — otherwise
+// the only record of "which student, which reason" was the in-memory
+// SyncReport, gone the moment the component unmounts.
+
+async function recordUnmatched(entry: Omit<UnmatchedScan, "id" | "recordedAt">): Promise<void> {
+  if (!hasIDB()) return;
+  const record: UnmatchedScan = { id: genId(), recordedAt: new Date().toISOString(), ...entry };
+  await tx(UNMATCHED_STORE, "readwrite", (store) => store.add(record));
+}
+
+export async function allUnmatched(): Promise<UnmatchedScan[]> {
+  if (!hasIDB()) return [];
+  const result = await tx<UnmatchedScan[]>(UNMATCHED_STORE, "readonly", (store) => store.getAll() as IDBRequest<UnmatchedScan[]>);
+  return (result || []).sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+}
+
+/** Call once a facilitator/admin has manually reconciled the student via Attendance → Add Manual Record. */
+export async function clearUnmatched(id: string): Promise<void> {
+  if (!hasIDB()) return;
+  await tx(UNMATCHED_STORE, "readwrite", (store) => store.delete(id));
 }
 
 // ── Submit-or-queue wrapper (used by the scanner pages) ────────────────────
@@ -126,38 +175,70 @@ function isBackendDownStatus(status: number): boolean {
 }
 
 /**
+ * Attempts to capture a scan into the offline queue. On success returns the
+ * normal `{ queued: true }` outcome; if IndexedDB itself is unavailable
+ * (`enqueue` throws), returns an honest `queued: false` rejection instead of
+ * letting the caller claim "Saved Offline" for a scan that was never stored
+ * anywhere. `status: 0` marks this as a client-side capture failure rather
+ * than a real HTTP response.
+ */
+async function tryEnqueue(qrCodeId: string, eventId: string, scannedAt: string): Promise<SubmitOutcome> {
+  try {
+    await enqueue({ qrCodeId, eventId, scannedAt });
+    return { queued: true };
+  } catch (err) {
+    console.error("[offline-queue] failed to capture scan — IndexedDB unavailable", err);
+    return {
+      queued: false,
+      ok: false,
+      status: 0,
+      data: {
+        error:
+          "Couldn't save this scan — local storage is unavailable on this device. Please retry on a stable connection, or record this student manually via Attendance → Add Manual Record.",
+      },
+    };
+  }
+}
+
+/**
  * Tries to submit a scan online. On a clear "backend unreachable" signal
  * (network error, timeout, 5xx/52x/504) it captures the scan offline and
  * returns `{ queued: true }`. A normal HTTP response (including business 4xx
  * like "window closed") is returned as-is for the caller to handle.
+ *
+ * `scannedAt`, when provided, is the original QR-scan capture time (Phase 1
+ * of the scanner UI) rather than the time this function runs (Phase 2,
+ * confirm-click) — it's forwarded as `scanned_at` so the server's event
+ * window checks judge the scan against when it actually happened, not
+ * against however long the facilitator took to hit Confirm. Also used to
+ * timestamp the offline-queue fallback below, for the same reason.
  */
 export async function submitScanOrQueue(params: {
   qrCodeId: string;
   eventId: string;
   authHeader: Record<string, string>;
+  scannedAt?: string;
 }): Promise<SubmitOutcome> {
   const { qrCodeId, eventId, authHeader } = params;
-  const scannedAt = new Date().toISOString();
+  const scannedAt = params.scannedAt ?? new Date().toISOString();
   try {
     const res = await fetchWithTimeout(
       "/api/scan",
       {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({ qr_code_id: qrCodeId, event_id: eventId }),
+        body: JSON.stringify({ qr_code_id: qrCodeId, event_id: eventId, scanned_at: scannedAt }),
       },
       SUBMIT_TIMEOUT_MS,
     );
     if (isBackendDownStatus(res.status)) {
-      await enqueue({ qrCodeId, eventId, scannedAt });
-      return { queued: true };
+      return await tryEnqueue(qrCodeId, eventId, scannedAt);
     }
     const data = await res.json().catch(() => ({}));
     return { queued: false, ok: res.ok, status: res.status, data };
   } catch {
     // Network error or timeout → backend unreachable → capture offline.
-    await enqueue({ qrCodeId, eventId, scannedAt });
-    return { queued: true };
+    return await tryEnqueue(qrCodeId, eventId, scannedAt);
   }
 }
 
@@ -220,12 +301,12 @@ export async function syncQueue(authHeader: Record<string, string>): Promise<Syn
       report.duplicates++;
       await removeQueued(scan.localId);
     } else if (outcome === "unmatched") {
-      report.unmatched.push({
-        qrCodeId: scan.qrCodeId,
-        eventId: scan.eventId,
-        scannedAt: scan.scannedAt,
-        reason: (data && data.error) || `Rejected (HTTP ${status})`,
-      });
+      const reason = (data && data.error) || `Rejected (HTTP ${status})`;
+      report.unmatched.push({ qrCodeId: scan.qrCodeId, eventId: scan.eventId, scannedAt: scan.scannedAt, reason });
+      // Persisted separately from the in-memory report so the rejection
+      // detail survives a dismissed toast or a page reload — see
+      // `allUnmatched`/`clearUnmatched`.
+      await recordUnmatched({ qrCodeId: scan.qrCodeId, eventId: scan.eventId, scannedAt: scan.scannedAt, reason });
       await removeQueued(scan.localId);
     } else {
       // retry — backend down. Bump attempt count, keep it, stop the run.
