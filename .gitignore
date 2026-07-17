@@ -66,4 +66,19 @@ docs/superpowers/
 docs/*.csv
 scripts/import-orientation-attendance*.sql
 scripts/RECONCILE-cpmt*.sql
-scratch/verify-cpmt*.mjs
+
+# one-off scripts that look up/reconcile/verify real student records by name or
+# email — incident-specific filenames (e.g. *-cpmt*.mjs) are too narrow to catch
+# the next incident, so these are matched by the verb prefix instead. Scratch/
+# scripts files are still free to use these names locally; they just won't be
+# tracked.
+scripts/reconcile-*.mjs
+scratch/reconcile-*.mjs
+scratch/verify-*.mjs
+scratch/lookup-*.mjs
+scratch/check-*.mjs
+scratch/mark-*.mjs
+
+# one-off incident writeups that tend to embed real student names/emails
+docs/unresolved-attendees*.md
+docs/attendance-incident-*.md
