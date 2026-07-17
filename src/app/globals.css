@@ -6371,8 +6371,16 @@ input[type="password"]::-ms-clear {
 }
 
 @media (max-width: 639px) {
+  .sd-root {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 140px);
+  }
   .cal-grid-panel {
     padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
   }
   .cal-weekday-row {
     display: grid;
@@ -6386,9 +6394,11 @@ input[type="password"]::-ms-clear {
   .cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, minmax(0, 1fr));
     gap: 2px;
     overflow-x: unset;
     scroll-snap-type: unset;
+    flex: 1;
   }
   .cal-cell {
     min-width: 0;
@@ -6811,10 +6821,17 @@ input[type="password"]::-ms-clear {
   /* ── Calendar: compact cells, hide event pills ── */
   .cal-grid-panel {
     padding: 14px 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
   }
-  .cal-weekday-row,
+  .cal-weekday-row {
+    gap: 6px !important;
+  }
   .cal-grid {
     gap: 6px !important;
+    flex: 1 !important;
+    grid-template-rows: repeat(6, minmax(0, 1fr)) !important;
   }
   .cal-weekday {
     font-size: 10px !important;
@@ -7274,8 +7291,21 @@ input[type="password"]::-ms-clear {
   .support-card {
     padding: 22px 20px 20px;
     border-radius: 14px;
+    width: 100%;
   }
   .support-footer {
     flex-direction: column;
+    gap: 12px;
+  }
+  .support-cancel-btn,
+  .support-send-btn {
+    min-height: 48px;
+    height: auto;
+    width: 100%;
+    font-size: 16px;
+    flex: none;
+  }
+  .support-send-btn {
+    font-weight: 600;
   }
 }
