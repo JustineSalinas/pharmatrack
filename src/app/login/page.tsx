@@ -365,8 +365,8 @@ function LoginForm() {
 
                 <button
                   type="submit"
-                  className="btn btn-gold pulse-btn"
-                  style={{ width: "100%", padding: "16px", marginTop: "4px", fontSize: "1.1rem", border: "none" }}
+                  className="btn btn-gold pulse-btn w-full h-[52px] md:h-auto px-6 md:p-[16px] mt-5 md:mt-[4px]"
+                  style={{ fontSize: "1.1rem", border: "none" }}
                   disabled={loading}
                 >
                   {loading ? "Logging in..." : "Secure Log In"}

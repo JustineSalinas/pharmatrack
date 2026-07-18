@@ -434,8 +434,8 @@ export default function RegisterPage() {
 
                 <button
                   type="submit"
-                  className={`btn btn-gold pulse-btn`}
-                  style={{ width: "100%", padding: "16px", marginTop: "10px", fontSize: "1.1rem", opacity: (!privacyAgreed || loading) ? 0.45 : 1, cursor: (!privacyAgreed || loading) ? "not-allowed" : "pointer", transition: "opacity 0.2s" }}
+                  className={`btn btn-gold pulse-btn w-full h-[52px] md:h-auto px-6 md:p-[16px] mt-5 md:mt-[10px]`}
+                  style={{ fontSize: "1.1rem", opacity: (!privacyAgreed || loading) ? 0.45 : 1, cursor: (!privacyAgreed || loading) ? "not-allowed" : "pointer", transition: "opacity 0.2s" }}
                   disabled={loading || !privacyAgreed}
                 >
                   {loading ? "Creating Account..." : `Create ${role === "student" ? "Student" : "Facilitator"} Account`}
