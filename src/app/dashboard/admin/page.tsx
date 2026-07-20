@@ -260,10 +260,6 @@ export default function AdminDashboard() {
                   }}
                 />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                <span style={{ fontSize: 11, color: "var(--dimmed)" }}>0%</span>
-                <span style={{ fontSize: 11, color: "var(--dimmed)" }}>100%</span>
-              </div>
             </div>
           </div>
         </div>
@@ -303,10 +299,6 @@ export default function AdminDashboard() {
                       transition: "width 0.8s ease",
                     }}
                   />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                  <span style={{ fontSize: 11, color: "var(--dimmed)" }}>0%</span>
-                  <span style={{ fontSize: 11, color: "var(--dimmed)" }}>100%</span>
                 </div>
               </div>
             </div>
