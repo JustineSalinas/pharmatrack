@@ -196,10 +196,9 @@ export default function AdminDashboard() {
               )}
             </button>
             {showNotifs && (
-              <div style={{
-                position: "absolute", top: "100%", right: 0, marginTop: "8px", width: "280px",
+              <div className="notif-dropdown" style={{
                 background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.5)", zIndex: 100, overflow: "hidden"
+                boxShadow: "0 10px 40px rgba(0,0,0,0.5)", overflow: "hidden"
               }}>
                 <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", fontSize: "13px", fontWeight: 600, color: "var(--white)" }}>
                   Notifications
@@ -422,6 +421,21 @@ export default function AdminDashboard() {
 
       <style jsx>{`
         .notif-item:hover { background: var(--surface2) !important; }
+        .notif-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 8px;
+          width: 280px;
+          max-width: calc(100vw - 32px);
+          z-index: 100;
+        }
+        /* On mobile the header wraps and the bell moves to the left, so anchoring
+           the panel's right edge to the bell pushed it off the left of the screen.
+           Flip to left-aligned so it opens into the viewport instead. */
+        @media (max-width: 640px) {
+          .notif-dropdown { right: auto; left: 0; }
+        }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
