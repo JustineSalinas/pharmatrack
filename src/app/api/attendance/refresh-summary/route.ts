@@ -17,7 +17,7 @@ const getAdminClient = () =>
     process.env.SUPABASE_SERVICE_ROLE_KEY || ""
   );
 
-const REFRESH_INTERVAL_MS = 15 * 60_000; // 15 minutes — matview is one row/student; 4×/hour is plenty for dashboard freshness
+const REFRESH_INTERVAL_MS = 3 * 60_000; // 3 minutes — matview is one row/student (cheap), so keep the dashboard rate close to live during events
 const CONFIG_KEY = "summaryRefreshLastRun";
 
 export async function POST(req: NextRequest) {
