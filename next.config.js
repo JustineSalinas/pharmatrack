@@ -15,12 +15,18 @@ const nextConfig = {
   },
   async rewrites() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-    return [
-      {
-        source: "/supabase-api/:path*",
-        destination: `${supabaseUrl}/:path*`,
-      },
-    ];
+    // Auth (only needs the apikey) and Realtime (a WebSocket upgrade that Route
+    // Handlers can't proxy) stay on the plain rewrite — both already worked.
+    // Everything else (REST/RPC/Storage) is handled by the explicit proxy at
+    // src/app/supabase-api/[...path]/route.ts, which forwards the Authorization
+    // header the rewrite was silently dropping (→ authenticated reads no longer
+    // hit PostgREST as anon). beforeFiles so these win over the [...path] route.
+    return {
+      beforeFiles: [
+        { source: "/supabase-api/auth/:path*", destination: `${supabaseUrl}/auth/:path*` },
+        { source: "/supabase-api/realtime/:path*", destination: `${supabaseUrl}/realtime/:path*` },
+      ],
+    };
   },
 };
 
