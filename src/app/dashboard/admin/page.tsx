@@ -250,16 +250,14 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div style={{ flex: 1, maxWidth: 280 }}>
-              <div style={{ height: 2, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
                 <div
                   style={{
                     height: "100%",
-                    width: "100%",
+                    width: `${Math.min(Number(stats.attendanceRate), 100)}%`,
                     background: "var(--gold)",
-                    borderRadius: 2,
-                    transform: `scaleX(${Math.min(Number(stats.attendanceRate), 100) / 100})`,
-                    transformOrigin: "left",
-                    transition: "transform 0.8s ease",
+                    borderRadius: 4,
+                    transition: "width 0.8s ease",
                   }}
                 />
               </div>
@@ -296,16 +294,14 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div style={{ flex: 1, maxWidth: 280 }}>
-                <div style={{ height: 2, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
                   <div
                     style={{
                       height: "100%",
-                      width: "100%",
+                      width: `${Math.min(emailUsage.percent, 100)}%`,
                       background: emailUsage.percent >= 90 ? "var(--danger)" : emailUsage.percent >= 70 ? "#d97706" : "var(--gold)",
-                      borderRadius: 2,
-                      transform: `scaleX(${Math.min(emailUsage.percent, 100) / 100})`,
-                      transformOrigin: "left",
-                      transition: "transform 0.8s ease",
+                      borderRadius: 4,
+                      transition: "width 0.8s ease",
                     }}
                   />
                 </div>
