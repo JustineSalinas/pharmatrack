@@ -60,6 +60,13 @@ export const manualAttendanceSchema = z.object({
   remarks: z.string().trim().max(500, "Remarks are too long").optional(),
 });
 
+export const editAttendanceSchema = z.object({
+  status: z.enum(["present", "late", "absent", "incomplete"]),
+  time_in: z.string().datetime().nullish(),
+  time_out: z.string().datetime().nullish(),
+  remarks: z.string().trim().max(500, "Remarks are too long").optional(),
+});
+
 export const productDraftSchema = z.object({
   name: z.string().trim().min(1, "Product name is required").max(200, "Product name is too long"),
   category: z.enum(["apparel", "accessories"]),
@@ -79,3 +86,4 @@ export type FacilitatorRegisterInput = z.infer<typeof facilitatorRegisterSchema>
 export type AdminRegisterInput = z.infer<typeof adminRegisterSchema>;
 export type QRSessionInput = z.infer<typeof qrSessionSchema>;
 export type ManualAttendanceInput = z.infer<typeof manualAttendanceSchema>;
+export type EditAttendanceInput = z.infer<typeof editAttendanceSchema>;

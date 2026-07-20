@@ -19,7 +19,26 @@ interface AttendanceRow {
   timeOut: string;
   status: string;
   rawDate: string;
+  rawTimeIn: string | null;
+  rawTimeOut: string | null;
   remarks: string;
+}
+
+// Convert a UTC timestamptz string to a datetime-local value (YYYY-MM-DDTHH:mm) in Manila time.
+function toManilaDatetimeLocal(utcString: string | null | undefined): string {
+  if (!utcString) return "";
+  const formatted = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Manila",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(new Date(utcString));
+  return formatted.slice(0, 16).replace(" ", "T");
+}
+
+// Parse a datetime-local value (treated as Manila time / UTC+8) back to a UTC ISO string.
+function fromManilaDatetimeLocal(localString: string): string | null {
+  if (!localString) return null;
+  return new Date(localString + ":00+08:00").toISOString();
 }
 
 interface StudentOption {
@@ -89,6 +108,8 @@ function formatAttendanceRows(data: any[]): AttendanceRow[] {
         : "—",
       status: r.status,
       rawDate,
+      rawTimeIn: r.time_in || null,
+      rawTimeOut: r.time_out || null,
       remarks: r.remarks || "",
     };
   });
@@ -129,6 +150,15 @@ export default function AdminAttendance() {
   const [manualRemarks, setManualRemarks] = useState("");
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const [manualError, setManualError] = useState("");
+
+  // ── Edit attendance modal ────────────────────────────────────────────
+  const [editRecord, setEditRecord] = useState<AttendanceRow | null>(null);
+  const [editStatus, setEditStatus] = useState<(typeof MANUAL_STATUS_OPTIONS)[number]>("present");
+  const [editTimeIn, setEditTimeIn] = useState("");
+  const [editTimeOut, setEditTimeOut] = useState("");
+  const [editRemarks, setEditRemarks] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const openManualModal = useCallback(async () => {
     setManualError("");
@@ -202,6 +232,47 @@ export default function AdminAttendance() {
       setManualError("Failed to add record");
     } finally {
       setManualSubmitting(false);
+    }
+  };
+
+  const openEditModal = useCallback((record: AttendanceRow) => {
+    setEditRecord(record);
+    setEditStatus(record.status as (typeof MANUAL_STATUS_OPTIONS)[number]);
+    setEditTimeIn(toManilaDatetimeLocal(record.rawTimeIn));
+    setEditTimeOut(toManilaDatetimeLocal(record.rawTimeOut));
+    setEditRemarks(record.remarks);
+    setEditError("");
+  }, []);
+
+  const handleEditSubmit = async () => {
+    if (!editRecord) return;
+    setEditSubmitting(true);
+    setEditError("");
+    try {
+      const res = await fetch(`/api/admin/attendance/${editRecord.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await getAuthHeader()),
+        },
+        body: JSON.stringify({
+          status: editStatus,
+          time_in: fromManilaDatetimeLocal(editTimeIn),
+          time_out: fromManilaDatetimeLocal(editTimeOut),
+          remarks: editRemarks.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setEditError(json.error || "Failed to update record");
+        return;
+      }
+      setEditRecord(null);
+      fetchAttendance(true);
+    } catch {
+      setEditError("Failed to update record");
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -626,7 +697,7 @@ export default function AdminAttendance() {
                       {r.remarks ? (r.remarks.length > 40 ? `${r.remarks.slice(0, 40)}…` : r.remarks) : "—"}
                     </td>
                     <td style={{ textAlign: "right", paddingRight: "24px" }}>
-                      <button className="action-btn-hover" style={{ width: "auto", padding: "6px 12px", marginLeft: "auto" }}>Review</button>
+                      <button className="action-btn-hover" style={{ width: "auto", padding: "6px 12px", marginLeft: "auto" }} onClick={() => openEditModal(r)}>Edit</button>
                     </td>
                   </tr>
                 );
@@ -758,6 +829,111 @@ export default function AdminAttendance() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {editRecord && (
+        <div className="modal-overlay" style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
+          overflowY: "auto", zIndex: 1000,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px",
+        }}>
+            <div className="modal-card" style={{
+            width: "100%", maxWidth: "480px",
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: "12px", padding: "28px", position: "relative",
+            boxShadow: "0 24px 48px rgba(0,0,0,0.5)",
+            margin: "auto",
+          }}>
+
+            {/* Header */}
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--white)", margin: "0 0 8px" }}>Edit Attendance Record</h3>
+              <div style={{ color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, marginBottom: "2px" }}>{editRecord.name}</div>
+              <div style={{ color: "var(--dimmed)", fontSize: "12px" }}>{editRecord.subject} &middot; {editRecord.displayDate}</div>
+            </div>
+
+            <div style={{ height: "1px", background: "var(--border)", marginBottom: "20px" }} />
+
+            {/* Status */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>Status</label>
+              <select
+                className="search-input select-input"
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value as typeof editStatus)}
+                style={{ width: "100%", height: "36px", padding: "0 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+              >
+                {MANUAL_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
+              </select>
+            </div>
+
+            {/* Times */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>Clock In</label>
+                <input
+                  type="datetime-local"
+                  value={editTimeIn}
+                  onChange={(e) => setEditTimeIn(e.target.value)}
+                  className="date-input"
+                  style={{ width: "100%", height: "36px", padding: "0 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>Clock Out</label>
+                <input
+                  type="datetime-local"
+                  value={editTimeOut}
+                  onChange={(e) => setEditTimeOut(e.target.value)}
+                  className="date-input"
+                  style={{ width: "100%", height: "36px", padding: "0 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+                />
+              </div>
+            </div>
+            <p style={{ fontSize: "11px", color: "var(--dimmed)", margin: "-10px 0 16px", opacity: 0.7 }}>Times are in Manila time (UTC+8). Leave blank to clear.</p>
+
+            {/* Remarks */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>
+                Remarks <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: "11px" }}>(optional)</span>
+              </label>
+              <textarea
+                value={editRemarks}
+                onChange={(e) => setEditRemarks(e.target.value)}
+                placeholder="Reason for this edit..."
+                maxLength={500}
+                rows={3}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none", resize: "vertical", fontFamily: "inherit", lineHeight: "1.5" }}
+              />
+            </div>
+
+            {editError && (
+              <p style={{ color: "var(--danger)", fontSize: "13px", margin: "0 0 16px" }}>{editError}</p>
+            )}
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setEditRecord(null)}
+                className="btn-ghost"
+                style={{ padding: "0 16px", height: "36px", fontSize: "13px", fontWeight: 500, borderRadius: "var(--radius-sm)", color: "var(--white-shade)", border: "1px solid var(--border)", background: "var(--surface2)", cursor: "pointer", transition: "all 0.15s ease" }}
+                disabled={editSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleEditSubmit}
+                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#0a0a0a", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: editSubmitting ? 0.6 : 1, transition: "all 0.15s ease" }}
+                disabled={editSubmitting}
+              >
+                {editSubmitting ? (<><Loader2 size={14} className="animate-spin" /> Saving...</>) : "Save Changes"}
+              </button>
+            </div>
+            </div>
         </div>
       )}
 
