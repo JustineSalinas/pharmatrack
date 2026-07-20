@@ -217,18 +217,23 @@ export default function AdminSettings() {
   };
 
   const handleReset = async () => {
-    if (
-      !confirm(
-        "This will permanently delete ALL attendance records. This cannot be undone.\n\nType OK to confirm."
-      )
-    )
+    // Typed confirmation — this permanently deletes EVERY attendance record, so
+    // a single stray click must not be able to trigger it.
+    const CONFIRM_PHRASE = "DELETE ALL ATTENDANCE";
+    const typed = window.prompt(
+      `This permanently deletes ALL attendance records for every event. This CANNOT be undone.\n\nType exactly:\n${CONFIRM_PHRASE}`
+    );
+    if (typed === null) return; // cancelled
+    if (typed.trim() !== CONFIRM_PHRASE) {
+      alert("Confirmation text did not match — nothing was deleted.");
       return;
-    const { error } = await supabase
+    }
+    const { error, count } = await supabase
       .from("attendance_records")
-      .delete()
+      .delete({ count: "exact" })
       .neq("id", "00000000-0000-0000-0000-000000000000");
     if (error) alert("Error: " + error.message);
-    else alert("All attendance records deleted.");
+    else alert(`Deleted ${count ?? 0} attendance record(s).`);
   };
 
   const [recomputing, setRecomputing] = useState(false);
