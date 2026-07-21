@@ -28,6 +28,11 @@ export interface SyncReport {
   remaining: number;
   /** True if the run stopped early because the backend was still unreachable. */
   backendDown: boolean;
+  /**
+   * True if the run stopped early because the scanner's session had expired (401).
+   * The affected scans stay queued — logging back in and syncing again recovers them.
+   */
+  authExpired: boolean;
 }
 
 /**
@@ -244,19 +249,24 @@ export async function submitScanOrQueue(params: {
 
 // ── Sync ───────────────────────────────────────────────────────────────────
 
-export type SyncClassification = "synced" | "duplicate" | "unmatched" | "retry";
+export type SyncClassification = "synced" | "duplicate" | "unmatched" | "retry" | "auth";
 
 /**
  * Decides what to do with a queued scan given the replay response. Pure and
  * exported so it can be unit-tested without IndexedDB or a real backend.
  * - 200 → recorded (includes the 23505 dedup race, which returns 200).
  * - 409 → already fully recorded / check-in-only duplicate → reconciled.
+ * - 401 → the scanner's session expired; the scan itself is fine. Recoverable
+ *   by logging back in, so it stays queued rather than being written off.
+ *   (2026-07-21: a facilitator's session lapsed mid-event and 22 valid scans
+ *   were classified as permanent rejections, needing manual reconciliation.)
  * - 5xx/52x/504 → backend still down → retry later.
- * - other 4xx (unknown QR, window closed, not approved) → permanent rejection.
+ * - other 4xx (unknown QR, window closed, 403 not-approved) → permanent rejection.
  */
 export function classifySyncResult(status: number): SyncClassification {
   if (status === 200) return "synced";
   if (status === 409) return "duplicate";
+  if (status === 401) return "auth";
   if (isBackendDownStatus(status)) return "retry";
   return "unmatched";
 }
@@ -264,11 +274,12 @@ export function classifySyncResult(status: number): SyncClassification {
 /**
  * Flushes the queue to `/api/scan`, replaying each scan with its original
  * `scanned_at`. Stops early (keeping the rest) if the backend goes unreachable
- * again mid-run. Removes synced/duplicate/unmatched from the queue; unmatched
- * are surfaced in the report for manual handling.
+ * or the session expires (401) mid-run. Removes synced/duplicate/unmatched from
+ * the queue; unmatched are surfaced in the report for manual handling, while
+ * session-expiry leaves everything queued for a retry after re-login.
  */
 export async function syncQueue(authHeader: Record<string, string>): Promise<SyncReport> {
-  const report: SyncReport = { synced: 0, duplicates: 0, unmatched: [], remaining: 0, backendDown: false };
+  const report: SyncReport = { synced: 0, duplicates: 0, unmatched: [], remaining: 0, backendDown: false, authExpired: false };
   if (!hasIDB()) return report;
 
   const scans = await allQueued();
@@ -308,6 +319,13 @@ export async function syncQueue(authHeader: Record<string, string>): Promise<Syn
       // `allUnmatched`/`clearUnmatched`.
       await recordUnmatched({ qrCodeId: scan.qrCodeId, eventId: scan.eventId, scannedAt: scan.scannedAt, reason });
       await removeQueued(scan.localId);
+    } else if (outcome === "auth") {
+      // Session expired. The scan is valid — keep it queued so re-logging in and
+      // syncing again recovers it. Stop the run: every remaining scan would 401
+      // on the same dead session.
+      report.authExpired = true;
+      await putQueued({ ...scan, attempts: scan.attempts + 1 });
+      break;
     } else {
       // retry — backend down. Bump attempt count, keep it, stop the run.
       report.backendDown = true;

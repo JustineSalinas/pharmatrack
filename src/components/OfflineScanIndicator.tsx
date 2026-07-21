@@ -29,6 +29,7 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
 
   const offline = !online;
   const showReport = lastReport && !reportDismissed && (lastReport.synced > 0 || lastReport.unmatched.length > 0 || lastReport.duplicates > 0);
+  const showAuthExpired = lastReport && !reportDismissed && lastReport.authExpired;
 
   return (
     <>
@@ -63,6 +64,31 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
           </button>
         )}
       </div>
+
+      {/* Session-expired banner. Rendered independently of the sync report: an
+          auth failure can happen with 0 synced/0 unmatched, in which case the
+          report below stays hidden and the facilitator would otherwise see
+          nothing at all while their scans sit unsent. */}
+      {showAuthExpired && (
+        <div
+          style={{
+            marginTop: "8px", padding: "10px 12px", borderRadius: "10px",
+            background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.35)",
+            fontSize: "13px", display: "flex", alignItems: "flex-start", gap: "10px",
+          }}
+        >
+          <AlertTriangle size={15} color="var(--gold)" style={{ marginTop: "2px", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ color: "var(--gold)", fontWeight: 600 }}>
+              Your session expired — sync paused
+            </div>
+            <div style={{ color: "var(--dimmed)", marginTop: "4px", fontSize: "12px", lineHeight: 1.5 }}>
+              {lastReport!.remaining} scan{lastReport!.remaining === 1 ? " is" : "s are"} still saved on this
+              device — nothing was lost. Log out and back in, then tap <strong>Sync now</strong>.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sync report */}
       {showReport && (
