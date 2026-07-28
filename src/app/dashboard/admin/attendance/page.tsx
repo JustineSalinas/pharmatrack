@@ -841,7 +841,7 @@ export default function AdminAttendance() {
               <button
                 type="button"
                 onClick={handleManualSubmit}
-                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#0a0a0a", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: manualSubmitting || !manualStudentId || !manualEventId ? 0.6 : 1, transition: "all 0.15s ease" }}
+                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "var(--gold-contrast)", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: manualSubmitting || !manualStudentId || !manualEventId ? 0.6 : 1, transition: "all 0.15s ease" }}
                 disabled={manualSubmitting || !manualStudentId || !manualEventId}
               >
                 {manualSubmitting ? (<><Loader2 size={14} className="animate-spin" /> Saving...</>) : "Add Record"}
@@ -947,7 +947,7 @@ export default function AdminAttendance() {
               <button
                 type="button"
                 onClick={handleEditSubmit}
-                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#0a0a0a", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: editSubmitting ? 0.6 : 1, transition: "all 0.15s ease" }}
+                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "var(--gold-contrast)", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: editSubmitting ? 0.6 : 1, transition: "all 0.15s ease" }}
                 disabled={editSubmitting}
               >
                 {editSubmitting ? (<><Loader2 size={14} className="animate-spin" /> Saving...</>) : "Save Changes"}

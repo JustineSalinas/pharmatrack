@@ -16,6 +16,9 @@
   --gold: #E8B84B;
   --gold2: #F0C96B;
   --gold-dim: rgba(232, 184, 75, 0.1);
+  /* Text colour to use on top of --gold. Near-black on the amber accent
+     (13.6:1); overridden to white in the dashboard, where --gold is indigo. */
+  --gold-contrast: #0a0a0a;
 
   /* Semantic */
   --danger: #F87171;
@@ -1626,6 +1629,8 @@ html {
   --gold: #4f46e5;
   --gold2: #6366f1;
   --gold-dim: rgba(79, 70, 229, 0.08);
+  /* White on indigo is 6.3:1; near-black would be 3.2:1 and fail AA. */
+  --gold-contrast: #ffffff;
 
   /* Semantic — darker for white bg contrast */
   --danger: #DC2626;
