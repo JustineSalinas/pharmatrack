@@ -135,12 +135,10 @@ html {
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
 
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
@@ -969,7 +967,6 @@ html {
 /* --- ANIMATIONS & UX ENHANCEMENTS --- */
 .fade-in {
   opacity: 0;
-  transform: translateY(30px);
   animation: fadeUp 0.8s forwards cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -986,9 +983,12 @@ html {
 }
 
 @keyframes fadeUp {
+  from {
+    opacity: 0;
+  }
+
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
@@ -1628,7 +1628,8 @@ html {
 }
 
 .dash-layout--student {
-  --bg: #F0EDE5; /* Pantone Coconut Milk */
+  --bg: #F0EDE5;
+  /* Pantone Coconut Milk */
 }
 
 /* Dashboard-specific scrollbar styling */
@@ -1664,9 +1665,9 @@ html {
   width: 100%;
   height: 100%;
   background: radial-gradient(circle 320px at 0% 0%, rgba(156, 123, 182, 0.95) 0%, transparent 100%),
-              radial-gradient(circle 420px at 100% 100%, rgba(142, 107, 187, 0.95) 0%, transparent 100%),
-              radial-gradient(circle 350px at 0% 55%, rgba(15, 10, 30, 0.98) 0%, transparent 100%),
-              #1c1033;
+    radial-gradient(circle 420px at 100% 100%, rgba(142, 107, 187, 0.95) 0%, transparent 100%),
+    radial-gradient(circle 350px at 0% 55%, rgba(15, 10, 30, 0.98) 0%, transparent 100%),
+    #1c1033;
   border-right: 1px solid rgba(139, 92, 246, 0.15);
   display: flex;
   flex-direction: column;
@@ -1870,6 +1871,8 @@ html {
   padding: 40px 48px;
   background: var(--bg);
   -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 1;
 }
 
 /* Base Dash Components */
@@ -2727,13 +2730,6 @@ html {
   scrollbar-color: var(--gold) var(--bg);
 }
 
-.dash-layout {
-  display: flex;
-  min-height: 100vh;
-  background: var(--bg);
-  position: relative;
-}
-
 /* Sidebar, nav-link, and footer styles are defined above in the
    Redesigned Sidebar block — do not duplicate here. */
 
@@ -2770,14 +2766,6 @@ html {
 .user-info span {
   font-size: 0.7rem;
   color: var(--muted);
-}
-
-.main-content {
-  flex: 1;
-  padding: 40px;
-  min-height: 100vh;
-  position: relative;
-  z-index: 1;
 }
 
 .mobile-menu-btn {
@@ -2843,8 +2831,8 @@ html {
     width: 56px !important;
     height: 56px !important;
     background: radial-gradient(circle 80px at 0% 0%, rgba(156, 123, 182, 0.95) 0%, transparent 100%),
-                radial-gradient(circle 80px at 100% 100%, rgba(142, 107, 187, 0.95) 0%, transparent 100%),
-                #1c1033 !important;
+      radial-gradient(circle 80px at 100% 100%, rgba(142, 107, 187, 0.95) 0%, transparent 100%),
+      #1c1033 !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.35) !important;
     z-index: 1001 !important;
@@ -5207,14 +5195,17 @@ input[type="password"]::-ms-clear {
   gap: 12px;
   margin-bottom: 8px;
 }
+
 .sp-form-section-header .sp-form-section-title {
   margin-bottom: 0;
 }
+
 .sp-form-header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .sp-edit-btn {
   display: inline-flex;
   align-items: center;
@@ -5229,16 +5220,18 @@ input[type="password"]::-ms-clear {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .sp-edit-btn:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
+
 .sp-discard-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(248,113,113,0.08);
-  border: 1px solid rgba(248,113,113,0.2);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
   color: var(--danger);
   padding: 8px 18px;
   border-radius: 24px;
@@ -5247,14 +5240,17 @@ input[type="password"]::-ms-clear {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .sp-discard-btn:hover:not(:disabled) {
-  background: rgba(248,113,113,0.15);
-  border-color: rgba(248,113,113,0.35);
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.35);
 }
+
 .sp-discard-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
 .sp-save-btn-sm {
   display: inline-flex;
   align-items: center;
@@ -5269,9 +5265,11 @@ input[type="password"]::-ms-clear {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .sp-save-btn-sm:hover:not(:disabled) {
   filter: brightness(1.1);
 }
+
 .sp-save-btn-sm:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -5285,11 +5283,12 @@ input[type="password"]::-ms-clear {
   font-size: 11px;
   font-weight: 600;
   padding: 4px 10px;
-  background: rgba(74,222,128,0.08);
-  border: 1px solid rgba(74,222,128,0.25);
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
   border-radius: 12px;
   color: var(--success);
 }
+
 .sp-active-dot {
   width: 6px;
   height: 6px;
@@ -5298,9 +5297,19 @@ input[type="password"]::-ms-clear {
   display: inline-block;
   animation: activePulse 2s infinite ease-in-out;
 }
+
 @keyframes activePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.85); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
 }
 
 /* ── Date Info Row ── */
@@ -5312,6 +5321,7 @@ input[type="password"]::-ms-clear {
   padding-top: 16px;
   border-top: 1px solid var(--border);
 }
+
 .sp-date-info-item {
   display: inline-flex;
   align-items: center;
@@ -5322,13 +5332,16 @@ input[type="password"]::-ms-clear {
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
 }
+
 .sp-date-info-icon {
   color: var(--dimmed);
 }
+
 .sp-date-info-label {
   color: var(--dimmed);
   font-weight: 500;
 }
+
 .sp-date-info-value {
   color: var(--white-shade);
   font-weight: 600;
@@ -6194,24 +6207,24 @@ input[type="password"]::-ms-clear {
   box-sizing: border-box;
 }
 
-.sd-panels-row > .cal-drawer,
-.sd-panels-row > .sd-event-panel {
+.sd-panels-row>.cal-drawer,
+.sd-panels-row>.sd-event-panel {
   flex: 1 1 0%;
   min-width: 0;
   margin-top: 0;
   margin-bottom: 0;
 }
 
-.sd-panels-row > .cal-drawer {
+.sd-panels-row>.cal-drawer {
   display: flex;
   flex-direction: column;
 }
 
-.sd-panels-row > .cal-drawer .cal-drawer-list {
+.sd-panels-row>.cal-drawer .cal-drawer-list {
   flex: 1;
 }
 
-.sd-panels-row > .sd-event-panel {
+.sd-panels-row>.sd-event-panel {
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -6233,8 +6246,9 @@ input[type="password"]::-ms-clear {
     flex-direction: column;
     gap: 16px;
   }
-  .sd-panels-row > .cal-drawer,
-  .sd-panels-row > .sd-event-panel {
+
+  .sd-panels-row>.cal-drawer,
+  .sd-panels-row>.sd-event-panel {
     width: 100%;
   }
 }
@@ -6376,27 +6390,33 @@ input[type="password"]::-ms-clear {
     flex-direction: column;
     min-height: calc(100vh - 140px);
   }
+
   .month-calendar-view .cal-grid-panel {
     display: flex;
     flex-direction: column;
     flex: 1;
   }
+
   .month-calendar-view .cal-grid {
     flex: 1;
     grid-template-rows: repeat(6, minmax(0, 1fr));
   }
+
   .cal-grid-panel {
     padding: 10px 8px;
   }
+
   .cal-weekday-row {
     display: grid;
     gap: 2px;
     margin-bottom: 4px;
   }
+
   .cal-weekday {
     font-size: 10px;
     padding: 2px 0;
   }
+
   .cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -6404,6 +6424,7 @@ input[type="password"]::-ms-clear {
     overflow-x: unset;
     scroll-snap-type: unset;
   }
+
   .cal-cell {
     min-width: 0;
     min-height: 42px;
@@ -6411,10 +6432,12 @@ input[type="password"]::-ms-clear {
     gap: 3px;
     border-radius: 6px;
   }
+
   .cal-cell-num {
     font-size: 11px;
     font-weight: 600;
   }
+
   /* Replace text pills with small coloured dots on mobile */
   .cal-cell-events {
     flex-direction: row;
@@ -6422,6 +6445,7 @@ input[type="password"]::-ms-clear {
     gap: 2px;
     margin-top: 2px;
   }
+
   .cal-cell-event-pill {
     width: 5px;
     height: 5px;
@@ -6432,12 +6456,15 @@ input[type="password"]::-ms-clear {
     text-indent: -9999px;
     overflow: hidden;
   }
+
   .cal-cell-more {
     display: none;
   }
+
   .upcoming-events-grid {
     grid-template-columns: 1fr !important;
   }
+
   .single-upcoming-event {
     max-width: 100%;
   }
@@ -6797,12 +6824,13 @@ input[type="password"]::-ms-clear {
   }
 
   /* Hero stat card spans both cols; inner layout stacks */
-  .admin-stat-card > div[style] {
+  .admin-stat-card>div[style] {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 16px !important;
   }
-  .admin-stat-card > div[style] > div:last-child {
+
+  .admin-stat-card>div[style]>div:last-child {
     max-width: 100% !important;
     width: 100% !important;
   }
@@ -6826,25 +6854,31 @@ input[type="password"]::-ms-clear {
   .cal-grid-panel {
     padding: 14px 12px !important;
   }
+
   .month-calendar-view .cal-grid-panel {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 !important;
   }
+
   .cal-weekday-row {
     gap: 6px !important;
   }
+
   .cal-grid {
     gap: 6px !important;
   }
+
   .month-calendar-view .cal-grid {
     flex: 1 !important;
     grid-template-rows: repeat(6, minmax(0, 1fr)) !important;
   }
+
   .cal-weekday {
     font-size: 10px !important;
     padding: 4px 0 !important;
   }
+
   .cal-cell {
     min-height: auto !important;
     padding: 8px 4px !important;
@@ -6852,18 +6886,23 @@ input[type="password"]::-ms-clear {
     border-radius: 8px !important;
     flex: 1 1 0 !important;
   }
+
   .cal-cell-day-label {
     font-size: 11px !important;
   }
+
   .cal-cell-date-label {
     font-size: 9px !important;
   }
+
   .cal-cell-event-pill {
     display: none !important;
   }
+
   .cal-cell-more {
     display: none !important;
   }
+
   /* Show a small dot instead of pills for event-bearing days */
   .cal-cell.has-events .cal-cell-events {
     display: flex;
@@ -6871,6 +6910,7 @@ input[type="password"]::-ms-clear {
     align-items: center;
     min-height: 8px;
   }
+
   .cal-cell.has-events .cal-cell-events::after {
     content: "";
     display: block;
@@ -6881,11 +6921,13 @@ input[type="password"]::-ms-clear {
     margin: 0;
     flex-shrink: 0;
   }
+
   /* Calendar nav: wrap month label */
   .sd-header .cal-month-nav {
     flex-wrap: wrap;
     gap: 6px;
   }
+
   .cal-month-label {
     min-width: 120px !important;
     font-size: 12px !important;
@@ -6895,9 +6937,11 @@ input[type="password"]::-ms-clear {
   .sp-profile-grid {
     grid-template-columns: 1fr !important;
   }
+
   .sp-two-col {
     grid-template-columns: 1fr !important;
   }
+
   .sp-three-col {
     grid-template-columns: 1fr !important;
   }
@@ -6927,12 +6971,13 @@ input[type="password"]::-ms-clear {
     align-items: flex-start !important;
     gap: 10px !important;
   }
+
   .sd-header-date {
     align-self: flex-start;
   }
 
   /* ── Notification dropdown ── */
-  .dash-notif-btn + div {
+  .dash-notif-btn+div {
     width: min(280px, 90vw) !important;
     right: 0 !important;
   }
@@ -6943,12 +6988,15 @@ input[type="password"]::-ms-clear {
   .stat-cards-row {
     grid-template-columns: 1fr !important;
   }
+
   .facilitator-overview-page .sd-stat-tiles {
     grid-template-columns: 1fr !important;
   }
+
   .main-content {
     padding: 20px 14px 100px !important;
   }
+
   /* Slightly tighter calendar cells */
   .cal-cell {
     min-height: auto !important;
@@ -6967,6 +7015,7 @@ input[type="password"]::-ms-clear {
     align-items: flex-start !important;
     gap: 16px !important;
   }
+
   .page-header .header-actions {
     width: 100%;
     flex-wrap: wrap;
@@ -6979,18 +7028,21 @@ input[type="password"]::-ms-clear {
     gap: 12px !important;
     padding: 14px !important;
   }
-  .event-row > div {
+
+  .event-row>div {
     width: auto !important;
   }
-  .event-row > div:first-child {
+
+  .event-row>div:first-child {
     flex: 1 1 100% !important;
   }
-  .event-row > div:last-child {
+
+  .event-row>div:last-child {
     margin-left: auto;
   }
 
   /* ── Modal inner grids: stack to 2-col (name/loc, time inputs) ── */
-  .modal-card form > div[style*="grid"] {
+  .modal-card form>div[style*="grid"] {
     grid-template-columns: 1fr 1fr !important;
   }
 
@@ -6998,6 +7050,7 @@ input[type="password"]::-ms-clear {
   .stats-grid {
     grid-template-columns: 1fr 1fr !important;
   }
+
   .content-grid {
     grid-template-columns: 1fr !important;
   }
@@ -7013,7 +7066,7 @@ input[type="password"]::-ms-clear {
   }
 
   /* ── Attendance summary strips: wrap 4 stats to 2×2 ── */
-  .fade-in > div[style*="display: flex"][style*="space"] > div[style*="flex: 1"] {
+  .fade-in>div[style*="display: flex"][style*="space"]>div[style*="flex: 1"] {
     min-width: 45%;
   }
 
@@ -7043,8 +7096,13 @@ input[type="password"]::-ms-clear {
 }
 
 @keyframes supportFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .support-card {
@@ -7063,8 +7121,15 @@ input[type="password"]::-ms-clear {
 }
 
 @keyframes supportPop {
-  from { opacity: 0; transform: scale(0.96) translateY(6px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .support-x-btn {
@@ -7182,7 +7247,7 @@ input[type="password"]::-ms-clear {
   background-position: right 10px center;
   background-size: 14px;
   width: 100%;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -7208,7 +7273,7 @@ input[type="password"]::-ms-clear {
   width: 100%;
   line-height: 1.5;
   box-sizing: border-box;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   min-height: 100px;
 }
@@ -7301,10 +7366,12 @@ input[type="password"]::-ms-clear {
     border-radius: 14px;
     width: 100%;
   }
+
   .support-footer {
     flex-direction: column;
     gap: 12px;
   }
+
   .support-cancel-btn,
   .support-send-btn {
     min-height: 48px;
@@ -7313,7 +7380,8 @@ input[type="password"]::-ms-clear {
     font-size: 16px;
     flex: none;
   }
+
   .support-send-btn {
     font-weight: 600;
   }
-}
+}

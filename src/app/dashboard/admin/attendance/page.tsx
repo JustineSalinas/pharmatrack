@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
@@ -159,6 +160,22 @@ export default function AdminAttendance() {
   const [editRemarks, setEditRemarks] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState("");
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (showManualModal || editRecord) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showManualModal, editRecord]);
 
   const openManualModal = useCallback(async () => {
     setManualError("");
@@ -506,8 +523,8 @@ export default function AdminAttendance() {
   // absent burst fills the row-capped `records` array and hides real scans.
   const useGlobalCounts = filterEvent === "All" && filterSection === "All" && !searchQuery && !selectedDate;
   const present = useGlobalCounts ? globalCounts.present : filtered.filter((r) => r.status === "present").length;
-  const late    = useGlobalCounts ? globalCounts.late    : filtered.filter((r) => r.status === "late").length;
-  const absent  = useGlobalCounts ? globalCounts.absent  : filtered.filter((r) => r.status === "absent").length;
+  const late = useGlobalCounts ? globalCounts.late : filtered.filter((r) => r.status === "late").length;
+  const absent = useGlobalCounts ? globalCounts.absent : filtered.filter((r) => r.status === "absent").length;
 
   if (loading) {
     return (
@@ -519,49 +536,62 @@ export default function AdminAttendance() {
 
   return (
     <div className="fade-in">
-      {/* Header */}
-      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "32px" }}>
+      {/* Header Banner */}
+      <div
+        className="page-header"
+        style={{
+          background: "#ffffff",
+          border: "1px solid rgba(0, 0, 0, 0.08)",
+          borderRadius: "12px",
+          padding: "20px 24px",
+          marginBottom: "24px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.03)",
+        }}
+      >
         <div>
-          <div className="breadcrumb" style={{ fontSize: "11px", textTransform: "uppercase", fontWeight: 600, color: "var(--dimmed)", letterSpacing: "0.06em", marginBottom: "8px" }}>
+          <div className="breadcrumb" style={{ fontSize: "11px", textTransform: "uppercase", fontWeight: 600, color: "#6b7280", letterSpacing: "0.06em", marginBottom: "6px" }}>
             <span>Admin Control</span><span style={{ margin: "0 8px" }}>/</span><span>Attendance</span>
           </div>
-          <h2 style={{ fontSize: "28px", fontWeight: 700, margin: 0, letterSpacing: "-0.03em", color: "var(--white)" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: 700, margin: 0, letterSpacing: "-0.02em", color: "#111827" }}>
             Attendance Logs
-            {refreshing && <Loader2 className="animate-spin" size={16} color="var(--dimmed)" style={{ marginLeft: 10, display: "inline" }} />}
+            {refreshing && <Loader2 className="animate-spin" size={16} color="#6b7280" style={{ marginLeft: 10, display: "inline" }} />}
           </h2>
-          <p style={{ color: "var(--dimmed)", fontSize: "13px", marginTop: "4px", margin: 0 }}>
+          <p style={{ color: "#6b7280", fontSize: "13px", marginTop: "4px", margin: 0 }}>
             Master database of all recorded participation · Updates in real-time
           </p>
         </div>
         <div className="header-actions" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <div style={{ position: "relative", width: "160px" }}>
-            <Calendar size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--dimmed)" }} />
+            <Calendar size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#6b7280" }} />
             <input
               className="date-input"
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              style={{ paddingLeft: "36px", paddingRight: "12px", height: "36px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white)", width: "100%", fontSize: "13px", outline: "none", cursor: "pointer", transition: "border-color 0.15s ease" }}
+              style={{ paddingLeft: "36px", paddingRight: "12px", height: "36px", borderRadius: "6px", border: "1px solid #e5e7eb", background: "#f9fafb", color: "#111827", width: "100%", fontSize: "13px", outline: "none", cursor: "pointer", transition: "border-color 0.15s ease" }}
             />
           </div>
           <button
             className="btn-ghost"
             onClick={() => fetchAttendance(true)}
-            style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
+            style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "6px", border: "1px solid #e5e7eb", background: "#f9fafb", color: "#374151", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
           >
             <RefreshCw size={14} />
             Refresh
           </button>
           <button
             className="btn-ghost"
-            style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
+            style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "6px", border: "1px solid #e5e7eb", background: "#f9fafb", color: "#374151", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
           >
             <Download size={14} /> Export
           </button>
           <button
             className="btn-ghost"
             onClick={openManualModal}
-            style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
+            style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 14px", borderRadius: "6px", border: "1px solid #e5e7eb", background: "#f9fafb", color: "#374151", fontSize: "13px", fontWeight: 500, cursor: "pointer", gap: "6px", transition: "all 0.15s ease" }}
           >
             <Plus size={14} /> Add Manual Record
           </button>
@@ -720,60 +750,60 @@ export default function AdminAttendance() {
         </div>
       </div>
 
-      {showManualModal && (
+      {mounted && showManualModal && createPortal(
         <div className="modal-overlay" style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000,
+          backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 99999,
           padding: "20px", paddingTop: "10vh"
         }}>
           <div className="modal-card" style={{
             width: "100%", maxWidth: "480px",
-            background: "var(--surface)", border: "1px solid var(--border)",
-            borderRadius: "12px", padding: "28px", position: "relative",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
+            background: "#ffffff", border: "1px solid #e5e7eb",
+            borderRadius: "16px", padding: "28px", position: "relative",
+            boxShadow: "0 24px 48px rgba(0,0,0,0.2)", color: "#111827"
           }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--white)", marginBottom: "4px" }}>Add Manual Record</h3>
-            <p style={{ color: "var(--dimmed)", fontSize: "13px", lineHeight: "1.5", margin: "0 0 20px" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111827", marginBottom: "4px" }}>Add Manual Record</h3>
+            <p style={{ color: "#6b7280", fontSize: "13px", lineHeight: "1.5", margin: "0 0 20px" }}>
               For students who attended a past event but didn&apos;t have a PharmaTrack account yet (e.g. no USA email at the time).
             </p>
 
             <div style={{ marginBottom: "14px" }}>
-              <label style={{ fontSize: "12px", color: "var(--dimmed)", display: "block", marginBottom: "6px" }}>Student</label>
+              <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: 600, display: "block", marginBottom: "6px" }}>Student</label>
               <input
                 className="search-input"
                 placeholder="Search by name, email, or student ID..."
                 value={manualStudentQuery}
                 onChange={(e) => { setManualStudentQuery(e.target.value); setManualStudentId(""); }}
-                style={{ width: "100%", height: "36px", padding: "0 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none", marginBottom: "8px" }}
+                style={{ width: "100%", height: "38px", padding: "0 12px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#f9fafb", color: "#111827", fontSize: "13px", outline: "none", marginBottom: "8px" }}
               />
               {manualStudentQuery && !manualStudentId && (
-                <div style={{ maxHeight: "160px", overflowY: "auto", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                <div style={{ maxHeight: "160px", overflowY: "auto", border: "1px solid #d1d5db", borderRadius: "8px", background: "#ffffff" }}>
                   {filteredManualStudents.slice(0, 20).map((s) => (
                     <div
                       key={s.id}
                       onClick={() => { setManualStudentId(s.id); setManualStudentQuery(`${s.full_name} (${s.student_id_number})`); }}
-                      style={{ padding: "8px 12px", fontSize: "13px", cursor: "pointer", color: "var(--white-shade)", borderBottom: "1px solid var(--border)" }}
+                      style={{ padding: "8px 12px", fontSize: "13px", cursor: "pointer", color: "#111827", borderBottom: "1px solid #e5e7eb" }}
                       className="user-row"
                     >
-                      <div>{s.full_name}</div>
-                      <div style={{ fontSize: "11px", color: "var(--dimmed)" }}>{s.email} · {s.student_id_number}</div>
+                      <div style={{ fontWeight: 500 }}>{s.full_name}</div>
+                      <div style={{ fontSize: "11px", color: "#6b7280" }}>{s.email} · {s.student_id_number}</div>
                     </div>
                   ))}
                   {filteredManualStudents.length === 0 && (
-                    <div style={{ padding: "8px 12px", fontSize: "13px", color: "var(--dimmed)" }}>No matching students found.</div>
+                    <div style={{ padding: "8px 12px", fontSize: "13px", color: "#6b7280" }}>No matching students found.</div>
                   )}
                 </div>
               )}
             </div>
 
             <div style={{ marginBottom: "14px" }}>
-              <label style={{ fontSize: "12px", color: "var(--dimmed)", display: "block", marginBottom: "6px" }}>Event</label>
+              <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: 600, display: "block", marginBottom: "6px" }}>Event</label>
               <select
                 className="search-input select-input"
                 value={manualEventId}
                 onChange={(e) => setManualEventId(e.target.value)}
-                style={{ width: "100%", height: "36px", padding: "0 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+                style={{ width: "100%", height: "38px", padding: "0 12px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#f9fafb", color: "#111827", fontSize: "13px", outline: "none" }}
               >
                 <option value="">Select an event...</option>
                 {events.map((e) => (
@@ -783,30 +813,30 @@ export default function AdminAttendance() {
             </div>
 
             <div style={{ marginBottom: "14px" }}>
-              <label style={{ fontSize: "12px", color: "var(--dimmed)", display: "block", marginBottom: "6px" }}>Status</label>
+              <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: 600, display: "block", marginBottom: "6px" }}>Status</label>
               <select
                 className="search-input select-input"
                 value={manualStatus}
                 onChange={(e) => setManualStatus(e.target.value as typeof manualStatus)}
-                style={{ width: "100%", height: "36px", padding: "0 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+                style={{ width: "100%", height: "38px", padding: "0 12px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#f9fafb", color: "#111827", fontSize: "13px", outline: "none" }}
               >
                 {MANUAL_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
               </select>
             </div>
 
             <div style={{ marginBottom: "14px" }}>
-              <label style={{ fontSize: "12px", color: "var(--dimmed)", display: "block", marginBottom: "6px" }}>Remarks (optional)</label>
+              <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: 600, display: "block", marginBottom: "6px" }}>Remarks (optional)</label>
               <textarea
                 value={manualRemarks}
                 onChange={(e) => setManualRemarks(e.target.value)}
                 placeholder="Defaults to a note that this was manually reconciled"
                 rows={2}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none", resize: "vertical", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#f9fafb", color: "#111827", fontSize: "13px", outline: "none", resize: "vertical", fontFamily: "inherit" }}
               />
             </div>
 
             {manualError && (
-              <p style={{ color: "var(--danger)", fontSize: "13px", margin: "0 0 14px" }}>{manualError}</p>
+              <p style={{ color: "#dc2626", fontSize: "13px", margin: "0 0 14px" }}>{manualError}</p>
             )}
 
             <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
@@ -814,7 +844,7 @@ export default function AdminAttendance() {
                 type="button"
                 onClick={() => setShowManualModal(false)}
                 className="btn-ghost"
-                style={{ padding: "0 16px", height: "36px", fontSize: "13px", fontWeight: 500, borderRadius: "var(--radius-sm)", color: "var(--white-shade)", border: "1px solid var(--border)", background: "var(--surface2)", cursor: "pointer", transition: "all 0.15s ease" }}
+                style={{ padding: "0 18px", height: "38px", fontSize: "13px", fontWeight: 500, borderRadius: "8px", color: "#374151", border: "1px solid #d1d5db", background: "#f3f4f6", cursor: "pointer", transition: "all 0.15s ease" }}
                 disabled={manualSubmitting}
               >
                 Cancel
@@ -822,49 +852,50 @@ export default function AdminAttendance() {
               <button
                 type="button"
                 onClick={handleManualSubmit}
-                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#0a0a0a", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: manualSubmitting || !manualStudentId || !manualEventId ? 0.6 : 1, transition: "all 0.15s ease" }}
+                style={{ padding: "0 22px", height: "38px", fontSize: "13px", fontWeight: 600, borderRadius: "8px", color: "#000000", background: "#E8B84B", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: manualSubmitting || !manualStudentId || !manualEventId ? 0.6 : 1, transition: "all 0.15s ease", boxShadow: "0 2px 6px rgba(232, 184, 75, 0.3)" }}
                 disabled={manualSubmitting || !manualStudentId || !manualEventId}
               >
                 {manualSubmitting ? (<><Loader2 size={14} className="animate-spin" /> Saving...</>) : "Add Record"}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {editRecord && (
+      {mounted && editRecord && createPortal(
         <div className="modal-overlay" style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
-          overflowY: "auto", zIndex: 1000,
+          backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)",
+          overflowY: "auto", zIndex: 99999,
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "20px",
         }}>
-            <div className="modal-card" style={{
+          <div className="modal-card" style={{
             width: "100%", maxWidth: "480px",
-            background: "var(--surface)", border: "1px solid var(--border)",
-            borderRadius: "12px", padding: "28px", position: "relative",
-            boxShadow: "0 24px 48px rgba(0,0,0,0.5)",
-            margin: "auto",
+            background: "#ffffff", border: "1px solid #e5e7eb",
+            borderRadius: "16px", padding: "28px", position: "relative",
+            boxShadow: "0 24px 48px rgba(0,0,0,0.2)",
+            margin: "auto", color: "#111827"
           }}>
 
             {/* Header */}
             <div style={{ marginBottom: "20px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--white)", margin: "0 0 8px" }}>Edit Attendance Record</h3>
-              <div style={{ color: "var(--white-shade)", fontSize: "13px", fontWeight: 500, marginBottom: "2px" }}>{editRecord.name}</div>
-              <div style={{ color: "var(--dimmed)", fontSize: "12px" }}>{editRecord.subject} &middot; {editRecord.displayDate}</div>
+              <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>Edit Attendance Record</h3>
+              <div style={{ color: "#1f2937", fontSize: "14px", fontWeight: 600, marginBottom: "2px" }}>{editRecord.name}</div>
+              <div style={{ color: "#6b7280", fontSize: "13px" }}>{editRecord.subject} &middot; {editRecord.displayDate}</div>
             </div>
 
-            <div style={{ height: "1px", background: "var(--border)", marginBottom: "20px" }} />
+            <div style={{ height: "1px", background: "#e5e7eb", marginBottom: "20px" }} />
 
             {/* Status */}
             <div style={{ marginBottom: "16px" }}>
-              <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>Status</label>
+              <label style={{ fontSize: "11px", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>Status</label>
               <select
                 className="search-input select-input"
                 value={editStatus}
                 onChange={(e) => setEditStatus(e.target.value as typeof editStatus)}
-                style={{ width: "100%", height: "36px", padding: "0 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+                style={{ width: "100%", height: "38px", padding: "0 12px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#f9fafb", color: "#111827", fontSize: "13px", outline: "none" }}
               >
                 {MANUAL_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
               </select>
@@ -873,31 +904,31 @@ export default function AdminAttendance() {
             {/* Times */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
               <div>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>Clock In</label>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>Clock In</label>
                 <input
                   type="datetime-local"
                   value={editTimeIn}
                   onChange={(e) => setEditTimeIn(e.target.value)}
                   className="date-input"
-                  style={{ width: "100%", height: "36px", padding: "0 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+                  style={{ width: "100%", height: "38px", padding: "0 10px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#f9fafb", color: "#111827", fontSize: "13px", outline: "none" }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>Clock Out</label>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>Clock Out</label>
                 <input
                   type="datetime-local"
                   value={editTimeOut}
                   onChange={(e) => setEditTimeOut(e.target.value)}
                   className="date-input"
-                  style={{ width: "100%", height: "36px", padding: "0 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none" }}
+                  style={{ width: "100%", height: "38px", padding: "0 10px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#f9fafb", color: "#111827", fontSize: "13px", outline: "none" }}
                 />
               </div>
             </div>
-            <p style={{ fontSize: "11px", color: "var(--dimmed)", margin: "-10px 0 16px", opacity: 0.7 }}>Times are in Manila time (UTC+8). Leave blank to clear.</p>
+            <p style={{ fontSize: "11px", color: "#6b7280", margin: "-10px 0 16px" }}>Times are in Manila time (UTC+8). Leave blank to clear.</p>
 
             {/* Remarks */}
             <div style={{ marginBottom: "20px" }}>
-              <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>
+              <label style={{ fontSize: "11px", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "8px" }}>
                 Remarks <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: "11px" }}>(optional)</span>
               </label>
               <textarea
@@ -906,12 +937,12 @@ export default function AdminAttendance() {
                 placeholder="Reason for this edit..."
                 maxLength={500}
                 rows={3}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--white)", fontSize: "13px", outline: "none", resize: "vertical", fontFamily: "inherit", lineHeight: "1.5" }}
+                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#f9fafb", color: "#111827", fontSize: "13px", outline: "none", resize: "vertical", fontFamily: "inherit", lineHeight: "1.5" }}
               />
             </div>
 
             {editError && (
-              <p style={{ color: "var(--danger)", fontSize: "13px", margin: "0 0 16px" }}>{editError}</p>
+              <p style={{ color: "#dc2626", fontSize: "13px", margin: "0 0 16px" }}>{editError}</p>
             )}
 
             <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
@@ -919,7 +950,7 @@ export default function AdminAttendance() {
                 type="button"
                 onClick={() => setEditRecord(null)}
                 className="btn-ghost"
-                style={{ padding: "0 16px", height: "36px", fontSize: "13px", fontWeight: 500, borderRadius: "var(--radius-sm)", color: "var(--white-shade)", border: "1px solid var(--border)", background: "var(--surface2)", cursor: "pointer", transition: "all 0.15s ease" }}
+                style={{ padding: "0 18px", height: "38px", fontSize: "13px", fontWeight: 500, borderRadius: "8px", color: "#374151", border: "1px solid #d1d5db", background: "#f3f4f6", cursor: "pointer", transition: "all 0.15s ease" }}
                 disabled={editSubmitting}
               >
                 Cancel
@@ -927,14 +958,15 @@ export default function AdminAttendance() {
               <button
                 type="button"
                 onClick={handleEditSubmit}
-                style={{ padding: "0 20px", height: "36px", fontSize: "13px", fontWeight: 600, borderRadius: "var(--radius-sm)", color: "#0a0a0a", background: "var(--gold)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: editSubmitting ? 0.6 : 1, transition: "all 0.15s ease" }}
+                style={{ padding: "0 22px", height: "38px", fontSize: "13px", fontWeight: 600, borderRadius: "8px", color: "#000000", background: "#E8B84B", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: editSubmitting ? 0.6 : 1, transition: "all 0.15s ease", boxShadow: "0 2px 6px rgba(232, 184, 75, 0.3)" }}
                 disabled={editSubmitting}
               >
                 {editSubmitting ? (<><Loader2 size={14} className="animate-spin" /> Saving...</>) : "Save Changes"}
               </button>
             </div>
-            </div>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       <style jsx>{`
