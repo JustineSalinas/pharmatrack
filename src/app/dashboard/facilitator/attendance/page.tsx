@@ -364,8 +364,8 @@ export default function FacilitatorAttendance() {
   // the "1 present" symptom from a bulk-absent burst filling the row-capped array.
   const useGlobalCounts = filterEvent === "All" && filterSection === "All" && !searchQuery && !startDate && !endDate;
   const present = useGlobalCounts ? globalCounts.present : filtered.filter((r) => r.status === "present").length;
-  const late = useGlobalCounts ? globalCounts.late : filtered.filter((r) => r.status === "late").length;
-  const absent = useGlobalCounts ? globalCounts.absent : filtered.filter((r) => r.status === "absent").length;
+  const late    = useGlobalCounts ? globalCounts.late    : filtered.filter((r) => r.status === "late").length;
+  const absent  = useGlobalCounts ? globalCounts.absent  : filtered.filter((r) => r.status === "absent").length;
 
   if (loading) {
     return (

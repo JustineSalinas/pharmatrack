@@ -1596,6 +1596,18 @@ html {
   position: relative;
   z-index: 1;
 
+  /* Scrollbar override for dashboards */
+  scrollbar-width: thin;
+  scrollbar-color: #D1D5DB #F7F8FA;
+}
+
+/* The dashboard light-mode palette. Applied to .modal-overlay as well as
+   .dash-layout because dashboard modals are portaled to document.body — they
+   render outside .dash-layout and would otherwise fall back to the dark root
+   palette (notably --gold, which is amber at :root but indigo in the
+   dashboard). Keep this rule as the single source of truth for both. */
+.dash-layout,
+.modal-overlay {
   /* Core Palette — Light Mode Override */
   --bg: #F7F8FA;
   --surface: #FFFFFF;
@@ -1621,10 +1633,6 @@ html {
   --teal: #0D9488;
   --teal-dim: rgba(13, 148, 136, 0.08);
   --mint: #16A34A;
-
-  /* Scrollbar override for dashboards */
-  scrollbar-width: thin;
-  scrollbar-color: #D1D5DB #F7F8FA;
 }
 
 .dash-layout--student {
