@@ -390,7 +390,7 @@ export default function ScannerPage() {
       } catch (err) {
         console.error("Failed to refresh session before confirming scan", err);
         try {
-          await enqueue({ qrCodeId: verifiedStudent.qrCodeId, eventId: selectedEventId, scannedAt: verifiedStudent.scannedAt });
+          await enqueue({ qrCodeId: verifiedStudent.qrCodeId, eventId: selectedEventId, scannedAt: verifiedStudent.scannedAt, studentName: verifiedStudent.fullName });
           await offlineSync.refresh();
           setScanResult({ success: true, message: "Saved Offline", submessage: `${verifiedStudent.fullName}'s scan was queued and will sync automatically.` });
           setVerifiedStudent(null);
@@ -410,6 +410,7 @@ export default function ScannerPage() {
         eventId: selectedEventId,
         authHeader,
         scannedAt: verifiedStudent.scannedAt,
+        studentName: verifiedStudent.fullName,
       });
 
       // Backend was unreachable — the scan was captured offline instead of lost.
