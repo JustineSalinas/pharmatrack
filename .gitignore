@@ -57,16 +57,9 @@ yarn-error.log*
 
 # internal docs — not for public repo
 pharmatrack_architecture.html
-docs/*.html
-docs/*.docx
-docs/*.pdf
-docs/auth-setup.md
-docs/identify-malformed-qr-students.md
-docs/supabase-outage-resilience.md
-docs/superpowers/
+/docs/
 
 # student sign-in data / generated attendance imports (contain PII — never commit)
-docs/*.csv
 scripts/import-orientation-attendance*.sql
 scripts/RECONCILE-cpmt*.sql
 
@@ -81,7 +74,3 @@ scratch/verify-*.mjs
 scratch/lookup-*.mjs
 scratch/check-*.mjs
 scratch/mark-*.mjs
-
-# one-off incident writeups that tend to embed real student names/emails
-docs/unresolved-attendees*.md
-docs/attendance-incident-*.md

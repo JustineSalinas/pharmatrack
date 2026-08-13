@@ -8,7 +8,7 @@ A QR-based attendance tracking system for the University of San Agustin College 
 
 1. A facilitator creates an event with a check-in window (on-time cutoff, late cutoff, close time)
 2. Each student has a personal QR code available on their profile
-3. At the venue, a facilitator opens the scanner and scans each student's QR code
+3. At the venue, a facilitator opens the scanner and scans student QR codes — or students can self-scan a displayed session QR code
 4. Attendance status is derived automatically from the scan time:
    - **Present** — scanned before the late cutoff
    - **Late** — scanned after the late cutoff but before the window closes
@@ -35,6 +35,8 @@ A QR-based attendance tracking system for the University of San Agustin College 
 - **Email notifications** — event broadcasts to students when events are scheduled, absence alerts, weekly attendance digest for facilitators
 - **Report exports** — PDF and Excel downloads for attendance records
 - **Approval workflow** — new accounts are held as `pending` until an admin approves them
+- **Manual reconciliation** — admins can correct a missed or wrong attendance entry for a past event
+- **Rate limiting** — critical endpoints (`/api/scan`, `/api/auth/*`, `/api/events`) are rate-limited per IP via Upstash Redis (falls back to in-memory in dev)
 
 ---
 
@@ -42,11 +44,34 @@ A QR-based attendance tracking system for the University of San Agustin College 
 
 ```bash
 npm install
-cp .env.local.example .env.local   # fill in Supabase and SMTP credentials
-npm run dev
 ```
 
-Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. Email features also need `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` (optional — the app runs without them).
+Create `.env.local` in the project root with the following variables:
+
+```
+# Supabase (required)
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Email / SMTP (optional — app runs without these)
+SMTP_HOST=
+SMTP_PORT=
+SMTP_SECURE=
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+
+# Upstash Redis rate limiting (optional — falls back to in-memory)
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+```
+
+Then start the dev server:
+
+```bash
+npm run dev
+```
 
 ```bash
 npm test            # run tests
@@ -59,7 +84,7 @@ npm run build       # production build
 
 ## Tech stack
 
-Next.js 15 (App Router) · Supabase (Postgres + Auth) · Zod · Vitest · nodemailer · Upstash Redis · Sentry
+Next.js 15 (App Router) · Supabase (Postgres + Auth) · Zod · Vitest · html5-qrcode / qrcode.react · pdfkit / xlsx · nodemailer · Upstash Redis · Sentry
 
 ---
 
