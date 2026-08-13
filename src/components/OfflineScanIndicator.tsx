@@ -27,10 +27,16 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
   } = state;
   const [reportDismissed, setReportDismissed] = useState(false);
 
-  // Any new sync result (auto-poll or manual) should be visible even if the
-  // previous report was dismissed — the dismissed flag only applies to the old
-  // lastReport object, not the next one.
-  useEffect(() => { if (lastReport) setReportDismissed(false); }, [lastReport]);
+  // Any *materially different* sync result (auto-poll or manual) should be
+  // visible even if the previous report was dismissed. Keyed on the report's
+  // contents, not its identity: syncQueue allocates a fresh object every run,
+  // so keying on `lastReport` itself would un-dismiss an identical repeated
+  // failure on every POLL_INTERVAL_MS tick and make the X button useless
+  // for exactly as long as the backend stays down.
+  const reportSignature = lastReport
+    ? `${lastReport.synced}|${lastReport.duplicates}|${lastReport.unmatched.length}|${lastReport.remaining}|${lastReport.backendDown}|${lastReport.authExpired}`
+    : null;
+  useEffect(() => { if (reportSignature) setReportDismissed(false); }, [reportSignature]);
 
   const offline = !online;
   const showReport = lastReport && !reportDismissed && (lastReport.synced > 0 || lastReport.unmatched.length > 0 || lastReport.duplicates > 0);
@@ -107,12 +113,20 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
           }}
         >
           <ServerCrash size={15} color="var(--danger)" style={{ marginTop: "2px", flexShrink: 0 }} />
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ color: "var(--danger)", fontWeight: 600 }}>Backend unreachable — retry later</div>
             <div style={{ color: "var(--dimmed)", marginTop: "4px", fontSize: "12px", lineHeight: 1.5 }}>
-              Scans are still saved on this device. They&apos;ll sync automatically when the connection returns.
+              {lastReport!.remaining} scan{lastReport!.remaining === 1 ? " is" : "s are"} still saved on this
+              device. They&apos;ll sync automatically when the connection returns.
             </div>
           </div>
+          <button
+            onClick={() => setReportDismissed(true)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--dimmed)", flexShrink: 0 }}
+            aria-label="Dismiss"
+          >
+            <X size={15} />
+          </button>
         </div>
       )}
 
@@ -174,7 +188,10 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
               >
                 <div style={{ minWidth: 0 }}>
                   <div style={{ color: "var(--white)", fontWeight: 600, fontSize: "12px" }}>
-                    {u.studentName ?? `QR ${u.qrCodeId.slice(0, 8)}…`} — {formatManilaTime(u.scannedAt, { hour: "numeric", minute: "2-digit", month: "short", day: "numeric" })}
+                    {/* Full id, never truncated: this branch fires only when the name is
+                        unknown (direct-offline capture), so the id is the operator's only
+                        handle for reconciling the record afterwards. */}
+                    {u.studentName ?? u.qrCodeId} — {formatManilaTime(u.scannedAt, { hour: "numeric", minute: "2-digit", month: "short", day: "numeric" })}
                   </div>
                   <div style={{ color: "var(--dimmed)", fontSize: "12px", marginTop: "2px" }}>{u.reason}</div>
                 </div>

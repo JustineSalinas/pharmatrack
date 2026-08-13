@@ -18,8 +18,12 @@ export interface QueuedScan {
   scannedAt: string;
   createdAt: string;
   attempts: number;
-  /** Student name captured at Phase 1. Null for direct-offline scans (no lookup ran). */
-  studentName: string | null;
+  /**
+   * Student name captured at Phase 1. Null for direct-offline scans (no lookup
+   * ran), and *absent* on rows queued before this field shipped — DB_VERSION
+   * was not bumped, so read sites must tolerate `undefined` as well as null.
+   */
+  studentName?: string | null;
 }
 
 export interface SyncReport {
@@ -49,8 +53,11 @@ export interface UnmatchedScan {
   scannedAt: string;
   reason: string;
   recordedAt: string;
-  /** Student name if it was known at capture time; null for direct-offline scans. */
-  studentName: string | null;
+  /**
+   * Student name if it was known at capture time; null for direct-offline
+   * scans, and absent on entries persisted before this field shipped.
+   */
+  studentName?: string | null;
 }
 
 export type SubmitOutcome =
