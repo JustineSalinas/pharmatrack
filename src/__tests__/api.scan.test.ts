@@ -443,6 +443,67 @@ describe("POST /api/scan", () => {
     expect(json.error).toMatch(/4 hours/i);
   });
 
+  // ── Offline replay of a scan that timed out but succeeded ───────────────
+
+  it("returns 409 and does not write time_out when a replayed scan lands exactly on time_in", async () => {
+    // A scan that timed out client-side at 12s but committed server-side gets
+    // queued with its ORIGINAL scanned_at and replayed. `now` then equals the
+    // time_in that same scan wrote, so hoursSinceIn is 0 and — with no
+    // check-out window on the event — every other guard passes. Without the
+    // ordering guard this writes time_out === time_in and returns 200.
+    const capturedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = {
+      data: { ...makeOpenEvent(), check_in_only: false, check_out_start: null, check_out_end: null },
+      error: null,
+    };
+    tableResults["attendance_records"] = {
+      data: {
+        id: "record-1",
+        student_id: STUDENT_ID,
+        event_id: EVENT_ID,
+        status: "present",
+        time_in: capturedAt,
+        time_out: null,
+      },
+      error: null,
+    };
+    const res = await POST(
+      makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID, scanned_at: capturedAt }),
+    );
+    expect(res.status).toBe(409);
+    expect(mockUpdateRecord).not.toHaveBeenCalledWith(
+      "attendance_records",
+      expect.objectContaining({ time_out: expect.anything() })
+    );
+  });
+
+  it("still records a normal check-out when the replayed scan is genuinely later", async () => {
+    // Guards against over-correcting: a real second scan must still check out.
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = {
+      data: { ...makeOpenEvent(), check_in_only: false, check_out_start: null, check_out_end: null },
+      error: null,
+    };
+    tableResults["attendance_records"] = {
+      data: {
+        id: "record-1",
+        student_id: STUDENT_ID,
+        event_id: EVENT_ID,
+        status: "present",
+        time_in: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1 hour ago
+        time_out: null,
+      },
+      error: null,
+    };
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.action).toBe("time_out");
+  });
+
   // ── Check-in only events ────────────────────────────────────────────────
 
   it("returns 409 and does not write time_out on a second scan for a check_in_only event", async () => {

@@ -276,6 +276,24 @@ export async function POST(req: NextRequest) {
     const timeIn = new Date(existing.time_in);
     const hoursSinceIn = (now.getTime() - timeIn.getTime()) / (1000 * 60 * 60);
 
+    // A check-out can never be at or before the check-in it closes. This fires
+    // on an offline replay of a scan that timed out client-side (12s) but
+    // actually succeeded server-side: the queued scan carries its ORIGINAL
+    // scanned_at, so `now` comes back exactly equal to the time_in that same
+    // scan just wrote. Without this guard `hoursSinceIn` is 0 (passes the
+    // 4-hour cap) and a null check_out_start/end skips both window checks, so
+    // we would write time_out === time_in and report a 200 — silently marking
+    // a student who scanned once as having completed the event.
+    // 409 is what the offline queue classifies as "duplicate", so the replayed
+    // scan is dropped from the queue instead of retrying forever.
+    if (now.getTime() <= timeIn.getTime()) {
+      console.warn(`[Scan API] Rejecting check-out at or before check-in for student ${studentId} (record ${existing.id}) — replayed duplicate scan`);
+      return NextResponse.json(
+        { error: `Already recorded as ${existing.status}. This scan was already saved.` },
+        { status: 409 },
+      );
+    }
+
     if (hoursSinceIn > 4) {
       console.warn(`[Scan API] Check-out failed: Time-out window expired (hours since check-in: ${hoursSinceIn.toFixed(2)} > 4)`);
       return NextResponse.json(
