@@ -18,6 +18,8 @@ export interface QueuedScan {
   scannedAt: string;
   createdAt: string;
   attempts: number;
+  /** Student name captured at Phase 1. Null for direct-offline scans (no lookup ran). */
+  studentName: string | null;
 }
 
 export interface SyncReport {
@@ -47,6 +49,8 @@ export interface UnmatchedScan {
   scannedAt: string;
   reason: string;
   recordedAt: string;
+  /** Student name if it was known at capture time; null for direct-offline scans. */
+  studentName: string | null;
 }
 
 export type SubmitOutcome =
@@ -108,7 +112,7 @@ function genId(): string {
  * silent success, otherwise the UI can end up claiming "Saved Offline" for a
  * scan that was never actually stored anywhere.
  */
-export async function enqueue(scan: { qrCodeId: string; eventId: string; scannedAt: string }): Promise<void> {
+export async function enqueue(scan: { qrCodeId: string; eventId: string; scannedAt: string; studentName?: string | null }): Promise<void> {
   if (!hasIDB()) throw new Error("IndexedDB is not available on this device/browser.");
   const record: QueuedScan = {
     localId: genId(),
@@ -117,6 +121,7 @@ export async function enqueue(scan: { qrCodeId: string; eventId: string; scanned
     scannedAt: scan.scannedAt,
     createdAt: new Date().toISOString(),
     attempts: 0,
+    studentName: scan.studentName ?? null,
   };
   await tx(STORE, "readwrite", (store) => store.add(record));
 }
@@ -187,9 +192,9 @@ function isBackendDownStatus(status: number): boolean {
  * anywhere. `status: 0` marks this as a client-side capture failure rather
  * than a real HTTP response.
  */
-async function tryEnqueue(qrCodeId: string, eventId: string, scannedAt: string): Promise<SubmitOutcome> {
+async function tryEnqueue(qrCodeId: string, eventId: string, scannedAt: string, studentName?: string | null): Promise<SubmitOutcome> {
   try {
-    await enqueue({ qrCodeId, eventId, scannedAt });
+    await enqueue({ qrCodeId, eventId, scannedAt, studentName });
     return { queued: true };
   } catch (err) {
     console.error("[offline-queue] failed to capture scan — IndexedDB unavailable", err);
@@ -223,8 +228,9 @@ export async function submitScanOrQueue(params: {
   eventId: string;
   authHeader: Record<string, string>;
   scannedAt?: string;
+  studentName?: string | null;
 }): Promise<SubmitOutcome> {
-  const { qrCodeId, eventId, authHeader } = params;
+  const { qrCodeId, eventId, authHeader, studentName } = params;
   const scannedAt = params.scannedAt ?? new Date().toISOString();
   try {
     const res = await fetchWithTimeout(
@@ -237,13 +243,13 @@ export async function submitScanOrQueue(params: {
       SUBMIT_TIMEOUT_MS,
     );
     if (isBackendDownStatus(res.status)) {
-      return await tryEnqueue(qrCodeId, eventId, scannedAt);
+      return await tryEnqueue(qrCodeId, eventId, scannedAt, studentName);
     }
     const data = await res.json().catch(() => ({}));
     return { queued: false, ok: res.ok, status: res.status, data };
   } catch {
     // Network error or timeout → backend unreachable → capture offline.
-    return await tryEnqueue(qrCodeId, eventId, scannedAt);
+    return await tryEnqueue(qrCodeId, eventId, scannedAt, studentName);
   }
 }
 
@@ -317,7 +323,7 @@ export async function syncQueue(authHeader: Record<string, string>): Promise<Syn
       // Persisted separately from the in-memory report so the rejection
       // detail survives a dismissed toast or a page reload — see
       // `allUnmatched`/`clearUnmatched`.
-      await recordUnmatched({ qrCodeId: scan.qrCodeId, eventId: scan.eventId, scannedAt: scan.scannedAt, reason });
+      await recordUnmatched({ qrCodeId: scan.qrCodeId, eventId: scan.eventId, scannedAt: scan.scannedAt, reason, studentName: scan.studentName ?? null });
       await removeQueued(scan.localId);
     } else if (outcome === "auth") {
       // Session expired. The scan is valid — keep it queued so re-logging in and

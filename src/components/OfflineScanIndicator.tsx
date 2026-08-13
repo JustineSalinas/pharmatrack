@@ -1,9 +1,9 @@
 "use client";
 
-import { Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle, AlertOctagon, X } from "lucide-react";
+import { Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle, AlertOctagon, X, ServerCrash } from "lucide-react";
 import type { OfflineSyncState } from "@/lib/useOfflineScanSync";
 import { formatManilaTime } from "@/lib/supabase";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function formatOffset(ms: number): string {
   const abs = Math.abs(ms);
@@ -27,9 +27,15 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
   } = state;
   const [reportDismissed, setReportDismissed] = useState(false);
 
+  // Any new sync result (auto-poll or manual) should be visible even if the
+  // previous report was dismissed — the dismissed flag only applies to the old
+  // lastReport object, not the next one.
+  useEffect(() => { if (lastReport) setReportDismissed(false); }, [lastReport]);
+
   const offline = !online;
   const showReport = lastReport && !reportDismissed && (lastReport.synced > 0 || lastReport.unmatched.length > 0 || lastReport.duplicates > 0);
   const showAuthExpired = lastReport && !reportDismissed && lastReport.authExpired;
+  const showBackendDown = lastReport && !reportDismissed && lastReport.backendDown && !showReport && !showAuthExpired;
 
   return (
     <>
@@ -85,6 +91,26 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
             <div style={{ color: "var(--dimmed)", marginTop: "4px", fontSize: "12px", lineHeight: 1.5 }}>
               {lastReport!.remaining} scan{lastReport!.remaining === 1 ? " is" : "s are"} still saved on this
               device — nothing was lost. Log out and back in, then tap <strong>Sync now</strong>.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Backend-still-down banner — rendered independently like authExpired so a failed
+          sync with 0 synced/unmatched/duplicates still shows something to the operator. */}
+      {showBackendDown && (
+        <div
+          style={{
+            marginTop: "8px", padding: "10px 12px", borderRadius: "10px",
+            background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.2)",
+            fontSize: "13px", display: "flex", alignItems: "flex-start", gap: "10px",
+          }}
+        >
+          <ServerCrash size={15} color="var(--danger)" style={{ marginTop: "2px", flexShrink: 0 }} />
+          <div>
+            <div style={{ color: "var(--danger)", fontWeight: 600 }}>Backend unreachable — retry later</div>
+            <div style={{ color: "var(--dimmed)", marginTop: "4px", fontSize: "12px", lineHeight: 1.5 }}>
+              Scans are still saved on this device. They&apos;ll sync automatically when the connection returns.
             </div>
           </div>
         </div>
@@ -148,7 +174,7 @@ export function OfflineScanIndicator({ state }: { state: OfflineSyncState }) {
               >
                 <div style={{ minWidth: 0 }}>
                   <div style={{ color: "var(--white)", fontWeight: 600, fontSize: "12px" }}>
-                    QR {u.qrCodeId} — {formatManilaTime(u.scannedAt, { hour: "numeric", minute: "2-digit", month: "short", day: "numeric" })}
+                    {u.studentName ?? `QR ${u.qrCodeId.slice(0, 8)}…`} — {formatManilaTime(u.scannedAt, { hour: "numeric", minute: "2-digit", month: "short", day: "numeric" })}
                   </div>
                   <div style={{ color: "var(--dimmed)", fontSize: "12px", marginTop: "2px" }}>{u.reason}</div>
                 </div>

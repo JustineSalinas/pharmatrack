@@ -43,6 +43,9 @@ qa-*.png
 # gstack session data
 .gstack/
 
+# claude skills that install as nested git repos (submodule-like)
+.claude/skills/project-planner/
+
 # misc
 .DS_Store
 *.pem
