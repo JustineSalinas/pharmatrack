@@ -50,7 +50,16 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<Response> {
   }
 
   const upstream = await fetch(target, init);
-  const body = await upstream.arrayBuffer();
+
+  // 204/205/304 are "null body" statuses: the Response constructor REJECTS any
+  // non-null body for them, and an empty ArrayBuffer still counts as non-null.
+  // PostgREST answers every .update()/.delete() that doesn't ask for a
+  // representation with 204, so passing the buffer through threw a TypeError
+  // here, turned into a 500, and surfaced in the UI as "Error updating status:"
+  // — even though the write had already committed upstream. Approving a user,
+  // editing or deleting an event, and merch edits all hit this.
+  const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
+  const body = NULL_BODY_STATUSES.has(upstream.status) ? null : await upstream.arrayBuffer();
 
   const respHeaders = new Headers();
   upstream.headers.forEach((value, key) => {
