@@ -443,6 +443,42 @@ describe("POST /api/scan", () => {
     expect(json.error).toMatch(/4 hours/i);
   });
 
+  // ── 4-hour cap must not override an explicit check-out window ───────────
+
+  it("allows a check-out >4h after check-in when the event defines a check-out window", async () => {
+    // Regression for 2026-08-28 (Saint Augustine's Feast Day): check-in ran
+    // 8:00-9:10 AM and check-out opened at 1:00 PM, so every student who
+    // checked in before 9:00 AM tripped the 4-hour cap an hour before
+    // check-out even opened. 385 checked in, 0 could check out.
+    const now = Date.now();
+    setupApprovedFacilitator();
+    tableResults["student_profiles"] = { data: { user_id: STUDENT_ID }, error: null };
+    tableResults["events"] = {
+      data: {
+        ...makeOpenEvent(),
+        check_in_only: false,
+        check_out_start: new Date(now - 30 * 60 * 1000).toISOString(), // opened 30 min ago
+        check_out_end: new Date(now + 30 * 60 * 1000).toISOString(),   // closes in 30 min
+      },
+      error: null,
+    };
+    tableResults["attendance_records"] = {
+      data: {
+        id: "record-1",
+        student_id: STUDENT_ID,
+        event_id: EVENT_ID,
+        status: "present",
+        time_in: new Date(now - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
+        time_out: null,
+      },
+      error: null,
+    };
+    const res = await POST(makeReq({ qr_code_id: QR_CODE, event_id: EVENT_ID }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.action).toBe("time_out");
+  });
+
   // ── Offline replay of a scan that timed out but succeeded ───────────────
 
   it("returns 409 and does not write time_out when a replayed scan lands exactly on time_in", async () => {

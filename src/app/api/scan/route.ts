@@ -294,8 +294,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (hoursSinceIn > 4) {
-      console.warn(`[Scan API] Check-out failed: Time-out window expired (hours since check-in: ${hoursSinceIn.toFixed(2)} > 4)`);
+    // The 4-hour cap is a FALLBACK for events that define no check-out window:
+    // without one, something has to stop a check-out arriving days later. When
+    // the event *does* declare a window, that window is the authority and the
+    // cap must not also apply — the two collided on 2026-08-28 (Saint
+    // Augustine's Feast Day: check-in 8:00-9:10 AM, check-out 1:00-2:00 PM),
+    // where every student who checked in before 9:00 AM blew the 4-hour cap an
+    // hour before check-out even opened. 385 checked in and 0 could check out.
+    const hasCheckOutWindow = !!(checkOutStart || checkOutEnd);
+    if (!hasCheckOutWindow && hoursSinceIn > 4) {
+      console.warn(`[Scan API] Check-out failed: Time-out window expired (hours since check-in: ${hoursSinceIn.toFixed(2)} > 4, event defines no check-out window)`);
       return NextResponse.json(
         { error: "Time-out window expired (more than 4 hours since check-in)" },
         { status: 400 },
