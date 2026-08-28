@@ -144,3 +144,43 @@ export function manilaTimeInputValue(isoString: string): string {
   // Intl's 24h formatting can return "24" for midnight in some environments.
   return `${hh === "24" ? "00" : hh}:${mm}`;
 }
+
+/**
+ * PostgREST enforces a HARD per-query ceiling of 1,000 rows and silently
+ * ignores any larger `.limit()` — a `.limit(20000)` returns 1,000 rows with no
+ * error, no warning, and no indication the result is partial. This has caused
+ * repeated incidents on this project: undercounted attendance-log stats, whole
+ * events dropped from Reports, and (2026-08-28) a backfill that processed 1,000
+ * of 3,539 records and so never marked a single one of an event's 555 rows.
+ *
+ * Use this for any query whose result must be COMPLETE — anything feeding a
+ * count, a total, or a per-event table. Do NOT reach for it to page an entire
+ * fast-growing table into the browser: for a plain total prefer
+ * `.select("*", { count: "exact", head: true })`, and for a "recent activity"
+ * feed a single deliberate `.range()` is the honest thing.
+ *
+ * `page` receives an inclusive [from, to] row range and must apply a STABLE
+ * sort — without a deterministic ORDER BY, Postgres may return overlapping or
+ * missing rows across pages.
+ *
+ * Stops at `maxRows` so a runaway table can never hang the tab; if that ceiling
+ * is hit the result is flagged `truncated` rather than silently short.
+ */
+export async function fetchAllRows<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  options: { pageSize?: number; maxRows?: number } = {},
+): Promise<{ data: T[]; error: unknown; truncated: boolean }> {
+  const pageSize = Math.min(options.pageSize ?? 1000, 1000);
+  const maxRows = options.maxRows ?? 20000;
+  const rows: T[] = [];
+  for (let from = 0; from < maxRows; from += pageSize) {
+    const to = Math.min(from + pageSize, maxRows) - 1;
+    const { data, error } = await page(from, to);
+    if (error) return { data: rows, error, truncated: false };
+    if (!data || data.length === 0) return { data: rows, error: null, truncated: false };
+    rows.push(...data);
+    if (data.length < to - from + 1) return { data: rows, error: null, truncated: false };
+  }
+  console.warn(`[fetchAllRows] hit the ${maxRows}-row ceiling — result is partial`);
+  return { data: rows, error: null, truncated: true };
+}

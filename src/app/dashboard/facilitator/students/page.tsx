@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAllRows } from "@/lib/supabase";
 import { triggerSummaryRefresh } from "@/lib/attendance";
 import {
   Search, Users, CheckCircle, XCircle, Clock, ChevronRight, X,
@@ -82,12 +82,17 @@ export default function StudentsPage() {
       const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
       // 2. Fetch today's attendance records for "Today" status column
-      const { data: todayRecs, error: tErr } = await supabase
-        .from("attendance_records")
-        .select("student_id, status")
-        .gte("created_at", todayStart.toISOString())
-        .lte("created_at", todayEnd.toISOString())
-        .limit(5000);
+      // Paged: this builds every student's "Today" status, so a partial read
+      // would silently blank out students past PostgREST's 1,000-row ceiling.
+      const { data: todayRecs, error: tErr } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("attendance_records")
+          .select("student_id, status")
+          .gte("created_at", todayStart.toISOString())
+          .lte("created_at", todayEnd.toISOString())
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       if (tErr) throw tErr;
 
       // Map student_id → latest status today

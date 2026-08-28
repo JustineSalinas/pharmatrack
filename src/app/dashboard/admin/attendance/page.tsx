@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { supabase, formatManilaTime } from "@/lib/supabase";
+import { supabase, formatManilaTime, fetchAllRows } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
 import { useRouter } from "next/navigation";
@@ -328,20 +328,30 @@ export default function AdminAttendance() {
             sessionIds.length ? `session_id.in.(${sessionIds.join(",")})` : null,
           ].filter(Boolean).join(",");
 
-          const res = await supabase
-            .from("attendance_records")
-            .select(ATTENDANCE_SELECT)
-            .or(orParts)
-            // Defensive cap — a single day's attendance across every event
-            // shouldn't approach this, just a circuit breaker.
-            .limit(5000);
+          // Paged: this feeds the day's stats, so it must be complete. A
+          // single day across every event passes PostgREST's hard 1,000-row
+          // ceiling easily (2026-08-28 alone was 555 records in one event).
+          const res = await fetchAllRows<any>((from, to) =>
+            supabase
+              .from("attendance_records")
+              .select(ATTENDANCE_SELECT)
+              .or(orParts)
+              .order("id", { ascending: true })
+              .range(from, to),
+          );
           data = res.data;
           error = res.error;
         }
       } else {
-        const res = await supabase
-          .from("attendance_records")
-          .select(ATTENDANCE_SELECT)
+        // Paged rather than a bare .limit(): PostgREST caps every query at
+        // 1,000 rows, which is BELOW the 2,000 cap that previously caused the
+        // "1 present" bug (a backfill burst filling the whole window and
+        // hiding the day's real scans). Paging to 20,000 delivers the window
+        // this code always intended.
+        const res = await fetchAllRows<any>((from, to) =>
+          supabase
+            .from("attendance_records")
+            .select(ATTENDANCE_SELECT)
           // Bound the log to the most recent records so this doesn't seq-scan
           // an ever-growing table on every load / realtime refresh. Backed by
           // idx_attendance_created.
@@ -351,8 +361,10 @@ export default function AdminAttendance() {
           // (~2k rows for a day of orientations); a 2,000 cap let that burst
           // fill the whole window and hide the day's real present/late scans
           // (the "1 present" bug). 20,000 matches the backfill's own ceiling.
-          .order("created_at", { ascending: false })
-          .limit(20000);
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        );
         data = res.data;
         error = res.error;
       }
@@ -432,16 +444,20 @@ export default function AdminAttendance() {
       return;
     }
     let cancelled = false;
-    supabase
-      .from("attendance_records")
-      .select(ATTENDANCE_SELECT)
-      .eq("event_id", match.id)
-      .limit(5000)
-      .then(({ data, error }) => {
-        if (cancelled || error) return;
-        setEventScopedRows(formatAttendanceRows(data || []));
-        setEventScopedFor(filterEvent);
-      });
+    // Paged: the event-scoped fetch exists precisely so one event's stats and
+    // table are EXACT, so it must not stop at PostgREST's 1,000-row ceiling.
+    fetchAllRows<any>((from, to) =>
+      supabase
+        .from("attendance_records")
+        .select(ATTENDANCE_SELECT)
+        .eq("event_id", match.id)
+        .order("id", { ascending: true })
+        .range(from, to),
+    ).then(({ data, error }) => {
+      if (cancelled || error) return;
+      setEventScopedRows(formatAttendanceRows(data || []));
+      setEventScopedFor(filterEvent);
+    });
     return () => {
       cancelled = true;
     };

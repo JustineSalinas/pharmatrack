@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase, parseDateLocal, formatManilaTime } from "@/lib/supabase";
+import { supabase, parseDateLocal, formatManilaTime, fetchAllRows } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import {
@@ -178,9 +178,10 @@ export default function FacilitatorAttendance() {
     else setRefreshing(true);
 
     try {
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select(ATTENDANCE_SELECT)
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("attendance_records")
+          .select(ATTENDANCE_SELECT)
         // Bound the log to the most recent records so this doesn't seq-scan an
         // ever-growing table on every load / realtime refresh. Backed by
         // idx_attendance_created.
@@ -192,8 +193,10 @@ export default function FacilitatorAttendance() {
         // a specific event is selected, the dedicated event-scoped fetch below
         // (by event_id) is used instead so stats/table for that event are
         // exact regardless of this cap.
-        .order("created_at", { ascending: false })
-        .limit(20000);
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
 
       if (error) throw error;
 
@@ -268,12 +271,16 @@ export default function FacilitatorAttendance() {
       return;
     }
     let cancelled = false;
-    supabase
-      .from("attendance_records")
-      .select(ATTENDANCE_SELECT)
-      .eq("event_id", match.id)
-      .limit(5000)
-      .then(({ data, error }) => {
+    // Paged: this fetch exists so a selected event's stats and table are
+    // EXACT, which the 1,000-row ceiling would otherwise quietly break.
+    fetchAllRows<any>((from, to) =>
+      supabase
+        .from("attendance_records")
+        .select(ATTENDANCE_SELECT)
+        .eq("event_id", match.id)
+        .order("id", { ascending: true })
+        .range(from, to),
+    ).then(({ data, error }) => {
         if (cancelled || error) return;
         setEventScopedRows(formatAttendanceRows(data || []));
         setEventScopedFor(filterEvent);

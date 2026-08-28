@@ -46,7 +46,11 @@ function clearMockTables() {
 const mockGetSession = vi.fn()
 const mockFetch = vi.fn()
 
-vi.mock('../supabase', () => {
+// Spreads the real module so fetchAllRows stays the genuine implementation —
+// the paging logic is what these tests need to exercise — and overrides only
+// the Supabase client with the chain mock below.
+vi.mock('../supabase', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../supabase')>();
   function buildChain(table: string) {
     let mode: 'select' | 'write' = 'select'
     let lastRows: unknown = null
@@ -78,6 +82,7 @@ vi.mock('../supabase', () => {
     return chain
   }
   return {
+    ...actual,
     supabase: {
       from: (table: string) => buildChain(table),
       auth: { getSession: () => mockGetSession() },

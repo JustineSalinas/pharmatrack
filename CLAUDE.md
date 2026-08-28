@@ -202,6 +202,12 @@ Rules of thumb when adding a new stat, count, or dashboard tile:
 - **Need a row list to display (e.g. "recent scans")?** Add an explicit, deliberate `.limit()`
   sized for genuine display purposes (e.g. 500) and treat it as a "recent activity" feed, not a
   source of truth for any count — never derive a stat from that same array.
+- **Need every row of a result that must be complete?** Use `fetchAllRows` from
+  `src/lib/supabase.ts` rather than a large `.limit()`. It pages with `.range()` in 1,000-row
+  chunks and flags `truncated` at its ceiling instead of returning a silently short list. The
+  `page` callback MUST apply a stable sort (`.order("id", …)` as a tiebreaker) or rows can
+  repeat or vanish between pages. Never "fix" a truncated read by raising `.limit()` — the
+  server ignores it.
 
 ### Tests
 

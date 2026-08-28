@@ -22,7 +22,7 @@
  *
  * Returns counts so admin tooling can show "X absent, Y incomplete" feedback.
  */
-import { supabase } from "./supabase";
+import { supabase, fetchAllRows } from "./supabase";
 import { getAuthHeader } from "./auth-client";
 
 export interface BackfillResult {
@@ -80,13 +80,18 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   // lives on student_profiles, so embed it via the FK.
   // Defensive cap — well above current enrollment, just a circuit breaker
   // against this becoming an unbounded scan as the student body grows.
-  const { data: students, error: stuErr } = await supabase
-    .from("users")
-    .select("id, student_profiles(current_year)")
-    .eq("account_type", "student")
-    .eq("status", "approved")
-    .limit(5000);
-  if (stuErr) { result.errors.push("students: " + stuErr.message); return result; }
+  // Paged: a short read here means targeted students silently never get an
+  // absent row. Under the 1,000-row ceiling at current enrolment, not forever.
+  const { data: students, error: stuErr } = await fetchAllRows<any>((from, to) =>
+    supabase
+      .from("users")
+      .select("id, student_profiles(current_year)")
+      .eq("account_type", "student")
+      .eq("status", "approved")
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  if (stuErr) { result.errors.push("students: " + String((stuErr as any)?.message ?? stuErr)); return result; }
   const studentList = (students ?? []).map((s: any) => {
     const sp = s.student_profiles;
     const year = Array.isArray(sp) ? sp[0]?.current_year : sp?.current_year;
@@ -106,20 +111,15 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   // insert_absent_records_batch is ON CONFLICT DO NOTHING, so a missing row
   // could only ever be skipped, never overwritten.
   const eventIds = events.map((ev: any) => ev.id);
-  const PAGE = 1000;
-  const allRecords: any[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data: page, error: arErr } = await supabase
+  const { data: allRecords, error: arErr } = await fetchAllRows<any>((from, to) =>
+    supabase
       .from("attendance_records")
       .select("id, student_id, event_id, time_in, time_out, status")
       .in("event_id", eventIds)
       .order("id", { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (arErr) { result.errors.push("attendance_records fetch: " + arErr.message); return result; }
-    if (!page || page.length === 0) break;
-    allRecords.push(...page);
-    if (page.length < PAGE) break;
-  }
+      .range(from, to),
+  );
+  if (arErr) { result.errors.push("attendance_records fetch: " + String((arErr as any)?.message ?? arErr)); return result; }
 
   // 4. Group existing records by event_id for fast O(1) in-memory lookup
   const recordsByEvent = new Map<string, any[]>();

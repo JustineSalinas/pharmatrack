@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAllRows } from "@/lib/supabase";
 import { getAuthHeader } from "@/lib/auth-client";
 import { useCurrentUser } from "@/lib/current-user-context";
 import { Loader2, Search, CheckCircle, XCircle, UserPlus, ShieldAlert, KeyRound, MailCheck, ChevronUp, ChevronDown, Trash2, AlertTriangle } from "lucide-react";
@@ -87,11 +87,16 @@ export default function AdminUsers() {
       }
 
       const [{ data, error }, { data: profiles }] = await Promise.all([
-        supabase
-          .from("users")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(2000),
+        // Paged: under the 1,000-row ceiling at current enrolment, but this
+        // list would start silently dropping accounts the moment it isn't.
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("users")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        ),
         supabase.from("student_profiles").select("user_id, section, current_year"),
       ]);
 
