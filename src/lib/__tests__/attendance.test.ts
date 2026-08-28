@@ -10,11 +10,15 @@ type WriteResult = { data: unknown; error: unknown }
 // violation, so the conflict-tolerant absent insert can be exercised.
 type WriteResolver = WriteResult | ((rows: unknown) => WriteResult)
 
-const selectResults: Record<string, { data: unknown; error: unknown }> = {}
+// A select result can be static, or a function of the requested .range() —
+// the latter lets a test simulate PostgREST's hard 1,000-row page ceiling.
+type SelectResult = { data: unknown; error: unknown }
+type SelectResolver = SelectResult | ((range: { from: number; to: number } | null) => SelectResult)
+const selectResults: Record<string, SelectResolver> = {}
 const writeResults: Record<string, WriteResolver> = {}
 const rpcResults: Record<string, WriteResolver> = {}
 
-function setSelect(table: string, value: { data: unknown; error: unknown }) {
+function setSelect(table: string, value: SelectResolver) {
   selectResults[table] = value
 }
 function setWrite(table: string, value: WriteResolver) {
@@ -46,6 +50,7 @@ vi.mock('../supabase', () => {
   function buildChain(table: string) {
     let mode: 'select' | 'write' = 'select'
     let lastRows: unknown = null
+    let lastRange: { from: number; to: number } | null = null
     const chain: Record<string, unknown> = {}
     chain.select = () => { mode = 'select'; return chain }
     chain.eq = () => chain
@@ -53,12 +58,17 @@ vi.mock('../supabase', () => {
     chain.gte = () => chain
     chain.in = () => chain
     chain.limit = () => chain
+    chain.order = () => chain
+    // Pagination-aware: a select result may be a function of the requested
+    // range, so a test can simulate PostgREST's hard 1,000-row page ceiling.
+    chain.range = (from: number, to: number) => { lastRange = { from, to }; return chain }
     chain.insert = (rows: unknown) => { mode = 'write'; lastRows = rows; return chain }
     chain.update = (vals: unknown) => { mode = 'write'; lastRows = vals; return chain }
     chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {
       let value: { data: unknown; error: unknown }
       if (mode === 'select') {
-        value = selectResults[table] ?? { data: null, error: null }
+        const sr = selectResults[table]
+        value = typeof sr === 'function' ? sr(lastRange) : (sr ?? { data: null, error: null })
       } else {
         const wr = writeResults[table]
         value = typeof wr === 'function' ? wr(lastRows) : (wr ?? { data: null, error: null })

@@ -97,13 +97,29 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   // 3. Fetch ALL existing attendance records for these events in a SINGLE query!
   // Defensive cap for the same reason as above — the 60-day event window
   // already bounds this, but a hard ceiling avoids relying on that alone.
+  // PostgREST enforces a HARD per-query ceiling of 1,000 rows and silently
+  // ignores any larger .limit() — the previous .limit(20000) here returned
+  // exactly 1000 of 3539 rows, dropping 72% with no error. That made the
+  // incomplete pass a no-op for whole events (on 2026-08-28, 0 of that event's
+  // 555 records were in the truncated set). Page explicitly instead.
+  // The absent pass never corrupted anything despite the truncation, because
+  // insert_absent_records_batch is ON CONFLICT DO NOTHING, so a missing row
+  // could only ever be skipped, never overwritten.
   const eventIds = events.map((ev: any) => ev.id);
-  const { data: allRecords, error: arErr } = await supabase
-    .from("attendance_records")
-    .select("id, student_id, event_id, time_in, time_out, status")
-    .in("event_id", eventIds)
-    .limit(20000);
-  if (arErr) { result.errors.push("attendance_records fetch: " + arErr.message); return result; }
+  const PAGE = 1000;
+  const allRecords: any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error: arErr } = await supabase
+      .from("attendance_records")
+      .select("id, student_id, event_id, time_in, time_out, status")
+      .in("event_id", eventIds)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (arErr) { result.errors.push("attendance_records fetch: " + arErr.message); return result; }
+    if (!page || page.length === 0) break;
+    allRecords.push(...page);
+    if (page.length < PAGE) break;
+  }
 
   // 4. Group existing records by event_id for fast O(1) in-memory lookup
   const recordsByEvent = new Map<string, any[]>();
