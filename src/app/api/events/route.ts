@@ -58,6 +58,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  // Window sanity. A mis-ordered window isn't caught by the DB (all four
+  // columns are independent TIMESTAMPTZs) and only shows up on the day, at the
+  // scanner, when students are already queueing — so reject it at creation.
+  // Fails OPEN: the UI always posts full ISO timestamps, but Postgres accepts
+  // timestamptz forms JS can't parse (a bare "08:00" resolves to today), so an
+  // unparseable value skips the ordering checks rather than blocking a create
+  // that would otherwise have succeeded.
+  const t = (v: any) => {
+    if (!v) return null;
+    const ms = new Date(v).getTime();
+    return Number.isNaN(ms) ? null : ms;
+  };
+  const ciStart = t(check_in_start), ciLate = t(check_in_late), ciEnd = t(check_in_end);
+  const coStart = t(check_out_start), coEnd = t(check_out_end);
+  const windowError = (ciStart === null || ciLate === null || ciEnd === null) ? null :
+    ciEnd! <= ciStart!
+      ? "Check-in must end after it starts."
+      : ciLate! < ciStart! || ciLate! > ciEnd!
+      ? "The late cutoff must fall inside the check-in window."
+      : coStart !== null && coEnd !== null && coEnd <= coStart
+      ? "Check-out must end after it starts."
+      : coStart !== null && coStart < ciStart!
+      ? "Check-out cannot open before check-in opens."
+      : coEnd !== null && coEnd < ciEnd!
+      ? "Check-out cannot close before check-in closes."
+      : null;
+  if (windowError) {
+    return NextResponse.json({ error: windowError }, { status: 400 });
+  }
+
   try {
     // 4. Insert the new event
     const { data: newEvent, error: insertErr } = await supabase

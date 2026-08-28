@@ -217,6 +217,51 @@ describe("POST /api/events", () => {
     expect((await res.json()).error).toMatch(/invalid json/i);
   });
 
+  // ── Window ordering validation (ISO timestamps, as the UI actually posts) ─
+
+  // The UI builds these with toISOString() (facilitator/events/page.tsx:162-164),
+  // so ordering is validated only when the values actually parse as dates.
+  const ISO_BODY = {
+    ...VALID_EVENT_BODY,
+    check_in_start: "2026-08-01T00:00:00.000Z", // 8:00 AM Manila
+    check_in_late: "2026-08-01T00:30:00.000Z",
+    check_in_end: "2026-08-01T01:00:00.000Z",
+  };
+
+  it("returns 400 when check-in ends before it starts", async () => {
+    const res = await POST(makeReq({ ...ISO_BODY, check_in_end: "2026-07-31T23:00:00.000Z" }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/check-in must end after it starts/i);
+  });
+
+  it("returns 400 when the late cutoff falls outside the check-in window", async () => {
+    const res = await POST(makeReq({ ...ISO_BODY, check_in_late: "2026-08-01T02:00:00.000Z" }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/late cutoff/i);
+  });
+
+  it("returns 400 when the check-out window ends before it starts", async () => {
+    const res = await POST(makeReq({
+      ...ISO_BODY,
+      check_out_start: "2026-08-01T05:00:00.000Z",
+      check_out_end: "2026-08-01T04:00:00.000Z",
+    }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/check-out must end after it starts/i);
+  });
+
+  it("accepts a check-out window that opens hours after check-in closes", async () => {
+    // The Saint Augustine's Feast Day shape: check-in 8:00-9:10 AM, check-out
+    // 1:00-2:00 PM. This is a legitimate configuration and must NOT be blocked
+    // — the scan route's 4-hour cap no longer applies when a window is set.
+    const res = await POST(makeReq({
+      ...ISO_BODY,
+      check_out_start: "2026-08-01T05:00:00.000Z", // 1:00 PM Manila
+      check_out_end: "2026-08-01T06:00:00.000Z",   // 2:00 PM Manila
+    }));
+    expect(res.status).toBe(200);
+  });
+
   // ── Happy path ────────────────────────────────────────────────────────────
 
   it("returns 200 and the new event for an approved facilitator", async () => {
