@@ -95,7 +95,30 @@ vi.mock('../supabase', async (importOriginal) => {
   }
 })
 
-import { runIfDue, backfillEventStatuses, notifyAbsences } from '../attendance'
+import { runIfDue, backfillEventStatuses, notifyAbsences, isEventEnded } from '../attendance'
+
+describe('isEventEnded', () => {
+  it('is not ended before check_in_end', () => {
+    const event = { check_in_end: '2026-08-28T01:10:00Z', check_out_end: '2026-08-28T06:00:00Z' }
+    expect(isEventEnded(event, new Date('2026-08-28T00:30:00Z'))).toBe(false)
+  })
+
+  it('check_in_only event ends right at check_in_end, ignoring any check_out_end', () => {
+    const event = { check_in_end: '2026-08-28T01:10:00Z', check_out_end: '2026-08-28T06:00:00Z', check_in_only: true }
+    expect(isEventEnded(event, new Date('2026-08-28T01:10:01Z'))).toBe(true)
+  })
+
+  it('normal event with a check_out_end is not ended until check_out_end passes', () => {
+    const event = { check_in_end: '2026-08-28T01:10:00Z', check_out_end: '2026-08-28T06:00:00Z' }
+    expect(isEventEnded(event, new Date('2026-08-28T02:00:00Z'))).toBe(false)
+    expect(isEventEnded(event, new Date('2026-08-28T06:00:01Z'))).toBe(true)
+  })
+
+  it('normal event with no check_out_end ends as soon as check_in_end passes', () => {
+    const event = { check_in_end: '2026-08-28T01:10:00Z', check_out_end: null }
+    expect(isEventEnded(event, new Date('2026-08-28T01:10:01Z'))).toBe(true)
+  })
+})
 
 describe('runIfDue', () => {
   let localStorageMock: Record<string, string> = {}
