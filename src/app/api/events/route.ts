@@ -58,6 +58,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  // A half-set check-out window is rejected outright. The event form already
+  // enforces this pairing (facilitator/events/page.tsx), but the API did not,
+  // so a direct call could store check_out_start with a null check_out_end.
+  // That shape is quietly dangerous: isEventEnded() in src/lib/attendance.ts
+  // treats "no check_out_end" as ended the moment check-in closes, so the
+  // scanner would show the event as Ended and disable scanning hours BEFORE
+  // its check-out window was due to open — while /api/scan, seeing a window,
+  // would happily keep accepting check-outs with no closing bound at all.
+  // Checked on the raw values, not the parsed ones, so an unparseable-but-
+  // paired window still falls through to the fail-open logic below.
+  if (!!check_out_start !== !!check_out_end) {
+    return NextResponse.json(
+      { error: "Set both a check-out start and end time, or neither." },
+      { status: 400 },
+    );
+  }
+
   // Window sanity. A mis-ordered window isn't caught by the DB (all four
   // columns are independent TIMESTAMPTZs) and only shows up on the day, at the
   // scanner, when students are already queueing — so reject it at creation.

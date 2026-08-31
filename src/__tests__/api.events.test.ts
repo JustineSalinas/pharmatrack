@@ -240,6 +240,25 @@ describe("POST /api/events", () => {
     expect((await res.json()).error).toMatch(/late cutoff/i);
   });
 
+  it("returns 400 when only a check-out start is given", async () => {
+    // isEventEnded() reads a null check_out_end as "ended at check-in close",
+    // so this shape would disable the scanner before check-out even opened.
+    const res = await POST(makeReq({ ...ISO_BODY, check_out_start: "2026-08-01T05:00:00.000Z" }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/both a check-out start and end/i);
+  });
+
+  it("returns 400 when only a check-out end is given", async () => {
+    const res = await POST(makeReq({ ...ISO_BODY, check_out_end: "2026-08-01T06:00:00.000Z" }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/both a check-out start and end/i);
+  });
+
+  it("still accepts an event with neither check-out time", async () => {
+    const res = await POST(makeReq({ ...ISO_BODY }));
+    expect(res.status).toBe(200);
+  });
+
   it("returns 400 when the check-out window ends before it starts", async () => {
     const res = await POST(makeReq({
       ...ISO_BODY,
