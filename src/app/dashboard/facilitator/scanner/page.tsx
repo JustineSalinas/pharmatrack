@@ -6,6 +6,7 @@ import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { debounce } from "@/lib/debounce";
 import { submitScanOrQueue, enqueue } from "@/lib/offlineScanQueue";
+import { isEventEnded } from "@/lib/attendance";
 import { useOfflineScanSync } from "@/lib/useOfflineScanSync";
 import { OfflineScanIndicator } from "@/components/OfflineScanIndicator";
 import { 
@@ -523,7 +524,7 @@ export default function FacilitatorScannerPage() {
                 >
                   {activeEvents.length > 0 ? (
                     activeEvents.map(e => (
-                      <option key={e.id} value={e.id}>{e.name} ({new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})</option>
+                      <option key={e.id} value={e.id}>{e.name} ({new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}){isEventEnded(e) ? " — Ended" : ""}</option>
                     ))
                   ) : (
                     <option value="">No events scheduled</option>
@@ -610,11 +611,15 @@ export default function FacilitatorScannerPage() {
                 <QrCode size={40} className="placeholder-icon" />
               </div>
               <h3 className="placeholder-title">Scanner Standby</h3>
-              <p className="placeholder-text">Please verify the selected target event details, then click below to launch the camera session.</p>
+              <p className="placeholder-text">
+                {selectedEvent && isEventEnded(selectedEvent)
+                  ? "This event's check-in/check-out window has closed — scanning is disabled."
+                  : "Please verify the selected target event details, then click below to launch the camera session."}
+              </p>
               <button
                 onClick={startCamera}
                 className="btn-start-scanner"
-                disabled={!selectedEventId}
+                disabled={!selectedEventId || (selectedEvent && isEventEnded(selectedEvent))}
               >
                 <Camera size={18} />
                 <span>Initialize Scanner</span>

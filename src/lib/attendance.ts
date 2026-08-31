@@ -48,6 +48,22 @@ const LOOKBACK_DAYS = 60;
 // API converting a pre-marked-absent placeholder into a real check-in.)
 const ABSENT_SETTLE_MS = 60 * 60_000; // 1 hour
 
+/**
+ * Whether an event's scanning window (check-in, and check-out if applicable)
+ * has fully closed. Mirrors the "is this event done" convention already used
+ * above to select completed events for backfill (check_in_end passed, and
+ * either check_in_only, no check_out_end, or check_out_end has also passed).
+ */
+export function isEventEnded(
+  event: { check_in_end: string; check_out_end?: string | null; check_in_only?: boolean | null },
+  now: Date = new Date(),
+): boolean {
+  if (now <= new Date(event.check_in_end)) return false;
+  if (event.check_in_only) return true;
+  if (!event.check_out_end) return true;
+  return now > new Date(event.check_out_end);
+}
+
 export async function backfillEventStatuses(): Promise<BackfillResult> {
   const result: BackfillResult = {
     eventsProcessed: 0, absentInserted: 0, incompleteUpdated: 0, errors: [], absentEntries: [],
