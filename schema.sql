@@ -267,7 +267,15 @@ CREATE TABLE IF NOT EXISTS public.events (
   created_at         TIMESTAMPTZ DEFAULT NOW(),
   target_year_levels  TEXT[],
   event_type          TEXT,
-  check_in_only       BOOLEAN NOT NULL DEFAULT false
+  check_in_only       BOOLEAN NOT NULL DEFAULT false,
+  -- false = an OPTIONAL event (e.g. an intramurals sport a student may choose
+  -- to attend). Scans are recorded normally so attendance can be tallied, but
+  -- the backfill never marks anyone absent for it and the attendance-rate
+  -- matview ignores it, so skipping the event can't lower a student's rate.
+  -- This replaces the old workaround of deleting optional events after the
+  -- fact, which cascade-deleted every present record too and left nothing to
+  -- audit a disputed count against.
+  counts_toward_attendance BOOLEAN NOT NULL DEFAULT true
 );
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
@@ -375,7 +383,15 @@ SELECT
   ) AS attendance_rate
 FROM public.users u
 JOIN public.student_profiles sp ON sp.user_id = u.id
-LEFT JOIN public.attendance_records ar ON ar.student_id = u.id
+-- Records for events flagged counts_toward_attendance = false are excluded
+-- here so an optional event can neither raise nor lower a student's rate.
+-- Session-based records (event_id NULL) are unaffected.
+LEFT JOIN public.attendance_records ar
+  ON ar.student_id = u.id
+  AND NOT EXISTS (
+    SELECT 1 FROM public.events ex
+    WHERE ex.id = ar.event_id AND ex.counts_toward_attendance = false
+  )
 WHERE u.account_type = 'student'
 GROUP BY u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year;
 
@@ -434,6 +450,49 @@ AS $$
 $$;
 REVOKE ALL ON FUNCTION public.get_attendance_rate_totals() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_attendance_rate_totals() TO authenticated;
+
+-- Per-student count of OPTIONAL events attended (counts_toward_attendance =
+-- false), for requirements like "attend 5 of the 15 intramurals sports". One
+-- row per approved student, including those with zero, so the export is a
+-- complete roster rather than only the students who showed up somewhere.
+-- Counts DISTINCT events: a student rescanned at the same sport counts once.
+CREATE OR REPLACE FUNCTION public.get_optional_event_tally()
+RETURNS TABLE (
+  student_id UUID,
+  full_name TEXT,
+  student_id_number TEXT,
+  section TEXT,
+  current_year TEXT,
+  events_attended BIGINT,
+  events_list TEXT
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT
+    u.id AS student_id,
+    u.full_name,
+    sp.student_id_number,
+    sp.section,
+    sp.current_year,
+    COUNT(DISTINCT e.id) AS events_attended,
+    STRING_AGG(DISTINCT e.name, ', ' ORDER BY e.name) AS events_list
+  FROM public.users u
+  JOIN public.student_profiles sp ON sp.user_id = u.id
+  LEFT JOIN public.attendance_records ar
+    ON ar.student_id = u.id AND ar.status IN ('present', 'late')
+  LEFT JOIN public.events e
+    ON e.id = ar.event_id AND e.counts_toward_attendance = false
+  WHERE public.is_council()
+    AND u.account_type = 'student'
+    AND u.status = 'approved'
+  GROUP BY u.id, u.full_name, sp.student_id_number, sp.section, sp.current_year
+  ORDER BY sp.current_year, sp.section, u.full_name;
+$$;
+REVOKE ALL ON FUNCTION public.get_optional_event_tally() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_optional_event_tally() TO authenticated;
 
 -- Per-event attendance totals for the Reports pages' "Monthly Trend" and
 -- "Most Attended Events" — aggregated SERVER-SIDE, one row per event, instead

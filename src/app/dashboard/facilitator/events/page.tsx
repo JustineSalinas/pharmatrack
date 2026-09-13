@@ -46,6 +46,8 @@ export default function EventsManagement() {
   const [checkOutStartTime, setCheckOutStartTime] = useState("");
   const [checkOutEndTime, setCheckOutEndTime] = useState("");
   const [checkInOnly, setCheckInOnly] = useState(false);
+  // false = optional event (e.g. an intramurals sport): no absents, not in the rate.
+  const [countsTowardAttendance, setCountsTowardAttendance] = useState(true);
   const [targetYearLevels, setTargetYearLevels] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -178,6 +180,7 @@ export default function EventsManagement() {
             check_out_start: checkOutStartTS,
             check_out_end: checkOutEndTS,
             check_in_only: checkInOnly,
+            counts_toward_attendance: countsTowardAttendance,
             target_year_levels: targetYearLevels.length ? targetYearLevels : null,
             event_type: eventType,
           })
@@ -233,6 +236,7 @@ export default function EventsManagement() {
             check_out_start: checkOutStartTS,
             check_out_end: checkOutEndTS,
             check_in_only: checkInOnly,
+            counts_toward_attendance: countsTowardAttendance,
             target_year_levels: targetYearLevels.length ? targetYearLevels : null,
             event_type: eventType,
           }),
@@ -308,6 +312,7 @@ export default function EventsManagement() {
     setCheckOutStartTime("");
     setCheckOutEndTime("");
     setCheckInOnly(false);
+    setCountsTowardAttendance(true);
     setTargetYearLevels([]);
     setEventType("Department");
     setFormError("");
@@ -330,6 +335,7 @@ export default function EventsManagement() {
     setCheckOutStartTime(event.check_out_start ? manilaTimeInputValue(event.check_out_start) : "");
     setCheckOutEndTime(event.check_out_end ? manilaTimeInputValue(event.check_out_end) : "");
     setCheckInOnly(event.check_in_only ?? false);
+    setCountsTowardAttendance(event.counts_toward_attendance ?? true);
     setTargetYearLevels(event.target_year_levels ?? []);
     setEventType(event.event_type ?? "Department");
     setFormError("");
@@ -645,6 +651,28 @@ export default function EventsManagement() {
                     style={{ accentColor: "#4f46e5", width: "14px", height: "14px" }}
                   />
                   Check-in only <span style={{ color: "var(--dimmed)" }}>(no check-out required)</span>
+                </label>
+
+                <label
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "fit-content",
+                    fontSize: "13px",
+                    color: !countsTowardAttendance ? "#a5b4fc" : "var(--white-shade)",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!countsTowardAttendance}
+                    onChange={() => setCountsTowardAttendance(prev => !prev)}
+                    style={{ accentColor: "#4f46e5", width: "14px", height: "14px" }}
+                  />
+                  Doesn&apos;t count toward attendance{" "}
+                  <span style={{ color: "var(--dimmed)" }}>(optional event — nobody is marked absent for skipping it)</span>
                 </label>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px", opacity: checkInOnly ? 0.4 : 1 }}>

@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const { name, location, date, check_in_start, check_in_late, check_in_end, check_out_start, check_out_end, target_year_levels, event_type, check_in_only } = body;
+  const { name, location, date, check_in_start, check_in_late, check_in_end, check_out_start, check_out_end, target_year_levels, event_type, check_in_only, counts_toward_attendance } = body;
   if (!name || !location || !date || !check_in_start || !check_in_late || !check_in_end) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
@@ -119,6 +119,9 @@ export async function POST(req: NextRequest) {
         check_out_start: check_out_start ?? null,
         check_out_end: check_out_end ?? null,
         check_in_only: check_in_only ?? false,
+        // Optional events (false) never generate absents and are excluded from
+        // the attendance rate; see the column comment in schema.sql.
+        counts_toward_attendance: counts_toward_attendance ?? true,
         created_by: user.id,
         target_year_levels: target_year_levels?.length ? target_year_levels : null,
         event_type: event_type ?? null,

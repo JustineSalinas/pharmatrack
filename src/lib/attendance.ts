@@ -77,7 +77,11 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
   // 1. Completed events within the lookback window.
   const { data: rawEvents, error: evErr } = await supabase
     .from("events")
-    .select("id, check_in_end, check_out_start, check_out_end, check_in_only, target_year_levels")
+    // select("*") rather than a column list: events is a small table, and
+    // naming counts_toward_attendance here would make this query ERROR (and
+    // silently stop all absent-marking) on a deploy that lands before the
+    // column migration. With "*" a missing column is simply undefined.
+    .select("*")
     .lt("check_in_end", nowIso)
     .gte("check_in_end", lookbackIso);
   if (evErr) { result.errors.push("events: " + evErr.message); return result; }
@@ -163,7 +167,13 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
     // Scope to the event's target_year_levels so a year-specific event only marks
     // its own year(s) absent; a null/empty target means the event is general
     // (e.g. CPMT) and applies to the whole student body.
-    const absentReady = new Date(ev.check_in_end).getTime() < absentCutoffMs;
+    // Optional events (counts_toward_attendance = false, e.g. intramurals
+    // sports a student may choose from) never generate absent rows: not
+    // attending one is not an absence. Present/late scans are still recorded
+    // above this, so the per-student tally (get_optional_event_tally) works.
+    // `!== false` so a row predating the column (undefined) still counts.
+    const isOptional = ev.counts_toward_attendance === false;
+    const absentReady = !isOptional && new Date(ev.check_in_end).getTime() < absentCutoffMs;
     if (absentReady) {
       const targetYears: string[] | null =
         Array.isArray(ev.target_year_levels) && ev.target_year_levels.length > 0

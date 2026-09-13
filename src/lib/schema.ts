@@ -40,6 +40,8 @@ export interface Event {
   check_out_start: string | null;
   check_out_end: string | null;
   check_in_only: boolean;
+  /** false = optional event: no absents generated, excluded from the attendance rate. */
+  counts_toward_attendance: boolean;
   created_by: string;
   created_at: string;
   event_type: string | null;

@@ -361,6 +361,63 @@ describe('backfillEventStatuses — absent scoping by target_year_levels (Issue 
   })
 })
 
+describe('backfillEventStatuses — optional events (counts_toward_attendance = false)', () => {
+  const pastCheckInEnd = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+  const students = [
+    { id: 's1', student_profiles: { current_year: '1st Year' } },
+    { id: 's2', student_profiles: { current_year: '2nd Year' } },
+    { id: 's3', student_profiles: { current_year: '3rd Year' } },
+  ]
+
+  beforeEach(() => {
+    clearMockTables()
+    setSelect('users', { data: students, error: null })
+    setSelect('attendance_records', { data: [], error: null })
+    setWrite('attendance_records', { data: null, error: null })
+  })
+
+  it('never marks anyone absent for an optional event, even with no records and a whole-school target', async () => {
+    // The intramurals case: 15 sports open to everyone, students need any 5.
+    // Skipping one must not become an absence.
+    setSelect('events', {
+      data: [{ id: 'sport-1', check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: null,
+               check_in_only: true, target_year_levels: null, counts_toward_attendance: false }],
+      error: null,
+    })
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(0)
+    expect(result.absentEntries).toEqual([])
+    expect(result.eventsProcessed).toBe(1) // still visited, just no absents
+  })
+
+  it('still marks absent for a mandatory event processed in the same run', async () => {
+    // Opening Ceremony (counts) and a sport (optional) closing together:
+    // only the ceremony produces absents.
+    setSelect('events', {
+      data: [
+        { id: 'opening',  check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: null,
+          check_in_only: true, target_year_levels: null, counts_toward_attendance: true },
+        { id: 'sport-1',  check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: null,
+          check_in_only: true, target_year_levels: null, counts_toward_attendance: false },
+      ],
+      error: null,
+    })
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(3)
+    expect(new Set(result.absentEntries.map((e) => e.eventId))).toEqual(new Set(['opening']))
+  })
+
+  it('treats an event row without the column (predates the migration) as counting', async () => {
+    setSelect('events', {
+      data: [{ id: 'legacy', check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: null,
+               check_in_only: false, target_year_levels: null }],
+      error: null,
+    })
+    const result = await backfillEventStatuses()
+    expect(result.absentInserted).toBe(3)
+  })
+})
+
 describe('backfillEventStatuses — premature-absent settle guard (Flaw B)', () => {
   const EVENT_ID = 'event-1'
 

@@ -319,6 +319,16 @@ describe("POST /api/events", () => {
     );
   });
 
+  it("defaults counts_toward_attendance to true when omitted", async () => {
+    await POST(makeReq(VALID_EVENT_BODY));
+    expect(mockInsertEvent).toHaveBeenCalledWith(expect.objectContaining({ counts_toward_attendance: true }));
+  });
+
+  it("persists counts_toward_attendance: false for an optional event", async () => {
+    await POST(makeReq({ ...VALID_EVENT_BODY, counts_toward_attendance: false }));
+    expect(mockInsertEvent).toHaveBeenCalledWith(expect.objectContaining({ counts_toward_attendance: false }));
+  });
+
   it("persists check_in_only: true when provided", async () => {
     const body = { ...VALID_EVENT_BODY, check_in_only: true };
     const res = await POST(makeReq(body));
