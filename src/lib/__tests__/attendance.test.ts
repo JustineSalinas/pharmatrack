@@ -488,6 +488,43 @@ describe('backfillEventStatuses — optional events (counts_toward_attendance = 
     const result = await backfillEventStatuses()
     expect(result.absentInserted).toBe(3)
   })
+
+  it('never marks incomplete for an optional event with a real check-out window, even past its deadline', async () => {
+    // A sport that offers sign-out (Opening/Sports Events note): a student who
+    // signed in but never found the scanner again to sign out must stay
+    // "present" — get_optional_event_tally() only counts present/late, so
+    // flipping this to "incomplete" would silently uncount a real attendee.
+    const pastCheckOutEnd = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    setSelect('events', {
+      data: [{ id: 'sport-1', check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: pastCheckOutEnd,
+               check_in_only: false, target_year_levels: null, counts_toward_attendance: false }],
+      error: null,
+    })
+    setSelect('attendance_records', {
+      data: [{ id: 'rec-1', student_id: 's1', event_id: 'sport-1', time_in: pastCheckInEnd, time_out: null, status: 'present' }],
+      error: null,
+    })
+    const result = await backfillEventStatuses()
+    expect(result.incompleteUpdated).toBe(0)
+  })
+
+  it('still marks incomplete on a MANDATORY event with the same shape (regression guard)', async () => {
+    // Same time_in/time_out/deadline shape as the previous test, but
+    // counts_toward_attendance: true — proves the fix is scoped to optional
+    // events only, not a global loosening of incomplete-marking.
+    const pastCheckOutEnd = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    setSelect('events', {
+      data: [{ id: 'mandatory-1', check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: pastCheckOutEnd,
+               check_in_only: false, target_year_levels: null, counts_toward_attendance: true }],
+      error: null,
+    })
+    setSelect('attendance_records', {
+      data: [{ id: 'rec-1', student_id: 's1', event_id: 'mandatory-1', time_in: pastCheckInEnd, time_out: null, status: 'present' }],
+      error: null,
+    })
+    const result = await backfillEventStatuses()
+    expect(result.incompleteUpdated).toBe(1)
+  })
 })
 
 describe('backfillEventStatuses — premature-absent settle guard (Flaw B)', () => {

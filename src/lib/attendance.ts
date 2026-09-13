@@ -256,8 +256,19 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
     // "incomplete". This also protects check-in-only attendees whose check_in_only
     // flag was toggled off after the fact (they'd otherwise be wrongly flipped to
     // incomplete). check_in_only events opt out explicitly for the same reason.
+    //
+    // Optional events (counts_toward_attendance = false — e.g. an intramurals
+    // sport a student may choose to attend) opt out too, and for the same reason
+    // as the absent-marking skip above: a scan is what earns credit, and nothing
+    // an optional event does may take it away. Without this, a sport that offers
+    // a check-out window (some students want to sign out; see isOptional above)
+    // would silently flip a genuine attendee who only signed in to "incomplete"
+    // once the window closed — and get_optional_event_tally() counts only
+    // present/late, so that student would come back as NOT having attended a
+    // sport they clearly did. Signing out, where offered, is a bonus, never a
+    // requirement, for an optional event.
     const hasCheckoutWindow = !!(ev.check_out_start || ev.check_out_end);
-    const incomplete = (ev.check_in_only || !hasCheckoutWindow) ? [] : existing.filter((r: any) => {
+    const incomplete = (ev.check_in_only || !hasCheckoutWindow || isOptional) ? [] : existing.filter((r: any) => {
       if (!r.time_in || r.time_out || r.status === "incomplete" || r.status === "absent") return false;
       const deadline = ev.check_out_end
         ? new Date(ev.check_out_end)
