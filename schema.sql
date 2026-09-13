@@ -456,6 +456,16 @@ GRANT EXECUTE ON FUNCTION public.get_attendance_rate_totals() TO authenticated;
 -- row per approved student, including those with zero, so the export is a
 -- complete roster rather than only the students who showed up somewhere.
 -- Counts DISTINCT events: a student rescanned at the same sport counts once.
+-- Counts by NORMALIZED EVENT NAME, not event.id. A sport that spans several
+-- days (e.g. Basketball, Tue-Fri) can't be one PharmaTrack event: the event
+-- form pins check_in_start and check_in_end to a single calendar `date`
+-- (src/app/dashboard/facilitator/events/page.tsx — manilaWallClockToISO(date,
+-- time) for every time field), so a multi-day sport is created as several
+-- same-named events, one per day it's held. Counting DISTINCT e.id would let
+-- a student who plays Basketball on 3 of its 4 days count it as 3 of their 5
+-- required events — the department's "5 events" means 5 distinct SPORTS, not
+-- 5 days of activity. LOWER(TRIM(e.name)) absorbs case/whitespace slips
+-- between the daily entries; events_list still shows the readable name.
 CREATE OR REPLACE FUNCTION public.get_optional_event_tally()
 RETURNS TABLE (
   student_id UUID,
@@ -477,7 +487,7 @@ AS $$
     sp.student_id_number,
     sp.section,
     sp.current_year,
-    COUNT(DISTINCT e.id) AS events_attended,
+    COUNT(DISTINCT LOWER(TRIM(e.name))) AS events_attended,
     STRING_AGG(DISTINCT e.name, ', ' ORDER BY e.name) AS events_list
   FROM public.users u
   JOIN public.student_profiles sp ON sp.user_id = u.id

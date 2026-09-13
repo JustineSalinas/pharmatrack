@@ -70,17 +70,29 @@ async function main() {
     .select("id,full_name,student_profiles(student_id_number,section,current_year)")
     .eq("account_type", "student").eq("status", "approved").order("id"));
 
-  // 4. Tally: distinct events per student (a rescan at the same sport counts once)
-  const attended = new Map();
+  // 4. Tally: distinct SPORT NAMES per student, not distinct event ids.
+  // A sport spanning several days (Basketball, Tue-Fri) can't be one
+  // PharmaTrack event — the event form pins check_in_start/check_in_end to a
+  // single calendar date — so it's created as several same-named events, one
+  // per day. Counting by event.id would let a student who plays 3 of its 4
+  // days count Basketball 3 times toward their 5; grouping by the normalized
+  // name (matching get_optional_event_tally() in schema.sql) counts it once.
+  const norm = (s) => String(s).trim().toLowerCase();
+  const attended = new Map();     // student_id -> Set<normalized name>
+  const displayName = new Map();  // normalized name -> first-seen display name
   for (const s of scans) {
+    const name = eventName.get(s.event_id);
+    if (!name) continue;
+    const key = norm(name);
+    if (!displayName.has(key)) displayName.set(key, name);
     if (!attended.has(s.student_id)) attended.set(s.student_id, new Set());
-    attended.get(s.student_id).add(s.event_id);
+    attended.get(s.student_id).add(key);
   }
 
   const rows = students.map((u) => {
     const p = Array.isArray(u.student_profiles) ? u.student_profiles[0] : u.student_profiles;
     const set = attended.get(u.id) ?? new Set();
-    const list = [...set].map((id) => eventName.get(id)).sort();
+    const list = [...set].map((key) => displayName.get(key)).sort();
     return {
       name: u.full_name,
       idNumber: p?.student_id_number ?? "",
