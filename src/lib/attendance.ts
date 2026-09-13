@@ -258,17 +258,18 @@ export async function backfillEventStatuses(): Promise<BackfillResult> {
     // incomplete). check_in_only events opt out explicitly for the same reason.
     //
     // Optional events (counts_toward_attendance = false — e.g. an intramurals
-    // sport a student may choose to attend) opt out too, and for the same reason
-    // as the absent-marking skip above: a scan is what earns credit, and nothing
-    // an optional event does may take it away. Without this, a sport that offers
-    // a check-out window (some students want to sign out; see isOptional above)
-    // would silently flip a genuine attendee who only signed in to "incomplete"
-    // once the window closed — and get_optional_event_tally() counts only
-    // present/late, so that student would come back as NOT having attended a
-    // sport they clearly did. Signing out, where offered, is a bonus, never a
-    // requirement, for an optional event.
+    // sport a student may choose to attend) are exempt from ABSENT-marking above
+    // (missing a sport entirely isn't an absence) but deliberately NOT exempt
+    // here: the department requires strict sign-in AND sign-out for Opening
+    // Program and the sports events, so a signed-in-only sports record still
+    // flips to "incomplete" once its check-out deadline passes, same as any
+    // other event with a check-out window. get_optional_event_tally() counts
+    // only present/late, so an incomplete sports record is correctly excluded
+    // from a student's 5-event tally — signing out is required to earn credit.
+    // (Opening Program was never affected by isOptional either way — it isn't
+    // optional, so this branch always applied to it.)
     const hasCheckoutWindow = !!(ev.check_out_start || ev.check_out_end);
-    const incomplete = (ev.check_in_only || !hasCheckoutWindow || isOptional) ? [] : existing.filter((r: any) => {
+    const incomplete = (ev.check_in_only || !hasCheckoutWindow) ? [] : existing.filter((r: any) => {
       if (!r.time_in || r.time_out || r.status === "incomplete" || r.status === "absent") return false;
       const deadline = ev.check_out_end
         ? new Date(ev.check_out_end)

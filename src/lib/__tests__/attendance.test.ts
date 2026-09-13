@@ -489,11 +489,14 @@ describe('backfillEventStatuses — optional events (counts_toward_attendance = 
     expect(result.absentInserted).toBe(3)
   })
 
-  it('never marks incomplete for an optional event with a real check-out window, even past its deadline', async () => {
-    // A sport that offers sign-out (Opening/Sports Events note): a student who
-    // signed in but never found the scanner again to sign out must stay
-    // "present" — get_optional_event_tally() only counts present/late, so
-    // flipping this to "incomplete" would silently uncount a real attendee.
+  it('DOES mark incomplete for an optional event with a real check-out window, once its deadline passes', async () => {
+    // Strict sign-in AND sign-out is required for Opening Program and the
+    // sports events per explicit department instruction: a student who signed
+    // in but never found the scanner again to sign out does NOT earn credit
+    // for that sport. get_optional_event_tally() only counts present/late, so
+    // flipping this to "incomplete" correctly excludes them from the tally —
+    // being exempt from ABSENT-marking (missing a sport isn't an absence)
+    // does not exempt a sport from requiring a sign-out to count.
     const pastCheckOutEnd = new Date(Date.now() - 30 * 60 * 1000).toISOString()
     setSelect('events', {
       data: [{ id: 'sport-1', check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: pastCheckOutEnd,
@@ -505,13 +508,13 @@ describe('backfillEventStatuses — optional events (counts_toward_attendance = 
       error: null,
     })
     const result = await backfillEventStatuses()
-    expect(result.incompleteUpdated).toBe(0)
+    expect(result.incompleteUpdated).toBe(1)
   })
 
-  it('still marks incomplete on a MANDATORY event with the same shape (regression guard)', async () => {
+  it('also marks incomplete on a MANDATORY event with the same shape (Opening Program is unaffected by isOptional)', async () => {
     // Same time_in/time_out/deadline shape as the previous test, but
-    // counts_toward_attendance: true — proves the fix is scoped to optional
-    // events only, not a global loosening of incomplete-marking.
+    // counts_toward_attendance: true — Opening Program was never gated by
+    // isOptional either way, so this behavior is unchanged either direction.
     const pastCheckOutEnd = new Date(Date.now() - 30 * 60 * 1000).toISOString()
     setSelect('events', {
       data: [{ id: 'mandatory-1', check_in_end: pastCheckInEnd, check_out_start: null, check_out_end: pastCheckOutEnd,
