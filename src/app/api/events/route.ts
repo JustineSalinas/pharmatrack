@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const { name, location, date, check_in_start, check_in_late, check_in_end, check_out_start, check_out_end, target_year_levels, event_type, check_in_only, counts_toward_attendance } = body;
+  const { name, location, date, check_in_start, check_in_late, check_in_end, check_out_start, check_out_end, target_year_levels, event_type, check_in_only, counts_toward_attendance, notify_students } = body;
   if (!name || !location || !date || !check_in_start || !check_in_late || !check_in_end) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
@@ -183,19 +183,29 @@ export async function POST(req: NextRequest) {
       }
     };
 
-    try {
-      after(runBroadcast);
-    } catch {
-      // after() requires Next's request-scope, which only exists inside a
-      // real next dev/Vercel request — it throws synchronously when the
-      // route handler is invoked directly outside that (e.g. Vitest calling
-      // POST() as a plain function). Fall back to a plain fire-and-forget
-      // call so tests don't depend on after() plumbing that doesn't apply
-      // to them; this branch never runs in the actual deployed app.
-      void runBroadcast();
+    // notify_students defaults to true so existing callers keep broadcasting.
+    // The opt-out exists because the broadcast goes to EVERY approved student
+    // (711 at last count) with no quota guard: creating the 15 MMIntrams sports
+    // events would have sent ~10,700 emails in one sitting — double the
+    // monthly quota — and 15 near-identical messages to each student. Tick
+    // "Don't email students" on those and send one schedule announcement.
+    if (notify_students === false) {
+      console.log(`[Events API] Broadcast skipped for "${name}" (notify_students=false)`);
+    } else {
+      try {
+        after(runBroadcast);
+      } catch {
+        // after() requires Next's request-scope, which only exists inside a
+        // real next dev/Vercel request — it throws synchronously when the
+        // route handler is invoked directly outside that (e.g. Vitest calling
+        // POST() as a plain function). Fall back to a plain fire-and-forget
+        // call so tests don't depend on after() plumbing that doesn't apply
+        // to them; this branch never runs in the actual deployed app.
+        void runBroadcast();
+      }
     }
 
-    return NextResponse.json({ success: true, event: newEvent });
+    return NextResponse.json({ success: true, event: newEvent, notified: notify_students !== false });
   } catch (err: any) {
     console.error("[Events API] Internal server error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

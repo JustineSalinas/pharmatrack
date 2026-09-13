@@ -95,7 +95,79 @@ vi.mock('../supabase', async (importOriginal) => {
   }
 })
 
-import { runIfDue, backfillEventStatuses, notifyAbsences, isEventEnded } from '../attendance'
+import { runIfDue, backfillEventStatuses, notifyAbsences, isEventEnded, isEventOpenNow, sortEventsForPicker, pickDefaultEvent } from '../attendance'
+
+describe('scanner event picker — sortEventsForPicker / pickDefaultEvent', () => {
+  // MMIntrams-shaped fixture: Mon..Thu, several events per day, check-in only.
+  const ev = (id: string, date: string, start: string, end: string, extra: object = {}) => ({
+    id, date,
+    check_in_start: `${date}T${start}:00+08:00`,
+    check_in_end: `${date}T${end}:00+08:00`,
+    check_out_start: null, check_out_end: null, check_in_only: true,
+    ...extra,
+  })
+  const mon = '2026-09-15', tue = '2026-09-16', thu = '2026-09-18'
+  const events = [
+    ev('thu-closing',   thu, '15:00', '17:00'),
+    ev('tue-chess',     tue, '13:00', '16:00'),
+    ev('mon-dance',     mon, '13:00', '16:00'),
+    ev('mon-opening',   mon, '08:00', '10:00'),
+    ev('mon-mrms',      mon, '10:30', '12:00'),
+  ]
+
+  it('puts still-open events first in chronological order, ended ones after', () => {
+    // Monday 11:00 — opening has ended, Mr&Ms is live, the rest are upcoming.
+    const now = new Date('2026-09-15T11:00:00+08:00')
+    expect(sortEventsForPicker(events, now).map((e) => e.id)).toEqual([
+      'mon-mrms', 'mon-dance', 'tue-chess', 'thu-closing', // active, chronological
+      'mon-opening',                                        // ended, last
+    ])
+  })
+
+  it('breaks same-day ties by check_in_start, not insertion order', () => {
+    const now = new Date('2026-09-15T07:00:00+08:00') // before everything
+    const ids = sortEventsForPicker(events, now).map((e) => e.id)
+    expect(ids.slice(0, 3)).toEqual(['mon-opening', 'mon-mrms', 'mon-dance'])
+  })
+
+  it('preselects the event whose window is open right now over a later one', () => {
+    const now = new Date('2026-09-15T11:00:00+08:00')
+    expect(pickDefaultEvent(events, now)?.id).toBe('mon-mrms')
+  })
+
+  it('preselects the next upcoming event when none is open', () => {
+    // Monday 12:15 — Mr&Ms closed at 12:00, dance opens at 13:00.
+    const now = new Date('2026-09-15T12:15:00+08:00')
+    expect(pickDefaultEvent(events, now)?.id).toBe('mon-dance')
+  })
+
+  it('does NOT preselect the latest-dated event on the first morning (the old bug)', () => {
+    const now = new Date('2026-09-15T08:30:00+08:00')
+    expect(pickDefaultEvent(events, now)?.id).toBe('mon-opening')
+    expect(pickDefaultEvent(events, now)?.id).not.toBe('thu-closing')
+  })
+
+  it('falls back to the most recently ended event when everything is over', () => {
+    const now = new Date('2026-09-19T09:00:00+08:00')
+    expect(pickDefaultEvent(events, now)?.id).toBe('thu-closing')
+  })
+
+  it('returns null for an empty list', () => {
+    expect(pickDefaultEvent([], new Date())).toBeNull()
+  })
+
+  it('isEventOpenNow honours a check-out window on a normal event', () => {
+    const e = ev('x', mon, '08:00', '09:10', {
+      check_in_only: false,
+      check_out_start: `${mon}T13:00:00+08:00`,
+      check_out_end: `${mon}T14:00:00+08:00`,
+    })
+    expect(isEventOpenNow(e, new Date('2026-09-15T08:30:00+08:00'))).toBe(true)  // check-in
+    expect(isEventOpenNow(e, new Date('2026-09-15T11:00:00+08:00'))).toBe(false) // the gap
+    expect(isEventOpenNow(e, new Date('2026-09-15T13:30:00+08:00'))).toBe(true)  // check-out
+    expect(isEventOpenNow(e, new Date('2026-09-15T14:30:00+08:00'))).toBe(false) // after
+  })
+})
 
 describe('isEventEnded', () => {
   it('is not ended before check_in_end', () => {

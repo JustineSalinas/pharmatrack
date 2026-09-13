@@ -6,7 +6,7 @@ import { supabase, formatManilaTime } from "@/lib/supabase";
 import { getCurrentUser, getAuthHeader } from "@/lib/auth-client";
 import { debounce } from "@/lib/debounce";
 import { submitScanOrQueue, enqueue } from "@/lib/offlineScanQueue";
-import { isEventEnded } from "@/lib/attendance";
+import { isEventEnded, sortEventsForPicker, pickDefaultEvent } from "@/lib/attendance";
 import { useOfflineScanSync } from "@/lib/useOfflineScanSync";
 import { OfflineScanIndicator } from "@/components/OfflineScanIndicator";
 import { 
@@ -92,9 +92,14 @@ export default function ScannerPage() {
         
         if (error) throw error;
         
-        setActiveEvents(events || []);
-        if (events && events.length > 0) {
-          setSelectedEventId(events[0].id);
+        // Still-open events first in chronological order, ended ones after;
+        // preselect the event a scan would be accepted for right now. See
+        // sortEventsForPicker / pickDefaultEvent for why (multi-day schedules).
+        const ordered = sortEventsForPicker(events || []);
+        setActiveEvents(ordered);
+        const preselect = pickDefaultEvent(ordered);
+        if (preselect) {
+          setSelectedEventId(preselect.id);
         } else {
           setLoading(false);
         }

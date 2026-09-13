@@ -64,6 +64,62 @@ export function isEventEnded(
   return now > new Date(event.check_out_end);
 }
 
+type PickerEvent = {
+  id: string;
+  date: string;
+  check_in_start: string;
+  check_in_end: string;
+  check_out_start?: string | null;
+  check_out_end?: string | null;
+  check_in_only?: boolean | null;
+};
+
+/**
+ * Whether a scan would be accepted for this event right now: inside the
+ * check-in window, or inside the check-out window when the event has one.
+ */
+export function isEventOpenNow(event: PickerEvent, now: Date = new Date()): boolean {
+  const t = now.getTime();
+  if (t >= new Date(event.check_in_start).getTime() && t <= new Date(event.check_in_end).getTime()) return true;
+  if (event.check_in_only || !event.check_out_start || !event.check_out_end) return false;
+  return t >= new Date(event.check_out_start).getTime() && t <= new Date(event.check_out_end).getTime();
+}
+
+/**
+ * Order for the scanner's event dropdown: events still in play first, in
+ * chronological order (date, then check_in_start), then ended events after.
+ *
+ * The previous `date DESC` with no tiebreak had two problems the moment more
+ * than one event existed: same-day events came back in unspecified order, and
+ * a multi-day schedule (MMIntrams: 17 events over Sept 15-18) put Friday's
+ * events at the top on Monday. Chronological-only would fix that week but
+ * bury a lone new event under a week of ended ones on a normal week, so
+ * ended events are pushed to the bottom instead of removed — they keep the
+ * "— Ended" suffix so the reason for their position is visible.
+ */
+export function sortEventsForPicker<T extends PickerEvent>(events: T[], now: Date = new Date()): T[] {
+  const key = (e: T) => `${e.date}T${new Date(e.check_in_start).toISOString()}`;
+  const active = events.filter((e) => !isEventEnded(e, now)).sort((a, b) => key(a).localeCompare(key(b)));
+  const ended = events.filter((e) => isEventEnded(e, now)).sort((a, b) => key(b).localeCompare(key(a)));
+  return [...active, ...ended];
+}
+
+/**
+ * Which event the scanner should preselect: the first one a scan would be
+ * accepted for right now; else the next one still to come; else whatever is
+ * first in picker order (an ended event, when nothing else exists).
+ *
+ * `events[0]` under the old DESC sort preselected the LATEST-dated event, so
+ * a facilitator opening the scanner on the first morning of a multi-day
+ * schedule had the last day's event selected and every scan rejected with
+ * "Event has not started yet".
+ */
+export function pickDefaultEvent<T extends PickerEvent>(events: T[], now: Date = new Date()): T | null {
+  if (events.length === 0) return null;
+  const ordered = sortEventsForPicker(events, now);
+  return ordered.find((e) => isEventOpenNow(e, now)) ?? ordered[0];
+}
+
 export async function backfillEventStatuses(): Promise<BackfillResult> {
   const result: BackfillResult = {
     eventsProcessed: 0, absentInserted: 0, incompleteUpdated: 0, errors: [], absentEntries: [],

@@ -319,6 +319,28 @@ describe("POST /api/events", () => {
     );
   });
 
+  // ── Email broadcast opt-out ───────────────────────────────────────────────
+
+  it("reports notified: true by default (notify_students omitted)", async () => {
+    const res = await POST(makeReq(VALID_EVENT_BODY));
+    expect(res.status).toBe(200);
+    expect((await res.json()).notified).toBe(true);
+  });
+
+  it("skips the broadcast entirely when notify_students is false", async () => {
+    const res = await POST(makeReq({ ...VALID_EVENT_BODY, notify_students: false }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).notified).toBe(false);
+    // Fire-and-forget path: give any wrongly-scheduled broadcast a tick to run.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockSendEventBroadcast).not.toHaveBeenCalled();
+  });
+
+  it("still creates the event when notify_students is false", async () => {
+    await POST(makeReq({ ...VALID_EVENT_BODY, notify_students: false }));
+    expect(mockInsertEvent).toHaveBeenCalledTimes(1);
+  });
+
   it("defaults counts_toward_attendance to true when omitted", async () => {
     await POST(makeReq(VALID_EVENT_BODY));
     expect(mockInsertEvent).toHaveBeenCalledWith(expect.objectContaining({ counts_toward_attendance: true }));

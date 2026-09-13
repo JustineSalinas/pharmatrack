@@ -48,6 +48,10 @@ export default function EventsManagement() {
   const [checkInOnly, setCheckInOnly] = useState(false);
   // false = optional event (e.g. an intramurals sport): no absents, not in the rate.
   const [countsTowardAttendance, setCountsTowardAttendance] = useState(true);
+  // Create-only: skips the email broadcast to every approved student. Used
+  // when many events are created at once (15 intramurals sports = ~10,700
+  // emails otherwise) and one manual announcement is sent instead.
+  const [skipEmail, setSkipEmail] = useState(false);
   const [targetYearLevels, setTargetYearLevels] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -237,6 +241,7 @@ export default function EventsManagement() {
             check_out_end: checkOutEndTS,
             check_in_only: checkInOnly,
             counts_toward_attendance: countsTowardAttendance,
+            notify_students: !skipEmail,
             target_year_levels: targetYearLevels.length ? targetYearLevels : null,
             event_type: eventType,
           }),
@@ -248,6 +253,8 @@ export default function EventsManagement() {
         }
       }
 
+      // Read before resetForm() clears the checkbox state.
+      const emailSkipped = skipEmail;
       setShowModal(false);
       resetForm();
       fetchEvents();
@@ -256,7 +263,9 @@ export default function EventsManagement() {
           ? revertedCount > 0
             ? `Event updated — ${revertedCount} previously-incomplete record${revertedCount === 1 ? "" : "s"} reverted.`
             : "Event updated successfully."
-          : "Event created — students will be notified via email.",
+          : emailSkipped
+            ? "Event created — no email sent."
+            : "Event created — students will be notified via email.",
         "success"
       );
     } catch (err: any) {
@@ -313,6 +322,7 @@ export default function EventsManagement() {
     setCheckOutEndTime("");
     setCheckInOnly(false);
     setCountsTowardAttendance(true);
+    setSkipEmail(false);
     setTargetYearLevels([]);
     setEventType("Department");
     setFormError("");
@@ -674,6 +684,31 @@ export default function EventsManagement() {
                   Doesn&apos;t count toward attendance{" "}
                   <span style={{ color: "var(--dimmed)" }}>(optional event — nobody is marked absent for skipping it)</span>
                 </label>
+
+                {/* Create-only: editing never re-broadcasts, so hide it there. */}
+                {!editingEvent && (
+                  <label
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      width: "fit-content",
+                      fontSize: "13px",
+                      color: skipEmail ? "#a5b4fc" : "var(--white-shade)",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={skipEmail}
+                      onChange={() => setSkipEmail(prev => !prev)}
+                      style={{ accentColor: "#4f46e5", width: "14px", height: "14px" }}
+                    />
+                    Don&apos;t email students about this event{" "}
+                    <span style={{ color: "var(--dimmed)" }}>(use when creating many events at once)</span>
+                  </label>
+                )}
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px", opacity: checkInOnly ? 0.4 : 1 }}>
                   <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--dimmed)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
