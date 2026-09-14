@@ -1,20 +1,17 @@
 -- ============================================================================
--- Count optional-event attendance by SPORT NAME, not by event.id — 2026-09-13
+-- Count optional-event attendance by SPORT/BATCH NAME — 2026-09-15
 --
 -- Paste this into the Supabase SQL editor and run it once. Safe to re-run.
--- No DROP involved this time — this only replaces one function definition,
--- so there is no "destructive operation" warning and nothing to rebuild.
+-- No DROP involved — this only replaces the function definition.
 --
--- Why: a sport that runs across several days (Basketball, Volleyball,
--- Football, E-Sports: Tue-Fri; others: 2 days) can't be created as ONE
--- PharmaTrack event, because the event form pins its check-in window to a
--- single calendar date. So a multi-day sport becomes several same-named
--- events — one per day it's held. The tally previously counted DISTINCT
--- event.id, which would let a student who played Basketball on 3 of its 4
--- days count it as 3 of their 5 required events. This counts by event NAME
--- instead, so it's always exactly 1 regardless of how many days they showed
--- up. Requires facilitators to spell the sport's name the same way each day
--- it's created (case and stray spaces don't matter — this normalizes both).
+-- Logic:
+-- 1. Multi-day sports created with identical names (e.g. Basketball, Lawn Tennis)
+--    normalize to the same name so attending across multiple days counts as 1.
+-- 2. Chess is grouped into TWO separate batches per department policy:
+--    - Morning batch (Rounds 1, 2, 3, 4, Morning, AM, Batch 1) -> "Chess (Morning)"
+--    - Afternoon batch (Rounds 5, 6, 7, 8, 9, Afternoon, PM, Batch 2) -> "Chess (Afternoon)"
+--    Attending multiple morning rounds yields 1 tally; attending multiple
+--    afternoon rounds yields 1 tally; attending both yields 2 tallies total.
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.get_optional_event_tally()
@@ -38,8 +35,55 @@ AS $$
     sp.student_id_number,
     sp.section,
     sp.current_year,
-    COUNT(DISTINCT LOWER(TRIM(e.name))) AS events_attended,
-    STRING_AGG(DISTINCT e.name, ', ' ORDER BY e.name) AS events_list
+    COUNT(DISTINCT
+      CASE
+        WHEN LOWER(e.name) LIKE '%chess%' AND (
+          LOWER(e.name) LIKE '%round 1%' OR
+          LOWER(e.name) LIKE '%round 2%' OR
+          LOWER(e.name) LIKE '%round 3%' OR
+          LOWER(e.name) LIKE '%round 4%' OR
+          LOWER(e.name) LIKE '%morning%' OR
+          LOWER(e.name) LIKE '%batch 1%' OR
+          LOWER(e.name) LIKE '%1st batch%'
+        ) THEN 'chess_morning'
+        WHEN LOWER(e.name) LIKE '%chess%' AND (
+          LOWER(e.name) LIKE '%round 5%' OR
+          LOWER(e.name) LIKE '%round 6%' OR
+          LOWER(e.name) LIKE '%round 7%' OR
+          LOWER(e.name) LIKE '%round 8%' OR
+          LOWER(e.name) LIKE '%round 9%' OR
+          LOWER(e.name) LIKE '%afternoon%' OR
+          LOWER(e.name) LIKE '%batch 2%' OR
+          LOWER(e.name) LIKE '%2nd batch%'
+        ) THEN 'chess_afternoon'
+        ELSE LOWER(TRIM(e.name))
+      END
+    ) AS events_attended,
+    STRING_AGG(DISTINCT
+      CASE
+        WHEN LOWER(e.name) LIKE '%chess%' AND (
+          LOWER(e.name) LIKE '%round 1%' OR
+          LOWER(e.name) LIKE '%round 2%' OR
+          LOWER(e.name) LIKE '%round 3%' OR
+          LOWER(e.name) LIKE '%round 4%' OR
+          LOWER(e.name) LIKE '%morning%' OR
+          LOWER(e.name) LIKE '%batch 1%' OR
+          LOWER(e.name) LIKE '%1st batch%'
+        ) THEN 'Chess (Morning - 1st Batch)'
+        WHEN LOWER(e.name) LIKE '%chess%' AND (
+          LOWER(e.name) LIKE '%round 5%' OR
+          LOWER(e.name) LIKE '%round 6%' OR
+          LOWER(e.name) LIKE '%round 7%' OR
+          LOWER(e.name) LIKE '%round 8%' OR
+          LOWER(e.name) LIKE '%round 9%' OR
+          LOWER(e.name) LIKE '%afternoon%' OR
+          LOWER(e.name) LIKE '%batch 2%' OR
+          LOWER(e.name) LIKE '%2nd batch%'
+        ) THEN 'Chess (Afternoon - 2nd Batch)'
+        ELSE e.name
+      END,
+      ', '
+    ) AS events_list
   FROM public.users u
   JOIN public.student_profiles sp ON sp.user_id = u.id
   LEFT JOIN public.attendance_records ar

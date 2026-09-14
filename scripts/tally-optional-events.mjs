@@ -71,22 +71,33 @@ async function main() {
     .eq("account_type", "student").eq("status", "approved").order("id"));
 
   // 4. Tally: distinct SPORT NAMES per student, not distinct event ids.
-  // A sport spanning several days (Basketball, Tue-Fri) can't be one
-  // PharmaTrack event — the event form pins check_in_start/check_in_end to a
-  // single calendar date — so it's created as several same-named events, one
-  // per day. Counting by event.id would let a student who plays 3 of its 4
-  // days count Basketball 3 times toward their 5; grouping by the normalized
-  // name (matching get_optional_event_tally() in schema.sql) counts it once.
-  const norm = (s) => String(s).trim().toLowerCase();
-  const attended = new Map();     // student_id -> Set<normalized name>
-  const displayName = new Map();  // normalized name -> first-seen display name
+  // Chess is grouped into two batches per department policy:
+  // - Morning batch (Rounds 1-3, Morning session) -> at most 1 tally
+  // - Afternoon batch (Rounds 5-9, Afternoon session) -> at most 1 tally
+  const categorize = (rawName) => {
+    const name = String(rawName).trim();
+    const lower = name.toLowerCase();
+    if (lower.includes("chess")) {
+      if (["round 1", "round 2", "round 3", "round 4", "morning", "batch 1", "1st batch"].some((r) => lower.includes(r))) {
+        return { key: "chess_morning", display: "Chess (Morning - 1st Batch)" };
+      }
+      if (["round 5", "round 6", "round 7", "round 8", "round 9", "afternoon", "batch 2", "2nd batch"].some((r) => lower.includes(r))) {
+        return { key: "chess_afternoon", display: "Chess (Afternoon - 2nd Batch)" };
+      }
+      return { key: "chess", display: "Chess" };
+    }
+    return { key: lower, display: name };
+  };
+
+  const attended = new Map();     // student_id -> Set<category key>
+  const displayName = new Map();  // category key -> display name
   for (const s of scans) {
     const name = eventName.get(s.event_id);
     if (!name) continue;
-    const key = norm(name);
-    if (!displayName.has(key)) displayName.set(key, name);
+    const cat = categorize(name);
+    if (!displayName.has(cat.key)) displayName.set(cat.key, cat.display);
     if (!attended.has(s.student_id)) attended.set(s.student_id, new Set());
-    attended.get(s.student_id).add(key);
+    attended.get(s.student_id).add(cat.key);
   }
 
   const rows = students.map((u) => {
