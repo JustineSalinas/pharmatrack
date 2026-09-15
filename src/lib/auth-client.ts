@@ -5,7 +5,14 @@ import type { LoginInput, StudentRegisterInput, FacilitatorRegisterInput } from 
 
 export async function loginUser({ email, password }: LoginInput) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw new Error(error.message);
+  if (error) {
+    const msg = error.message?.trim();
+    throw new Error(
+      !msg || msg === "{}" || msg === "[]"
+        ? "Unable to reach the authentication server. Please try again."
+        : msg
+    );
+  }
   return data;
 }
 /**
